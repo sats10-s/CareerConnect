@@ -79,11 +79,11 @@ with the `job_postings` table naming.
 - Laravel Sanctum, cookie-based SPA session (`withCredentials` + the
   `sanctum/csrf-cookie` handshake) — also issues a bearer token on login
   for non-browser clients.
-- `POST /api/register` — student self-registration only (name, college
+- `POST /api/auth/register` — student self-registration only (name, college
   email, password, roll number, department, batch). Faculty/Admin/Super
   Admin accounts are provisioned by seeding/administration, not public
   sign-up.
-- `POST /api/login`, `POST /api/logout`, `GET /api/me`.
+- `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`.
 - Passwords are hashed with bcrypt via Laravel's `Hash` facade — never
   stored in plaintext.
 - **Server-side authorization is enforced independently of the frontend.**

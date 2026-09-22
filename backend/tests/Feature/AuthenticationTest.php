@@ -49,7 +49,7 @@ class AuthenticationTest extends TestCase
 
     public function test_student_can_register_with_valid_details(): void
     {
-        $response = $this->postJson('/api/register', [
+        $response = $this->postJson('/api/auth/register', [
             'name' => 'Aarav Mehta',
             'email' => 'aarav@careerconnect.edu',
             'password' => 'Password@123',
@@ -74,7 +74,7 @@ class AuthenticationTest extends TestCase
 
     public function test_registration_rejects_invalid_payloads(): void
     {
-        $response = $this->postJson('/api/register', [
+        $response = $this->postJson('/api/auth/register', [
             'name' => '',
             'email' => 'not-an-email',
             'password' => 'short',
@@ -103,7 +103,7 @@ class AuthenticationTest extends TestCase
             'batch_id' => $this->batch->id,
         ]);
 
-        $response = $this->postJson('/api/register', [
+        $response = $this->postJson('/api/auth/register', [
             'name' => 'Another Student',
             'email' => 'duplicate@careerconnect.edu',
             'password' => 'Password@123',
@@ -132,7 +132,7 @@ class AuthenticationTest extends TestCase
             'batch_id' => $this->batch->id,
         ]);
 
-        $response = $this->postJson('/api/login', [
+        $response = $this->postJson('/api/auth/login', [
             'email' => 'diya@careerconnect.edu',
             'password' => 'Password@123',
         ]);
@@ -151,7 +151,7 @@ class AuthenticationTest extends TestCase
             'role_id' => $this->studentRole->id,
         ]);
 
-        $response = $this->postJson('/api/login', [
+        $response = $this->postJson('/api/auth/login', [
             'email' => 'kabir@careerconnect.edu',
             'password' => 'wrong-password',
         ]);
@@ -170,7 +170,7 @@ class AuthenticationTest extends TestCase
             'is_active' => false,
         ]);
 
-        $response = $this->postJson('/api/login', [
+        $response = $this->postJson('/api/auth/login', [
             'email' => 'isha@careerconnect.edu',
             'password' => 'Password@123',
         ]);
@@ -180,7 +180,7 @@ class AuthenticationTest extends TestCase
 
     public function test_guest_cannot_access_me_or_any_dashboard(): void
     {
-        $this->getJson('/api/me')->assertStatus(401);
+        $this->getJson('/api/auth/me')->assertStatus(401);
         $this->getJson('/api/student/dashboard')->assertStatus(401);
         $this->getJson('/api/faculty/dashboard')->assertStatus(401);
         $this->getJson('/api/admin/dashboard')->assertStatus(401);
@@ -204,7 +204,7 @@ class AuthenticationTest extends TestCase
 
         Sanctum::actingAs($user, ['*']);
 
-        $response = $this->getJson('/api/me');
+        $response = $this->getJson('/api/auth/me');
 
         $response->assertOk();
         $response->assertJsonPath('data.email', 'rohan@careerconnect.edu');
@@ -292,6 +292,6 @@ class AuthenticationTest extends TestCase
             'batch_id' => $this->batch->id,
         ]);
 
-        $this->actingAs($user)->postJson('/api/logout')->assertOk();
+        $this->actingAs($user)->postJson('/api/auth/logout')->assertOk();
     }
 }
