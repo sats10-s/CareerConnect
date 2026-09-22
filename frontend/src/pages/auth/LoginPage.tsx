@@ -21,28 +21,10 @@ export function LoginPage() {
     setError(null)
     setIsSubmitting(true)
     try {
-      // TEMPORARY DIAGNOSTIC - remove once the browser login flow is
-      // confirmed working.
-      if (import.meta.env.DEV) console.log('[careerconnect:diag] LoginPage.handleSubmit: calling login()')
       const user = await login({ email, password })
-      if (import.meta.env.DEV) console.log('[careerconnect:diag] LoginPage.handleSubmit: login() resolved', user)
       const redirectTo = (location.state as { from?: string } | null)?.from
       navigate(redirectTo ?? dashboardPathForRole(user.role), { replace: true })
     } catch (err) {
-      // TEMPORARY DIAGNOSTIC - remove once the browser login flow is
-      // confirmed working. Logs the RAW error exactly as caught, before
-      // any isAxiosError branching - this is what tells us whether it's
-      // really an AxiosError at all, or something else entirely (a
-      // TypeError from downstream code, for example) that the old code
-      // would have silently collapsed into the same generic message.
-      if (import.meta.env.DEV) {
-        console.error('[careerconnect:diag] LoginPage.handleSubmit caught:', err)
-        console.error('[careerconnect:diag] typeof err:', typeof err, '| err instanceof Error:', err instanceof Error, '| isAxiosError(err):', isAxiosError(err))
-        if (err instanceof Error) {
-          console.error('[careerconnect:diag] err.name:', err.name, '| err.message:', err.message, '| err.stack:', err.stack)
-        }
-      }
-
       // Surface what actually happened instead of a generic message -
       // a 419/422/500 with a real backend message is a different
       // problem than the browser never getting a response at all

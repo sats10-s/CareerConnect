@@ -9,15 +9,22 @@ export const authService = {
   },
 
   async login(payload: LoginPayload): Promise<AuthUser> {
-    // TEMPORARY DIAGNOSTIC - remove once the browser login flow is
-    // confirmed working.
-    if (import.meta.env.DEV) console.log('[careerconnect:diag] authService.login: calling ensureCsrfCookie()')
     await ensureCsrfCookie()
-    if (import.meta.env.DEV) console.log('[careerconnect:diag] authService.login: ensureCsrfCookie() resolved, calling api.post(/auth/login)')
     const response = await api.post('/auth/login', payload)
-    if (import.meta.env.DEV) console.log('[careerconnect:diag] authService.login: api.post(/auth/login) resolved', { status: response.status, body: response.data })
-    const { data } = response
-    return data.data as AuthUser
+
+    // The backend wraps the user in a Laravel API resource envelope:
+    // { data: { id, name, email, role, is_active, ... }, token }.
+    // Extract explicitly and fail loudly if that shape isn't what came
+    // back, instead of silently returning `undefined` to the caller -
+    // an unhandled-shape bug here should surface as a clear error, not
+    // as a downstream "Cannot read properties of undefined" crash.
+    const user = response.data?.data as AuthUser | undefined
+    if (!user) {
+      throw new Error(
+        `Login response did not include a user object. Received: ${JSON.stringify(response.data)}`
+      )
+    }
+    return user
   },
 
   async logout(): Promise<void> {
