@@ -29,8 +29,13 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => 'InnoDB',
+            // PDO::MYSQL_ATTR_SSL_CA is deprecated as of PHP 8.5 in favour of
+            // the namespaced Pdo\Mysql::ATTR_SSL_CA constant (both resolve to
+            // the same underlying value). Pdo\Mysql only exists from PHP 8.4
+            // onward, so this falls back to the original PDO:: constant on
+            // 8.3 (the composer.json floor) rather than fatal-erroring there.
             'options' => extension_loaded('pdo_mysql') ? array_filter([
-                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                (class_exists(\Pdo\Mysql::class) ? \Pdo\Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
         ],
     ],
