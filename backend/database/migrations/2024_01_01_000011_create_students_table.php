@@ -15,10 +15,13 @@ return new class extends Migration
             $table->foreignId('department_id')->constrained('departments')->restrictOnDelete();
             $table->foreignId('batch_id')->constrained('batches')->restrictOnDelete();
             $table->string('phone', 20)->nullable();
-            // faculty_mentor_id -> faculty.id is added as a real FK in a
-            // later migration, once the `faculty` table exists (see
-            // 2024_01_01_000012_add_faculty_mentor_foreign_key...).
-            $table->unsignedBigInteger('faculty_mentor_id')->nullable();
+            // `faculty` is created before `students` (see the previous
+            // migration) specifically so this FK can be declared inline
+            // here, rather than bolted on afterwards - adding a foreign
+            // key to an already-existing table isn't portable across
+            // database drivers (SQLite in particular, which the test
+            // suite uses, doesn't support ALTER TABLE ADD CONSTRAINT).
+            $table->foreignId('faculty_mentor_id')->nullable()->constrained('faculty')->nullOnDelete();
             $table->timestamps();
 
             $table->index('department_id');
