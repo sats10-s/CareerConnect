@@ -8,3 +8,5 @@ npm-debug.log*
 .vscode/*
 !.vscode/extensions.json
 .DS_Store
+*.tsbuildinfo
+vite.config.ts.timestamp-*
