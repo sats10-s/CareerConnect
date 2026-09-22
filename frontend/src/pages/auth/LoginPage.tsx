@@ -25,8 +25,19 @@ export function LoginPage() {
       const redirectTo = (location.state as { from?: string } | null)?.from
       navigate(redirectTo ?? dashboardPathForRole(user.role), { replace: true })
     } catch (err) {
+      // Surface what actually happened instead of a generic message -
+      // a 419/422/500 with a real backend message is a different
+      // problem than the browser never getting a response at all
+      // (CORS/network failure), and hiding that distinction is what
+      // made this bug hard to diagnose from the UI alone.
       if (isAxiosError<ApiValidationError>(err)) {
-        setError(err.response?.data.message ?? 'Unable to log in. Please try again.')
+        if (err.response) {
+          setError(`Login failed (${err.response.status}): ${err.response.data?.message ?? 'No error message returned.'}`)
+        } else if (err.request) {
+          setError('Login failed: no response from the server. This usually means a CORS rejection or the backend is unreachable - check the browser console/Network tab.')
+        } else {
+          setError(`Login failed: ${err.message}`)
+        }
       } else {
         setError('Unable to log in. Please try again.')
       }

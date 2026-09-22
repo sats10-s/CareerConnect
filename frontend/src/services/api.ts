@@ -41,6 +41,18 @@ export const api = axios.create({
  */
 export async function ensureCsrfCookie(): Promise<void> {
   await axios.get(`${API_BASE_URL}/sanctum/csrf-cookie`, { withCredentials: true })
+
+  // TEMPORARY DIAGNOSTIC - remove once the browser login flow is
+  // confirmed working. XSRF-TOKEN is intentionally not httpOnly (the
+  // whole point of Sanctum's double-submit pattern is that JS can read
+  // it), so this tells us directly whether the cookie actually made it
+  // into the browser's cookie jar for this origin, independent of
+  // whether axios later attaches it as a header.
+  if (import.meta.env.DEV) {
+    const hasXsrfCookie = document.cookie.split('; ').some((c) => c.startsWith('XSRF-TOKEN='))
+    // eslint-disable-next-line no-console
+    console.log('[careerconnect:diag] after /sanctum/csrf-cookie, document.cookie has XSRF-TOKEN:', hasXsrfCookie, '| full document.cookie:', document.cookie)
+  }
 }
 
 api.interceptors.response.use(
@@ -52,6 +64,45 @@ api.interceptors.response.use(
       // Let the AuthContext decide what to do (e.g. clear user state);
       // we avoid a hard redirect here to keep this module UI-agnostic.
     }
+
+    // TEMPORARY DIAGNOSTIC - remove once the browser login flow is
+    // confirmed working. Logs exactly what happened on the wire for
+    // any failed request through this instance, instead of letting the
+    // UI collapse it into a generic message:
+    //  - error.response present  -> the server answered; status + body
+    //    are the ground truth for what actually went wrong.
+    //  - error.response absent, error.request present -> the browser
+    //    never got a response at all (CORS rejection, connection
+    //    refused, DNS failure, etc.) - this is NOT the same failure as
+    //    a 419/422/500 and needs a different fix.
+    if (import.meta.env.DEV) {
+      if (error?.response) {
+        // eslint-disable-next-line no-console
+        console.error('[careerconnect:diag] request failed WITH a response', {
+          url: error.config?.url,
+          method: error.config?.method,
+          status: error.response.status,
+          statusText: error.response.statusText,
+          responseData: error.response.data,
+          responseHeaders: error.response.headers,
+          requestHeadersSent: error.config?.headers,
+        })
+      } else if (error?.request) {
+        // eslint-disable-next-line no-console
+        console.error('[careerconnect:diag] request failed with NO response (network/CORS-level failure)', {
+          url: error.config?.url,
+          method: error.config?.method,
+          withCredentials: error.config?.withCredentials,
+          withXSRFToken: error.config?.withXSRFToken,
+          message: error.message,
+          code: error.code,
+        })
+      } else {
+        // eslint-disable-next-line no-console
+        console.error('[careerconnect:diag] request setup failed before it was sent', error)
+      }
+    }
+
     return Promise.reject(error)
   }
 )
