@@ -21,10 +21,28 @@ export function LoginPage() {
     setError(null)
     setIsSubmitting(true)
     try {
+      // TEMPORARY DIAGNOSTIC - remove once the browser login flow is
+      // confirmed working.
+      if (import.meta.env.DEV) console.log('[careerconnect:diag] LoginPage.handleSubmit: calling login()')
       const user = await login({ email, password })
+      if (import.meta.env.DEV) console.log('[careerconnect:diag] LoginPage.handleSubmit: login() resolved', user)
       const redirectTo = (location.state as { from?: string } | null)?.from
       navigate(redirectTo ?? dashboardPathForRole(user.role), { replace: true })
     } catch (err) {
+      // TEMPORARY DIAGNOSTIC - remove once the browser login flow is
+      // confirmed working. Logs the RAW error exactly as caught, before
+      // any isAxiosError branching - this is what tells us whether it's
+      // really an AxiosError at all, or something else entirely (a
+      // TypeError from downstream code, for example) that the old code
+      // would have silently collapsed into the same generic message.
+      if (import.meta.env.DEV) {
+        console.error('[careerconnect:diag] LoginPage.handleSubmit caught:', err)
+        console.error('[careerconnect:diag] typeof err:', typeof err, '| err instanceof Error:', err instanceof Error, '| isAxiosError(err):', isAxiosError(err))
+        if (err instanceof Error) {
+          console.error('[careerconnect:diag] err.name:', err.name, '| err.message:', err.message, '| err.stack:', err.stack)
+        }
+      }
+
       // Surface what actually happened instead of a generic message -
       // a 419/422/500 with a real backend message is a different
       // problem than the browser never getting a response at all
@@ -38,6 +56,13 @@ export function LoginPage() {
         } else {
           setError(`Login failed: ${err.message}`)
         }
+      } else if (import.meta.env.DEV && err instanceof Error) {
+        // A non-axios error means something threw outside the HTTP
+        // request itself (e.g. in the post-login redirect logic) -
+        // show it plainly in dev rather than hiding it behind the
+        // generic copy, since that's exactly the case the generic
+        // message was masking.
+        setError(`Unexpected error (not an HTTP failure): ${err.name}: ${err.message}`)
       } else {
         setError('Unable to log in. Please try again.')
       }

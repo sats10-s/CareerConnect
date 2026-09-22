@@ -9,8 +9,14 @@ export const authService = {
   },
 
   async login(payload: LoginPayload): Promise<AuthUser> {
+    // TEMPORARY DIAGNOSTIC - remove once the browser login flow is
+    // confirmed working.
+    if (import.meta.env.DEV) console.log('[careerconnect:diag] authService.login: calling ensureCsrfCookie()')
     await ensureCsrfCookie()
-    const { data } = await api.post('/auth/login', payload)
+    if (import.meta.env.DEV) console.log('[careerconnect:diag] authService.login: ensureCsrfCookie() resolved, calling api.post(/auth/login)')
+    const response = await api.post('/auth/login', payload)
+    if (import.meta.env.DEV) console.log('[careerconnect:diag] authService.login: api.post(/auth/login) resolved', { status: response.status, body: response.data })
+    const { data } = response
     return data.data as AuthUser
   },
 

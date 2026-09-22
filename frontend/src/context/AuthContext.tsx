@@ -39,7 +39,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh])
 
   const login = useCallback(async (payload: LoginPayload) => {
+    // TEMPORARY DIAGNOSTIC - remove once the browser login flow is
+    // confirmed working.
+    if (import.meta.env.DEV) console.log('[careerconnect:diag] AuthContext.login: calling authService.login()')
     const loggedInUser = await authService.login(payload)
+    if (import.meta.env.DEV) console.log('[careerconnect:diag] AuthContext.login: authService.login() resolved', loggedInUser)
     setUser(loggedInUser)
     return loggedInUser
   }, [])
