@@ -1,0 +1,25 @@
+import { api, ensureCsrfCookie } from './api'
+import type { AuthUser, LoginPayload, RegisterPayload } from '@/types/auth'
+
+export const authService = {
+  async register(payload: RegisterPayload): Promise<AuthUser> {
+    await ensureCsrfCookie()
+    const { data } = await api.post('/register', payload)
+    return data.data as AuthUser
+  },
+
+  async login(payload: LoginPayload): Promise<AuthUser> {
+    await ensureCsrfCookie()
+    const { data } = await api.post('/login', payload)
+    return data.data as AuthUser
+  },
+
+  async logout(): Promise<void> {
+    await api.post('/logout')
+  },
+
+  async me(): Promise<AuthUser> {
+    const { data } = await api.get('/me')
+    return data.data as AuthUser
+  },
+}
