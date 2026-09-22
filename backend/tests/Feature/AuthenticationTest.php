@@ -132,6 +132,11 @@ class AuthenticationTest extends TestCase
             'batch_id' => $this->batch->id,
         ]);
 
+        // Deliberately sends no Origin/Referer header, i.e. a plain
+        // token client (curl, Postman, a mobile app) rather than the
+        // SPA - this is the path that used to throw "Session store not
+        // set on request." because the controller touched the session
+        // unconditionally. It must still succeed and return a token.
         $response = $this->postJson('/api/auth/login', [
             'email' => 'diya@careerconnect.edu',
             'password' => 'Password@123',
@@ -140,6 +145,38 @@ class AuthenticationTest extends TestCase
         $response->assertOk();
         $response->assertJsonPath('data.email', 'diya@careerconnect.edu');
         $response->assertJsonStructure(['data' => ['id', 'name', 'email', 'role'], 'token']);
+    }
+
+    public function test_login_establishes_a_stateful_session_for_spa_requests(): void
+    {
+        $user = User::create([
+            'name' => 'Meera Nair',
+            'email' => 'meera@careerconnect.edu',
+            'password' => Hash::make('Password@123'),
+            'role_id' => $this->studentRole->id,
+        ]);
+        Student::create([
+            'user_id' => $user->id,
+            'roll_number' => 'CC24008',
+            'department_id' => $this->department->id,
+            'batch_id' => $this->batch->id,
+        ]);
+
+        // An Origin matching SANCTUM_STATEFUL_DOMAINS is what
+        // EnsureFrontendRequestsAreStateful treats as "from the
+        // frontend" - only then does it start a session, which is what
+        // lets AuthController@login call Auth::login() and
+        // session()->regenerate(). This is the actual SPA login path
+        // the React app uses; it must still work now that the session
+        // calls are conditional on $request->hasSession().
+        $response = $this->withHeaders(['Origin' => 'http://localhost'])
+            ->postJson('/api/auth/login', [
+                'email' => 'meera@careerconnect.edu',
+                'password' => 'Password@123',
+            ]);
+
+        $response->assertOk();
+        $response->assertCookie(config('session.cookie'));
     }
 
     public function test_login_fails_with_incorrect_password(): void

@@ -26,8 +26,20 @@ class AuthController extends Controller
     {
         $user = $this->registrationService->registerStudent($request->validated());
 
-        Auth::login($user);
-        $request->session()->regenerate();
+        // Only touch the session when this request actually went through
+        // Sanctum's stateful pipeline (EnsureFrontendRequestsAreStateful,
+        // enabled via ->statefulApi() in bootstrap/app.php). That
+        // middleware only starts a session for requests whose
+        // Origin/Referer matches SANCTUM_STATEFUL_DOMAINS - i.e. the SPA.
+        // A token-only client (curl, Postman, a mobile app) never gets a
+        // session store attached to the request, so calling
+        // $request->session() unconditionally throws "Session store not
+        // set on request." $request->hasSession() is the documented way
+        // to branch on that without guessing from headers ourselves.
+        if ($request->hasSession()) {
+            Auth::login($user);
+            $request->session()->regenerate();
+        }
 
         return (new UserResource($user))
             ->response()
@@ -35,15 +47,20 @@ class AuthController extends Controller
     }
 
     /**
-     * Session-based login (SPA, via Sanctum). Also issues a bearer
-     * token so the same endpoint works for non-cookie clients.
+     * Works as both a session-based login for the SPA (Sanctum's stateful
+     * cookie auth, when the request comes from a stateful domain) and a
+     * plain token endpoint for any other client - the same response
+     * always includes a bearer token, and the session is only touched
+     * when one is actually present on the request.
      */
     public function login(LoginRequest $request): JsonResponse
     {
         $user = $this->authService->attemptLogin($request->validated());
 
-        Auth::login($user);
-        $request->session()->regenerate();
+        if ($request->hasSession()) {
+            Auth::login($user);
+            $request->session()->regenerate();
+        }
 
         $token = $user->createToken('careerconnect-api')->plainTextToken;
 
@@ -56,9 +73,11 @@ class AuthController extends Controller
     {
         $request->user()?->currentAccessToken()?->delete();
 
-        Auth::guard('web')->logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        if ($request->hasSession()) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
 
         return response()->json(['message' => 'Logged out successfully.']);
     }
