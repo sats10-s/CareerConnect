@@ -108,7 +108,7 @@ class ApplicationTest extends TestCase
      * can actually produce (initial APPLIED history included) rather
      * than a hand-built row.
      */
-    private function createApplication(JobPosting $jobPosting): Application
+    private function makeApplication(JobPosting $jobPosting): Application
     {
         Sanctum::actingAs($this->makeStudentUser(), ['*']);
         $data = $this->postJson("/api/student/opportunities/jobs/{$jobPosting->id}/apply")->json('data');
@@ -119,7 +119,7 @@ class ApplicationTest extends TestCase
     public function test_admin_can_list_applications(): void
     {
         $jobPosting = $this->makeJobPosting();
-        $this->createApplication($jobPosting);
+        $this->makeApplication($jobPosting);
 
         Sanctum::actingAs($this->makeAdmin(), ['*']);
         $response = $this->getJson('/api/admin/applications');
@@ -132,7 +132,7 @@ class ApplicationTest extends TestCase
     public function test_admin_can_view_application_detail(): void
     {
         $jobPosting = $this->makeJobPosting();
-        $application = $this->createApplication($jobPosting);
+        $application = $this->makeApplication($jobPosting);
 
         Sanctum::actingAs($this->makeAdmin(), ['*']);
         $response = $this->getJson("/api/admin/applications/{$application->id}");
@@ -147,7 +147,7 @@ class ApplicationTest extends TestCase
     public function test_admin_can_update_application_status(): void
     {
         $jobPosting = $this->makeJobPosting();
-        $application = $this->createApplication($jobPosting);
+        $application = $this->makeApplication($jobPosting);
 
         Sanctum::actingAs($this->makeAdmin(), ['*']);
         $response = $this->patchJson("/api/admin/applications/{$application->id}/status", [
@@ -163,7 +163,7 @@ class ApplicationTest extends TestCase
     public function test_valid_transition_succeeds(): void
     {
         $jobPosting = $this->makeJobPosting();
-        $application = $this->createApplication($jobPosting);
+        $application = $this->makeApplication($jobPosting);
         $application->update(['status' => ApplicationStatus::UNDER_REVIEW]);
 
         Sanctum::actingAs($this->makeAdmin(), ['*']);
@@ -176,7 +176,7 @@ class ApplicationTest extends TestCase
     public function test_invalid_transition_is_rejected(): void
     {
         $jobPosting = $this->makeJobPosting();
-        $application = $this->createApplication($jobPosting);
+        $application = $this->makeApplication($jobPosting);
         // APPLIED -> SELECTED is not a supported transition.
 
         Sanctum::actingAs($this->makeAdmin(), ['*']);
@@ -189,7 +189,7 @@ class ApplicationTest extends TestCase
     public function test_admin_cannot_set_status_to_withdrawn(): void
     {
         $jobPosting = $this->makeJobPosting();
-        $application = $this->createApplication($jobPosting);
+        $application = $this->makeApplication($jobPosting);
 
         Sanctum::actingAs($this->makeAdmin(), ['*']);
         $response = $this->patchJson("/api/admin/applications/{$application->id}/status", ['status' => 'WITHDRAWN']);
@@ -201,7 +201,7 @@ class ApplicationTest extends TestCase
     public function test_status_change_creates_a_history_record(): void
     {
         $jobPosting = $this->makeJobPosting();
-        $application = $this->createApplication($jobPosting);
+        $application = $this->makeApplication($jobPosting);
 
         Sanctum::actingAs($this->makeAdmin(), ['*']);
         $this->patchJson("/api/admin/applications/{$application->id}/status", [
@@ -221,7 +221,7 @@ class ApplicationTest extends TestCase
     public function test_selected_at_and_rejection_reason_are_recorded_correctly(): void
     {
         $jobPosting = $this->makeJobPosting();
-        $application = $this->createApplication($jobPosting);
+        $application = $this->makeApplication($jobPosting);
         $application->update(['status' => ApplicationStatus::UNDER_REVIEW]);
 
         Sanctum::actingAs($this->makeAdmin(), ['*']);
@@ -243,7 +243,7 @@ class ApplicationTest extends TestCase
     public function test_student_cannot_update_application_status(): void
     {
         $jobPosting = $this->makeJobPosting();
-        $application = $this->createApplication($jobPosting);
+        $application = $this->makeApplication($jobPosting);
 
         Sanctum::actingAs($this->makeStudentUser(), ['*']);
         $this->patchJson("/api/admin/applications/{$application->id}/status", ['status' => 'UNDER_REVIEW'])
@@ -253,7 +253,7 @@ class ApplicationTest extends TestCase
     public function test_faculty_cannot_update_application_status(): void
     {
         $jobPosting = $this->makeJobPosting();
-        $application = $this->createApplication($jobPosting);
+        $application = $this->makeApplication($jobPosting);
 
         Sanctum::actingAs($this->makeFaculty(), ['*']);
         $this->patchJson("/api/admin/applications/{$application->id}/status", ['status' => 'UNDER_REVIEW'])
