@@ -21,6 +21,14 @@ class Student extends Model
         'backlogs',
         'phone',
         'faculty_mentor_id',
+        'personal_email',
+        'linkedin_url',
+        'github_url',
+        'portfolio_url',
+        'resume_path',
+        'resume_original_name',
+        'resume_size',
+        'resume_uploaded_at',
     ];
 
     protected function casts(): array
@@ -29,6 +37,8 @@ class Student extends Model
             'year' => 'integer',
             'cgpa' => 'decimal:2',
             'backlogs' => 'integer',
+            'resume_size' => 'integer',
+            'resume_uploaded_at' => 'datetime',
         ];
     }
 
@@ -55,5 +65,25 @@ class Student extends Model
     public function applications(): HasMany
     {
         return $this->hasMany(Application::class);
+    }
+
+    public function skills(): HasMany
+    {
+        return $this->hasMany(StudentSkill::class);
+    }
+
+    public function projects(): HasMany
+    {
+        return $this->hasMany(StudentProject::class);
+    }
+
+    public function certifications(): HasMany
+    {
+        return $this->hasMany(StudentCertification::class);
+    }
+
+    public function experiences(): HasMany
+    {
+        return $this->hasMany(StudentExperience::class);
     }
 }

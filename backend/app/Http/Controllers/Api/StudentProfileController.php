@@ -2,38 +2,41 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\Student\Concerns\ReturnsFreshProfile;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Student\UpdateProfileRequest;
-use App\Http\Resources\UserResource;
+use App\Http\Resources\StudentProfileResource;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
- * A student viewing/editing their own profile. Distinct from
- * AuthController@me: that endpoint is the app-boot "who am I"
- * check used everywhere, this one is specifically the editable
- * profile screen and is the only place a student can change their
- * roll_number/department/batch/year/cgpa/backlogs/phone.
+ * A student viewing/editing their own profile - the full Student
+ * Profile module (personal/academic/skills/projects/certifications/
+ * experience/links/resume + the deterministic completion percentage).
+ * Skills/projects/certifications/experiences/resume each have their
+ * own controller under Api\Student\* since each is its own set of CRUD
+ * endpoints; this one owns the single profile record itself.
  *
- * Route-gated by auth:sanctum + role:STUDENT (see routes/api.php),
- * so there's no cross-student access to guard against here - a
- * student can only ever read/write their own record via
- * $request->user()->student.
+ * Route-gated by auth:sanctum + role:STUDENT (see routes/api.php), so
+ * there's no cross-student access to guard against here - a student
+ * can only ever read/write their own record via
+ * $request->user()->student, never an id supplied by the client.
  */
 class StudentProfileController extends Controller
 {
-    public function show(Request $request): UserResource
-    {
-        $user = $request->user()->load(['role', 'student.department', 'student.batch']);
+    use ReturnsFreshProfile;
 
-        return new UserResource($user);
+    public function show(Request $request): StudentProfileResource
+    {
+        return $this->freshProfile($request);
     }
 
-    public function update(UpdateProfileRequest $request): UserResource
+    public function update(UpdateProfileRequest $request): StudentProfileResource
     {
-        $request->user()->student()->update($request->validated());
+        DB::transaction(function () use ($request) {
+            $request->user()->student()->update($request->validated());
+        });
 
-        $user = $request->user()->fresh()->load(['role', 'student.department', 'student.batch']);
-
-        return new UserResource($user);
+        return $this->freshProfile($request);
     }
 }
