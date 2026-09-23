@@ -108,7 +108,7 @@ class AttendanceController extends Controller
             ->orderByDesc('attendance_date')
             ->get();
 
-        return $this->success(
+        $response = $this->success(
             data: [
                 'assignment' => new InternshipAssignmentListResource($assignment),
                 'summary' => new AttendanceSummaryResource($this->attendanceService->getAssignmentAttendanceSummary($assignment)),
@@ -116,5 +116,17 @@ class AttendanceController extends Controller
             ],
             message: 'Attendance retrieved successfully.',
         );
+
+        // attendance_percentage is a genuine PHP float that can
+        // legitimately land on a whole number - 0 or 100 - and PHP's
+        // default JSON encoding collapses a whole-number float to
+        // "100" instead of "100.0" unless explicitly told to preserve
+        // the fraction. Scoped to just this one response, not the
+        // shared FormatsApiResponse trait every controller in this
+        // codebase uses, since no other endpoint returns a raw float
+        // that needs it.
+        $response->setEncodingOptions($response->getEncodingOptions() | JSON_PRESERVE_ZERO_FRACTION);
+
+        return $response;
     }
 }

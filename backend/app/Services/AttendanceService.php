@@ -135,9 +135,12 @@ class AttendanceService
         $oldCheckOut = $attendance->check_out_time;
         $oldRemarks = $attendance->remarks;
 
+        $explicitCheckIn = array_key_exists('check_in_time', $data);
+        $explicitCheckOut = array_key_exists('check_out_time', $data);
+
         $newStatus = array_key_exists('status', $data) ? $this->normalizeStatus($data['status']) : $oldStatus;
-        $newCheckIn = array_key_exists('check_in_time', $data) ? $data['check_in_time'] : $oldCheckIn;
-        $newCheckOut = array_key_exists('check_out_time', $data) ? $data['check_out_time'] : $oldCheckOut;
+        $newCheckIn = $explicitCheckIn ? $data['check_in_time'] : $oldCheckIn;
+        $newCheckOut = $explicitCheckOut ? $data['check_out_time'] : $oldCheckOut;
         $newRemarks = array_key_exists('remarks', $data) ? $data['remarks'] : $oldRemarks;
 
         // Re-derive time consistency from the EFFECTIVE resulting state,
@@ -145,7 +148,21 @@ class AttendanceService
         // include - e.g. changing status to ABSENT without explicitly
         // clearing check_in_time still results in a consistent record,
         // never a stale PRESENT-shaped time left dangling on an ABSENT
-        // row.
+        // row. That means a bare {status: "ABSENT"} request - which
+        // carries over the OLD, still-non-null PRESENT times because
+        // neither time field was touched - must silently clear them
+        // here rather than let assertTimeConsistency() reject them as
+        // a contradiction; the client is never forced to redundantly
+        // null the times out itself just to change the status. Only an
+        // EXPLICITLY supplied non-null time alongside a status that
+        // disallows times (e.g. {status: "ABSENT", check_in_time:
+        // "09:00"}) is a genuine error, which assertTimeConsistency()
+        // below still catches.
+        if (! $newStatus->allowsTimes() && ! $explicitCheckIn && ! $explicitCheckOut) {
+            $newCheckIn = null;
+            $newCheckOut = null;
+        }
+
         [$newCheckIn, $newCheckOut] = $this->assertTimeConsistency($newStatus, $newCheckIn, $newCheckOut);
 
         $unchanged = $newStatus === $oldStatus
