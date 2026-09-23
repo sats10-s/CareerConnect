@@ -1,12 +1,38 @@
-import { useEffect, useState } from 'react'
-import { Briefcase, CheckCircle2, ClipboardList, MessagesSquare, UserCircle2 } from 'lucide-react'
-import { StatCard } from '@/components/ui/StatCard'
-import { Card, CardHeader } from '@/components/ui/Card'
-import { Badge, toneForStatus } from '@/components/ui/Badge'
+import { useEffect, useMemo, useState } from 'react'
+import { WelcomeHeader } from '@/components/dashboard/WelcomeHeader'
+import { MetricBand, type Metric } from '@/components/dashboard/MetricBand'
+import { JourneyProgress, type JourneyStep } from '@/components/dashboard/JourneyProgress'
+import { ApplicationActivity } from '@/components/dashboard/ApplicationActivity'
+import { OpportunityList } from '@/components/dashboard/OpportunityList'
+import { UpcomingInterview } from '@/components/dashboard/UpcomingInterview'
+import { ProfileStrength } from '@/components/dashboard/ProfileStrength'
+import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
 import { Spinner } from '@/components/ui/Spinner'
 import { dashboardService } from '@/services/dashboardService'
 import { useAuth } from '@/hooks/useAuth'
 import type { StudentDashboardData } from '@/types/dashboard'
+
+/**
+ * Derives journey steps from the stats the backend already returns.
+ * There's no dedicated "journey stage" field in the API - this is a
+ * client-side presentation of existing counts, not fabricated data:
+ * each step's state is a direct function of a real stat being > 0.
+ */
+function deriveJourneySteps(stats: StudentDashboardData['stats']): JourneyStep[] {
+  const order = [
+    { label: 'Registered', reached: true },
+    { label: 'Applied', reached: stats.applications > 0 },
+    { label: 'Shortlisted', reached: stats.shortlisted > 0 },
+    { label: 'Interview', reached: stats.interviews > 0 },
+    { label: 'Selected', reached: stats.selected > 0 },
+  ]
+  const currentIndex = order.reduce((last, step, i) => (step.reached ? i : last), 0)
+
+  return order.map((step, i) => ({
+    label: step.label,
+    state: i < currentIndex ? 'complete' : i === currentIndex ? 'current' : 'upcoming',
+  }))
+}
 
 export function StudentDashboardPage() {
   const { user } = useAuth()
@@ -17,6 +43,16 @@ export function StudentDashboardPage() {
     dashboardService.student().then(setData).finally(() => setIsLoading(false))
   }, [])
 
+  const metrics = useMemo<Metric[]>(() => {
+    if (!data) return []
+    return [
+      { label: 'Applications', value: data.stats.applications },
+      { label: 'Shortlisted', value: data.stats.shortlisted },
+      { label: 'Interviews', value: data.stats.interviews },
+      { label: 'Selected', value: data.stats.selected },
+    ]
+  }, [data])
+
   if (isLoading) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
@@ -26,51 +62,33 @@ export function StudentDashboardPage() {
   }
 
   if (!data) {
-    return <p className="text-sm text-gray-500">Unable to load dashboard data right now.</p>
+    return <p className="text-sm text-ink-faint">Unable to load dashboard data right now.</p>
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-gray-900">Welcome back, {user?.name?.split(' ')[0]} 👋</h2>
-        <p className="mt-1 text-sm text-gray-500">Here's where your placement journey stands today.</p>
-      </div>
+    <div className="space-y-8">
+      <WelcomeHeader name={user?.name ?? ''} department={user?.student?.department} batch={user?.student?.batch} />
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        <StatCard label="Applications" value={data.stats.applications} icon={ClipboardList} tone="navy" />
-        <StatCard label="Shortlisted" value={data.stats.shortlisted} icon={Briefcase} tone="amber" />
-        <StatCard label="Interviews" value={data.stats.interviews} icon={MessagesSquare} tone="blue" />
-        <StatCard label="Selected" value={data.stats.selected} icon={CheckCircle2} tone="green" />
-        <StatCard label="Profile Completion" value={data.stats.profile_completion} suffix="%" icon={UserCircle2} tone="navy" />
-      </div>
+      <MetricBand metrics={metrics} />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader title="Recent applications" subtitle="Your latest job & internship applications" />
-          <div className="divide-y divide-gray-100">
-            {data.recent_applications.length === 0 && (
-              <p className="px-5 py-8 text-center text-sm text-gray-500">No applications yet — browse Jobs or Internships to get started.</p>
-            )}
-            {data.recent_applications.map((app) => (
-              <div key={app.id} className="flex items-center justify-between gap-4 px-5 py-3.5">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-gray-900">{app.title ?? 'Untitled opportunity'}</p>
-                  <p className="truncate text-xs text-gray-500">{app.company} · {app.type === 'internship' ? 'Internship' : 'Job'}</p>
-                </div>
-                <Badge tone={toneForStatus(app.status)}>{app.status}</Badge>
-              </div>
-            ))}
-          </div>
-        </Card>
+      <section>
+        <h2 className="text-sm font-semibold text-ink">Your placement journey</h2>
+        <div className="mt-4">
+          <JourneyProgress steps={deriveJourneySteps(data.stats)} />
+        </div>
+      </section>
 
-        <Card>
-          <CardHeader title="Notifications" />
-          <div className="divide-y divide-gray-100">
-            {data.notifications.map((note) => (
-              <div key={note.id} className="px-5 py-3.5 text-sm text-gray-700">{note.message}</div>
-            ))}
-          </div>
-        </Card>
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <div className="space-y-8 lg:col-span-2">
+          <ApplicationActivity applications={data.recent_applications} />
+          <OpportunityList />
+        </div>
+
+        <div className="space-y-6">
+          <ProfileStrength percentage={data.stats.profile_completion} />
+          <UpcomingInterview />
+          <ActivityFeed notifications={data.notifications} />
+        </div>
       </div>
     </div>
   )

@@ -2,12 +2,16 @@ import type { LucideIcon } from 'lucide-react'
 
 type Tone = 'navy' | 'blue' | 'green' | 'amber' | 'red'
 
+// Kept as boxed stat cards for the dashboards that still use this
+// pattern (Faculty/Admin/Super Admin) - the Student dashboard's own
+// metrics now use MetricBand (a divided strip, not boxed cards) per
+// the design system's "never 4 identical boxed stat cards" rule.
 const TONE_CLASSES: Record<Tone, string> = {
-  navy: 'bg-navy-50 text-navy-700',
-  blue: 'bg-blue-50 text-blue-700',
-  green: 'bg-emerald-50 text-emerald-700',
-  amber: 'bg-amber-50 text-amber-700',
-  red: 'bg-red-50 text-red-700',
+  navy: 'bg-indigo-tint text-indigo',
+  blue: 'bg-indigo-tint text-indigo',
+  green: 'bg-success-bg text-success',
+  amber: 'bg-warning-bg text-warning',
+  red: 'bg-error-bg text-error',
 }
 
 interface StatCardProps {
@@ -22,14 +26,14 @@ export function StatCard({ label, value, icon: Icon, tone = 'navy', suffix }: St
   return (
     <div className="card animate-fade-in p-5">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-gray-500">{label}</p>
+        <p className="text-sm font-medium text-ink-soft">{label}</p>
         <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${TONE_CLASSES[tone]}`}>
           <Icon className="h-[18px] w-[18px]" />
         </span>
       </div>
-      <p className="mt-3 text-2xl font-bold tracking-tight text-gray-900">
+      <p className="mt-3 text-2xl font-bold tabular-nums tracking-tight text-ink">
         {value}
-        {suffix && <span className="ml-0.5 text-base font-semibold text-gray-400">{suffix}</span>}
+        {suffix && <span className="ml-0.5 text-base font-semibold text-ink-faint">{suffix}</span>}
       </p>
     </div>
   )

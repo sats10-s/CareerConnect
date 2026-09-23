@@ -2,17 +2,98 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Design tokens - CareerConnect visual design system.
+ *
+ * Light values are the spec's role-mapped palette (60% canvas / 30%
+ * surface / 10% indigo+gold, per the 60-30-10 rule). Dark values are a
+ * SEPARATE, deliberately chosen palette (deep charcoal/navy, brightened
+ * indigo/gold) - not an inversion - each independently contrast-checked
+ * against WCAG AA. See the design-system report for the full ratio audit.
+ *
+ * Two tokens were adjusted from the literal spec values because they
+ * measured below the required 4.5:1 for the text usage they're meant
+ * for (verified with a WCAG relative-luminance contrast script, not
+ * assumed):
+ *   --ink-faint  spec gave #8D8E87 (3.12:1 on canvas, 3.31:1 on surface -
+ *                fails). Darkened to #72736D (4.51:1 on canvas, 4.79:1 on
+ *                surface). Scoped to canvas/surface only - not used on
+ *                --sidebar, where it drops back under 4.5:1.
+ *   --gold-ink   NEW token, not in the original spec. The spec's base
+ *                --gold (#A9822E) on --gold-bg measures 3.10:1 - clears
+ *                the 3:1 non-text/large-text threshold but not 4.5:1 for
+ *                small text (e.g. a "Selected" status badge's label).
+ *                --gold stays exactly as specified for its intended
+ *                non-text uses (borders, icons, large numerals, rings,
+ *                dots); --gold-ink (#876824, 4.54:1 on --gold-bg) is
+ *                what small gold-toned text actually uses.
+ */
+:root {
+  --canvas: #faf8f3;
+  --surface: #ffffff;
+  --sidebar: #f4f1e9;
+  --border: #e4e1d6;
+
+  --indigo: #2b3f8c;
+  --indigo-tint: #eef1fa;
+
+  --gold: #a9822e;
+  --gold-bg: #f6efdf;
+  --gold-ink: #876824;
+
+  --success: #1c6e45;
+  --success-bg: #e7f2ea;
+  --warning: #8a5b12;
+  --warning-bg: #f8efdd;
+  --error: #a93a2e;
+  --error-bg: #f8e9e7;
+
+  --ink: #20221f;
+  --ink-soft: #5c5d57;
+  --ink-faint: #72736d;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #14161c;
+    --surface: #1c1f27;
+    --sidebar: #10121a;
+    --border: #2c2f3a;
+
+    --indigo: #8fa3ee;
+    --indigo-tint: #212a4d;
+
+    --gold: #d9b25c;
+    --gold-bg: #3a2f14;
+    --gold-ink: #f0ce85;
+
+    --success: #5fc08a;
+    --success-bg: #153224;
+    --warning: #e0ac55;
+    --warning-bg: #3a2a0e;
+    --error: #e88478;
+    --error-bg: #3a1b17;
+
+    --ink: #f2f1ec;
+    --ink-soft: #bdbeb6;
+    --ink-faint: #8f9098;
+  }
+}
+
 @layer base {
   html {
     font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
   }
 
   body {
-    @apply bg-gray-50 text-gray-900 antialiased;
+    @apply antialiased;
+    background-color: var(--canvas);
+    color: var(--ink);
   }
 
   :focus-visible {
-    @apply outline-none ring-2 ring-navy-500 ring-offset-2 ring-offset-white;
+    outline: none;
+    box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--indigo);
   }
 }
 
@@ -22,22 +103,55 @@
   }
 
   .btn-primary {
-    @apply btn bg-navy-800 text-white hover:bg-navy-900 active:bg-navy-950;
+    @apply btn text-white;
+    background-color: var(--indigo);
+  }
+  .btn-primary:hover {
+    background-color: color-mix(in srgb, var(--indigo) 88%, black);
+  }
+  .btn-primary:active {
+    background-color: color-mix(in srgb, var(--indigo) 78%, black);
   }
 
   .btn-secondary {
-    @apply btn border border-gray-300 bg-white text-gray-700 hover:bg-gray-50;
+    @apply btn;
+    border: 1px solid var(--border);
+    background-color: var(--surface);
+    color: var(--ink);
+  }
+  .btn-secondary:hover {
+    background-color: var(--sidebar);
   }
 
   .card {
-    @apply rounded-xl border border-gray-200 bg-white shadow-sm;
+    @apply rounded-xl shadow-sm;
+    border: 1px solid var(--border);
+    background-color: var(--surface);
   }
 
   .input {
-    @apply w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 transition-colors focus:border-navy-500 focus:ring-1 focus:ring-navy-500;
+    @apply w-full rounded-lg px-3.5 py-2.5 text-sm transition-colors;
+    border: 1px solid var(--border);
+    background-color: var(--surface);
+    color: var(--ink);
+  }
+  .input::placeholder {
+    color: var(--ink-faint);
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--indigo);
+    box-shadow: 0 0 0 1px var(--indigo);
   }
 
   .label {
-    @apply mb-1.5 block text-sm font-medium text-gray-700;
+    @apply mb-1.5 block text-sm font-medium;
+    color: var(--ink-soft);
+  }
+
+  /* The ONE serif-italic accent moment - dashboard greeting only. */
+  .font-display-italic {
+    font-family: 'Newsreader', ui-serif, Georgia, serif;
+    font-style: italic;
   }
 }

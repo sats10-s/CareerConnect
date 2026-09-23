@@ -20,20 +20,20 @@ export function DashboardLayout({ role }: { role: Role }) {
   const activeLabel = items.find((item) => item.path === location.pathname)?.label ?? items[0]?.label ?? 'Dashboard'
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div className="flex h-screen overflow-hidden bg-canvas">
       <Sidebar items={items} roleLabel={ROLE_LABEL[role]} />
 
       {mobileOpen && (
         <div className="fixed inset-0 z-40 flex lg:hidden">
-          <div className="fixed inset-0 bg-gray-900/50" onClick={() => setMobileOpen(false)} />
-          <div className="relative flex w-64 flex-col bg-white shadow-xl">
-            <div className="flex h-16 items-center justify-between border-b border-gray-100 px-4">
-              <span className="text-sm font-bold text-gray-900">CareerConnect</span>
-              <button onClick={() => setMobileOpen(false)} className="rounded-lg p-1.5 hover:bg-gray-100" aria-label="Close navigation">
+          <div className="fixed inset-0 bg-ink/50" onClick={() => setMobileOpen(false)} />
+          <div className="relative flex w-64 flex-col bg-sidebar shadow-xl">
+            <div className="flex h-16 items-center justify-between border-b border-border px-4">
+              <span className="text-sm font-bold text-ink">CareerConnect</span>
+              <button onClick={() => setMobileOpen(false)} className="rounded-lg p-1.5 hover:bg-surface" aria-label="Close navigation">
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <Sidebar items={items} roleLabel={ROLE_LABEL[role]} />
+            <Sidebar items={items} roleLabel={ROLE_LABEL[role]} variant="mobile" />
           </div>
         </div>
       )}
