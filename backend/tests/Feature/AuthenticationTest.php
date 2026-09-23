@@ -229,6 +229,28 @@ class AuthenticationTest extends TestCase
         $this->getJson('/api/super-admin/dashboard')->assertStatus(401);
     }
 
+    /**
+     * Regression test for bootstrap/app.php's guest-redirect override.
+     * Illuminate\Foundation\Configuration\ApplicationBuilder::withMiddleware()
+     * unconditionally seeds a default guest-redirect callback of
+     * `fn () => route('login')` *before* this app's own withMiddleware()
+     * closure runs, and Authenticate::unauthenticated() only skips
+     * calling it when $request->expectsJson() is already true. This app
+     * is API-only and defines no named `login` route anywhere, so a
+     * PLAIN unauthenticated request that does NOT send an
+     * `Accept: application/json` header - unlike getJson()/postJson(),
+     * which every other guest test in this suite uses - used to hit
+     * that default closure and throw "Route [login] not defined."
+     * instead of returning 401. bootstrap/app.php now overrides it via
+     * redirectGuestsTo() for every /api/* request; this proves it stays
+     * fixed, independent of any single endpoint.
+     */
+    public function test_guest_receives_json_401_without_a_json_accept_header(): void
+    {
+        $this->get('/api/student/dashboard')->assertStatus(401);
+        $this->post('/api/auth/logout')->assertStatus(401);
+    }
+
     public function test_authenticated_user_can_fetch_own_profile_via_me(): void
     {
         $user = User::create([
