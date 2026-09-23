@@ -50,14 +50,18 @@ class PpoRecordPolicy
     }
 
     /**
-     * Faculty-owner only, AND the record must not already be terminal
-     * (ACCEPTED/DECLINED) - re-checked again in
-     * InternshipCompletionService::updatePpo() as the load-bearing
-     * check.
+     * Faculty-owner ONLY - this is an object-level ownership check, not
+     * a lifecycle/state check. Whether the record is already terminal
+     * (ACCEPTED/DECLINED) is deliberately NOT checked here, for the
+     * same reason given in InternshipCompletionPolicy::update()'s own
+     * docblock: ownership is a 403 concern, an invalid transition on a
+     * record you DO own is a 422 concern, and
+     * InternshipCompletionService::updatePpo() is the sole, load-bearing
+     * place that enforces the latter.
      */
     public function update(User $user, PpoRecord $ppoRecord): bool
     {
-        return $this->facultyOwns($user, $ppoRecord->internshipAssignment) && ! $ppoRecord->status->isTerminal();
+        return $this->facultyOwns($user, $ppoRecord->internshipAssignment);
     }
 
     private function facultyOwns(User $user, InternshipAssignment $assignment): bool

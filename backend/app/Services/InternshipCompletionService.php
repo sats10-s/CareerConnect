@@ -64,10 +64,20 @@ use Illuminate\Support\Facades\DB;
  * IMMUTABILITY - a FINALIZED completion (InternshipCompletionStatus::isTerminal())
  * and a terminal PPO record (PpoStatus::isTerminal() - ACCEPTED or
  * DECLINED) can never be updated again through update()/updatePpo();
- * this is re-checked here as the load-bearing rule (not just in the
- * policy layer - see InternshipCompletionPolicy::update()/
- * PpoRecordPolicy::update()'s own docblocks for why both layers check
- * it).
+ * this is enforced HERE, and only here, as the sole, load-bearing
+ * check (InternshipCompletionException/PpoRecordException -> HTTP
+ * 422). InternshipCompletionPolicy::update()/finalize() and
+ * PpoRecordPolicy::update() deliberately do NOT also check terminal
+ * status - they answer a different question ("does this caller own
+ * this record's assignment?" -> 403 when no) and must not conflate it
+ * with "is this owned record in a state that allows this write?" ->
+ * 422 when no. Authorization runs before this service is ever called
+ * (Gate::authorize in the controller), so by the time any method here
+ * runs, ownership has already been confirmed - a terminal-state
+ * rejection from this service is always evidence the caller DID own
+ * the record, just couldn't change it anymore. See
+ * InternshipCompletionPolicy::update()'s own docblock for the fuller
+ * 403-vs-422 reasoning.
  *
  * NEVER AUTOMATICALLY ALTERS THE ASSIGNMENT OR APPLICATION - per the
  * module spec's "Do not automatically alter application/assignment

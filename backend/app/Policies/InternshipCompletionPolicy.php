@@ -67,25 +67,34 @@ class InternshipCompletionPolicy
     }
 
     /**
-     * Faculty-owner only, AND the record must not already be
-     * FINALIZED - re-checked again in
-     * InternshipCompletionService::updateCompletion() as the
-     * load-bearing check (this is defense in depth, not the only
-     * enforcement - see that method's docblock).
+     * Faculty-owner ONLY - this is an object-level ownership check, not
+     * a lifecycle/state check. Whether the record is already FINALIZED
+     * is deliberately NOT checked here: that is a business-rule
+     * question, not an authorization question, and it is enforced as
+     * the sole, load-bearing check in
+     * InternshipCompletionService::updateCompletion() (which throws
+     * InternshipCompletionException -> HTTP 422). Mixing the two here
+     * would make a terminal-record write on your OWN assignment look
+     * identical, over HTTP, to trying to touch someone else's
+     * assignment (both would surface as 403), which is exactly the
+     * ambiguity this method exists to avoid: ownership failures are
+     * 403, invalid-state-on-an-owned-record failures are 422 - see
+     * InternshipCompletionService's own docblock ("IMMUTABILITY").
      */
     public function update(User $user, InternshipCompletion $completion): bool
     {
-        return $this->facultyOwns($user, $completion->internshipAssignment) && ! $completion->status->isTerminal();
+        return $this->facultyOwns($user, $completion->internshipAssignment);
     }
 
     /**
-     * Faculty-owner only, AND the record must not already be
-     * FINALIZED (finalizing an already-finalized record is a no-op
-     * that should never be reachable, not silently allowed).
+     * Faculty-owner ONLY - same reasoning as update() above. Whether
+     * the record is already FINALIZED is left entirely to
+     * InternshipCompletionService::finalizeCompletion(), which throws a
+     * 422 when the DRAFT -> FINALIZED transition is no longer valid.
      */
     public function finalize(User $user, InternshipCompletion $completion): bool
     {
-        return $this->facultyOwns($user, $completion->internshipAssignment) && ! $completion->status->isTerminal();
+        return $this->facultyOwns($user, $completion->internshipAssignment);
     }
 
     private function facultyOwns(User $user, InternshipAssignment $assignment): bool
