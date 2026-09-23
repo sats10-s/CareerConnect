@@ -84,4 +84,15 @@ class InternshipAssignment extends Model
     {
         return $this->hasMany(InternshipAssignmentFacultyHistory::class);
     }
+
+    /**
+     * Attendance Management - every Attendance row marked against this
+     * assignment. This is the ONLY path to an assignment's attendance;
+     * see App\Models\Attendance's docblock for why that model has no
+     * student()/faculty() relation of its own.
+     */
+    public function attendance(): HasMany
+    {
+        return $this->hasMany(Attendance::class);
+    }
 }

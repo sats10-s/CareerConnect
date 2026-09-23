@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Admin\ApplicationController as AdminApplicationController;
+use App\Http\Controllers\Api\Admin\AttendanceController as AdminAttendanceController;
 use App\Http\Controllers\Api\Admin\InternshipAssignmentController as AdminInternshipAssignmentController;
 use App\Http\Controllers\Api\Admin\InternshipController;
 use App\Http\Controllers\Api\Admin\InterviewController as AdminInterviewController;
@@ -11,10 +12,12 @@ use App\Http\Controllers\Api\Dashboard\AdminDashboardController;
 use App\Http\Controllers\Api\Dashboard\FacultyDashboardController;
 use App\Http\Controllers\Api\Dashboard\StudentDashboardController;
 use App\Http\Controllers\Api\Dashboard\SuperAdminDashboardController;
+use App\Http\Controllers\Api\Faculty\AttendanceController as FacultyAttendanceController;
 use App\Http\Controllers\Api\Faculty\InternshipAssignmentController as FacultyInternshipAssignmentController;
 use App\Http\Controllers\Api\Faculty\StudentController as FacultyStudentController;
 use App\Http\Controllers\Api\MetaController;
 use App\Http\Controllers\Api\Student\ApplicationController as StudentApplicationController;
+use App\Http\Controllers\Api\Student\AttendanceController as StudentAttendanceController;
 use App\Http\Controllers\Api\Student\CertificationController;
 use App\Http\Controllers\Api\Student\ExperienceController;
 use App\Http\Controllers\Api\Student\InterviewController as StudentInterviewController;
@@ -218,6 +221,39 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/faculty/students', [FacultyStudentController::class, 'index'])
         ->middleware('role:FACULTY');
+
+    // Attendance Management - scoped exclusively through
+    // InternshipAssignment -> Faculty/Student (Attendance has no
+    // student_id/faculty_id column of its own - see
+    // App\Models\Attendance's docblock). Object-level authorization is
+    // enforced by AttendancePolicy (and, for the two assignment-scoped
+    // GET routes below, InternshipAssignmentPolicy::view()) inside each
+    // controller, on top of these role gates. There is no admin create
+    // route - marking new attendance is exclusively a faculty action;
+    // admin may only view and correct existing records.
+    Route::prefix('student/attendance')->middleware('role:STUDENT')->group(function () {
+        Route::get('/', [StudentAttendanceController::class, 'index']);
+        Route::get('/{attendance}', [StudentAttendanceController::class, 'show']);
+    });
+
+    Route::get('/student/internship-assignments/{assignment}/attendance', [StudentAttendanceController::class, 'forAssignment'])
+        ->middleware('role:STUDENT');
+
+    Route::prefix('faculty/attendance')->middleware('role:FACULTY')->group(function () {
+        Route::get('/', [FacultyAttendanceController::class, 'index']);
+        Route::patch('/{attendance}', [FacultyAttendanceController::class, 'update']);
+    });
+
+    Route::middleware('role:FACULTY')->group(function () {
+        Route::get('/faculty/internship-assignments/{assignment}/attendance', [FacultyAttendanceController::class, 'forAssignment']);
+        Route::post('/faculty/internship-assignments/{assignment}/attendance', [FacultyAttendanceController::class, 'store']);
+    });
+
+    Route::prefix('admin/attendance')->middleware('role:PLACEMENT_ADMIN,SUPER_ADMIN')->group(function () {
+        Route::get('/', [AdminAttendanceController::class, 'index']);
+        Route::get('/{attendance}', [AdminAttendanceController::class, 'show']);
+        Route::patch('/{attendance}', [AdminAttendanceController::class, 'update']);
+    });
 
     Route::get('/super-admin/dashboard', [SuperAdminDashboardController::class, 'index'])
         ->middleware('role:SUPER_ADMIN');

@@ -21,6 +21,16 @@ use App\Models\User;
  * spec's explicit "Faculty ... cannot assign students / cannot
  * reassign themselves or others / cannot change faculty_id"), so
  * update() is admin-only with no faculty branch at all.
+ *
+ * view() ADDITIONALLY allows the assignment's own student (see
+ * studentOwns()) - added for the Attendance Management module, which
+ * needs `GET /api/student/internship-assignments/{assignment}/attendance`
+ * to authorize a student against their own assignment. This is a pure
+ * widening: it does not change admin or faculty behavior, and nothing
+ * in the pre-existing Internship Assignment module ever calls view()
+ * with a student actor (its own routes are all role:PLACEMENT_ADMIN,
+ * SUPER_ADMIN / role:FACULTY), so this addition cannot affect any of
+ * its existing authorization tests.
  */
 class InternshipAssignmentPolicy
 {
@@ -35,7 +45,11 @@ class InternshipAssignmentPolicy
             return true;
         }
 
-        return $this->owns($user, $assignment);
+        if ($this->owns($user, $assignment)) {
+            return true;
+        }
+
+        return $this->studentOwns($user, $assignment);
     }
 
     public function create(User $user): bool
@@ -60,6 +74,12 @@ class InternshipAssignmentPolicy
     {
         return $user->faculty !== null
             && $assignment->faculty_id === $user->faculty->id;
+    }
+
+    private function studentOwns(User $user, InternshipAssignment $assignment): bool
+    {
+        return $user->student !== null
+            && $assignment->student_id === $user->student->id;
     }
 
     private function isAdmin(User $user): bool
