@@ -16,7 +16,12 @@ return new class extends Migration
             // permissive so this migration can't break rows created
             // before this field existed.
             $table->unsignedTinyInteger('year')->nullable()->after('batch_id');
-            $table->unsignedDecimal('cgpa', 4, 2)->nullable()->after('year');
+            // Blueprint::unsignedDecimal() does not exist on this Laravel
+            // version - plain decimal(4,2) covers the full 10-point CGPA
+            // scale (0.00-10.00); the "no negative values" intent is
+            // still enforced where it actually matters, in the
+            // registration/profile Form Requests' `between:0,10` rule.
+            $table->decimal('cgpa', 4, 2)->nullable()->after('year');
             $table->unsignedTinyInteger('backlogs')->nullable()->default(0)->after('cgpa');
         });
     }
