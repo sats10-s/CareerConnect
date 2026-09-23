@@ -10,6 +10,10 @@ use Illuminate\Support\Facades\Schema;
  * column, so it stays queryable and FK-valid. An opportunity with no
  * rows here is interpreted as "open to all departments" (no restriction),
  * consistent with how the other eligible_* tables below are read.
+ *
+ * `morphs('opportunity')` is given an explicit index name - see
+ * 2024_01_02_000003_create_opportunity_eligibility_criteria_table's
+ * docblock for why (MySQL's 64-character identifier limit).
  */
 return new class extends Migration
 {
@@ -17,7 +21,7 @@ return new class extends Migration
     {
         Schema::create('opportunity_eligible_departments', function (Blueprint $table) {
             $table->id();
-            $table->morphs('opportunity');
+            $table->morphs('opportunity', 'opportunity_eligible_departments_opportunity_idx');
             $table->foreignId('department_id')->constrained('departments')->cascadeOnDelete();
             $table->timestamps();
 

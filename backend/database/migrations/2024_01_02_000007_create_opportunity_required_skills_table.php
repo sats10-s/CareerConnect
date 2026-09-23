@@ -13,6 +13,10 @@ use Illuminate\Support\Facades\Schema;
  * exists anywhere in this codebase. One opportunity can require
  * multiple skills - each is its own row here, never a comma-separated
  * or JSON list.
+ *
+ * `morphs('opportunity')` is given an explicit index name - see
+ * 2024_01_02_000003_create_opportunity_eligibility_criteria_table's
+ * docblock for why (MySQL's 64-character identifier limit).
  */
 return new class extends Migration
 {
@@ -20,7 +24,7 @@ return new class extends Migration
     {
         Schema::create('opportunity_required_skills', function (Blueprint $table) {
             $table->id();
-            $table->morphs('opportunity');
+            $table->morphs('opportunity', 'opportunity_required_skills_opportunity_idx');
             $table->string('skill_name', 100);
             $table->timestamps();
 

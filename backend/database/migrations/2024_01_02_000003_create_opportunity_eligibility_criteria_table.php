@@ -22,6 +22,16 @@ use Illuminate\Support\Facades\Schema;
  * `max_backlogs` is the highest backlog count still eligible
  * (student.backlogs <= max_backlogs) - see the final report's
  * "schema decisions needing confirmation" for this interpretation.
+ *
+ * `morphs('opportunity')` is given an explicit index name below
+ * because Laravel's auto-generated one -
+ * `opportunity_eligibility_criteria_opportunity_type_opportunity_id_index`
+ * (70 chars) - exceeds MySQL's 64-character identifier limit
+ * (SQLSTATE 42000 / error 1059), which fails the whole CREATE TABLE
+ * statement on a MySQL production database even though it's silently
+ * fine on SQLite (the test suite's driver, which doesn't enforce that
+ * limit). Same fix applied to every other opportunity_* migration
+ * below this one for the same reason.
  */
 return new class extends Migration
 {
@@ -29,7 +39,7 @@ return new class extends Migration
     {
         Schema::create('opportunity_eligibility_criteria', function (Blueprint $table) {
             $table->id();
-            $table->morphs('opportunity'); // opportunity_type, opportunity_id
+            $table->morphs('opportunity', 'opportunity_eligibility_opportunity_idx'); // opportunity_type, opportunity_id
             $table->decimal('min_cgpa', 4, 2)->nullable();
             $table->unsignedTinyInteger('max_backlogs')->nullable();
             $table->timestamps();
