@@ -27,16 +27,51 @@ use Illuminate\Support\Facades\Schema;
  * because Laravel's auto-generated one -
  * `opportunity_eligibility_criteria_opportunity_type_opportunity_id_index`
  * (70 chars) - exceeds MySQL's 64-character identifier limit
- * (SQLSTATE 42000 / error 1059), which fails the whole CREATE TABLE
- * statement on a MySQL production database even though it's silently
- * fine on SQLite (the test suite's driver, which doesn't enforce that
- * limit). Same fix applied to every other opportunity_* migration
- * below this one for the same reason.
+ * (SQLSTATE 42000 / error 1059). Same fix applied to every other
+ * opportunity_* migration below this one for the same reason.
+ *
+ * RECONCILIATION NOTE (do not remove): the very first attempt at this
+ * migration - before the index above had an explicit name - hit that
+ * 1059 error on production MySQL. What actually happened is more
+ * subtle than "the CREATE TABLE failed": Laravel's MySQL schema
+ * builder issues the base `CREATE TABLE` (columns only) and each
+ * index/key (including morphs()'s and the unique() below) as
+ * SEPARATE statements, and MySQL auto-commits each DDL statement
+ * independently - it does not roll back earlier statements in the
+ * same migration when a later one fails. So the bare `CREATE TABLE`
+ * succeeded and was permanently committed; the very next statement
+ * (ADD INDEX with the too-long auto-generated name) then failed,
+ * aborting the migration before the unique() constraint was ever
+ * added - and since the migration as a whole threw, Laravel never
+ * recorded it as Ran, so `php artisan migrate` tried the full
+ * `Schema::create()` again and hit "table already exists" (1050).
+ *
+ * The `Schema::hasTable()` branch below handles that specific,
+ * already-happened state non-destructively: it does NOT drop or
+ * recreate the table (no data is touched), it only adds whatever the
+ * first attempt never got to - the morphs index and the unique
+ * constraint - guarded by hasIndex() so it's also safe to run again.
+ * A fresh install (table doesn't exist yet) is unaffected and takes
+ * the normal Schema::create() path below.
  */
 return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('opportunity_eligibility_criteria')) {
+            Schema::table('opportunity_eligibility_criteria', function (Blueprint $table) {
+                if (! Schema::hasIndex('opportunity_eligibility_criteria', 'opportunity_eligibility_opportunity_idx')) {
+                    $table->index(['opportunity_type', 'opportunity_id'], 'opportunity_eligibility_opportunity_idx');
+                }
+
+                if (! Schema::hasIndex('opportunity_eligibility_criteria', 'opportunity_eligibility_criteria_unique')) {
+                    $table->unique(['opportunity_type', 'opportunity_id'], 'opportunity_eligibility_criteria_unique');
+                }
+            });
+
+            return;
+        }
+
         Schema::create('opportunity_eligibility_criteria', function (Blueprint $table) {
             $table->id();
             $table->morphs('opportunity', 'opportunity_eligibility_opportunity_idx'); // opportunity_type, opportunity_id
