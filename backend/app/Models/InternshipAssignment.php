@@ -107,4 +107,16 @@ class InternshipAssignment extends Model
     {
         return $this->hasMany(WeeklyProgressReport::class);
     }
+
+    /**
+     * Internship Document Management - every InternshipDocument row
+     * uploaded against this assignment. This is the ONLY path to an
+     * assignment's documents; see App\Models\InternshipDocument's
+     * docblock for why that model has no student()/faculty() relation
+     * of its own, mirroring attendance()/weeklyProgressReports() above.
+     */
+    public function internshipDocuments(): HasMany
+    {
+        return $this->hasMany(InternshipDocument::class);
+    }
 }

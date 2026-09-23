@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Admin\ApplicationController as AdminApplicationCont
 use App\Http\Controllers\Api\Admin\AttendanceController as AdminAttendanceController;
 use App\Http\Controllers\Api\Admin\InternshipAssignmentController as AdminInternshipAssignmentController;
 use App\Http\Controllers\Api\Admin\InternshipController;
+use App\Http\Controllers\Api\Admin\InternshipDocumentController as AdminInternshipDocumentController;
 use App\Http\Controllers\Api\Admin\InterviewController as AdminInterviewController;
 use App\Http\Controllers\Api\Admin\JobPostingController;
 use App\Http\Controllers\Api\Admin\PlacementDriveController as AdminPlacementDriveController;
@@ -15,6 +16,7 @@ use App\Http\Controllers\Api\Dashboard\StudentDashboardController;
 use App\Http\Controllers\Api\Dashboard\SuperAdminDashboardController;
 use App\Http\Controllers\Api\Faculty\AttendanceController as FacultyAttendanceController;
 use App\Http\Controllers\Api\Faculty\InternshipAssignmentController as FacultyInternshipAssignmentController;
+use App\Http\Controllers\Api\Faculty\InternshipDocumentController as FacultyInternshipDocumentController;
 use App\Http\Controllers\Api\Faculty\StudentController as FacultyStudentController;
 use App\Http\Controllers\Api\Faculty\WeeklyProgressReportController as FacultyWeeklyProgressReportController;
 use App\Http\Controllers\Api\MetaController;
@@ -22,6 +24,7 @@ use App\Http\Controllers\Api\Student\ApplicationController as StudentApplication
 use App\Http\Controllers\Api\Student\AttendanceController as StudentAttendanceController;
 use App\Http\Controllers\Api\Student\CertificationController;
 use App\Http\Controllers\Api\Student\ExperienceController;
+use App\Http\Controllers\Api\Student\InternshipDocumentController as StudentInternshipDocumentController;
 use App\Http\Controllers\Api\Student\InterviewController as StudentInterviewController;
 use App\Http\Controllers\Api\Student\OpportunityController;
 use App\Http\Controllers\Api\Student\PlacementDriveController as StudentPlacementDriveController;
@@ -293,6 +296,41 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('admin/weekly-reports')->middleware('role:PLACEMENT_ADMIN,SUPER_ADMIN')->group(function () {
         Route::get('/', [AdminWeeklyProgressReportController::class, 'index']);
         Route::get('/{report}', [AdminWeeklyProgressReportController::class, 'show']);
+    });
+
+    // Internship Document Management - scoped exclusively through
+    // InternshipAssignment -> Faculty/Student, mirroring Attendance/
+    // Weekly Progress Reports' own scoping pattern (see
+    // App\Models\InternshipDocument's docblock for why this model has
+    // no student_id/faculty_id column of its own). Object-level
+    // authorization is enforced by InternshipDocumentPolicy inside each
+    // controller, on top of these role gates. There is no admin
+    // create/resubmit/review route - admin gets read-only visibility
+    // only (see Api\Admin\InternshipDocumentController's docblock).
+    // There is deliberately no {assignment}-scoped route for store() -
+    // unlike Weekly Progress Reports, the module spec's own route list
+    // has upload posting straight to `/student/internship-documents`
+    // with `internship_assignment_id` as a validated body field (see
+    // StoreInternshipDocumentRequest's docblock).
+    Route::prefix('student/internship-documents')->middleware('role:STUDENT')->group(function () {
+        Route::get('/', [StudentInternshipDocumentController::class, 'index']);
+        Route::get('/{document}', [StudentInternshipDocumentController::class, 'show']);
+        Route::post('/', [StudentInternshipDocumentController::class, 'store']);
+        Route::post('/{document}/resubmit', [StudentInternshipDocumentController::class, 'resubmit']);
+        Route::get('/{document}/download', [StudentInternshipDocumentController::class, 'download']);
+    });
+
+    Route::prefix('faculty/internship-documents')->middleware('role:FACULTY')->group(function () {
+        Route::get('/', [FacultyInternshipDocumentController::class, 'index']);
+        Route::get('/{document}', [FacultyInternshipDocumentController::class, 'show']);
+        Route::get('/{document}/download', [FacultyInternshipDocumentController::class, 'download']);
+        Route::patch('/{document}/status', [FacultyInternshipDocumentController::class, 'updateStatus']);
+    });
+
+    Route::prefix('admin/internship-documents')->middleware('role:PLACEMENT_ADMIN,SUPER_ADMIN')->group(function () {
+        Route::get('/', [AdminInternshipDocumentController::class, 'index']);
+        Route::get('/{document}', [AdminInternshipDocumentController::class, 'show']);
+        Route::get('/{document}/download', [AdminInternshipDocumentController::class, 'download']);
     });
 
     Route::get('/super-admin/dashboard', [SuperAdminDashboardController::class, 'index'])
