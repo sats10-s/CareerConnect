@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Admin\ApplicationController as AdminApplicationCont
 use App\Http\Controllers\Api\Admin\InternshipController;
 use App\Http\Controllers\Api\Admin\InterviewController as AdminInterviewController;
 use App\Http\Controllers\Api\Admin\JobPostingController;
+use App\Http\Controllers\Api\Admin\PlacementDriveController as AdminPlacementDriveController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\Dashboard\AdminDashboardController;
 use App\Http\Controllers\Api\Dashboard\FacultyDashboardController;
@@ -15,6 +16,7 @@ use App\Http\Controllers\Api\Student\CertificationController;
 use App\Http\Controllers\Api\Student\ExperienceController;
 use App\Http\Controllers\Api\Student\InterviewController as StudentInterviewController;
 use App\Http\Controllers\Api\Student\OpportunityController;
+use App\Http\Controllers\Api\Student\PlacementDriveController as StudentPlacementDriveController;
 use App\Http\Controllers\Api\Student\ProjectController;
 use App\Http\Controllers\Api\Student\ResumeController;
 use App\Http\Controllers\Api\Student\SkillController;
@@ -155,6 +157,31 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{interview}/reschedule', [AdminInterviewController::class, 'reschedule']);
         Route::post('/{interview}/complete', [AdminInterviewController::class, 'complete']);
         Route::post('/{interview}/cancel', [AdminInterviewController::class, 'cancel']);
+    });
+
+    // Placement Drive Management - a college recruitment event/
+    // container grouping existing JobPosting/Internship opportunities
+    // (Company -> Placement Drive -> Job/Internship -> Applications ->
+    // Interviews -> Selections). Object-level authorization is enforced
+    // by PlacementDrivePolicy inside Api\Student\PlacementDriveController/
+    // Api\Admin\PlacementDriveController, on top of these role gates.
+    Route::prefix('student/placement-drives')->middleware('role:STUDENT')->group(function () {
+        Route::get('/', [StudentPlacementDriveController::class, 'index']);
+        Route::get('/{placementDrive}', [StudentPlacementDriveController::class, 'show']);
+    });
+
+    Route::prefix('admin/placement-drives')->middleware('role:PLACEMENT_ADMIN,SUPER_ADMIN')->group(function () {
+        Route::get('/', [AdminPlacementDriveController::class, 'index']);
+        Route::post('/', [AdminPlacementDriveController::class, 'store']);
+        Route::get('/{placementDrive}', [AdminPlacementDriveController::class, 'show']);
+        Route::patch('/{placementDrive}', [AdminPlacementDriveController::class, 'update']);
+
+        Route::post('/{placementDrive}/publish', [AdminPlacementDriveController::class, 'publish']);
+        Route::post('/{placementDrive}/close', [AdminPlacementDriveController::class, 'close']);
+        Route::post('/{placementDrive}/cancel', [AdminPlacementDriveController::class, 'cancel']);
+
+        Route::post('/{placementDrive}/opportunities', [AdminPlacementDriveController::class, 'attachOpportunity']);
+        Route::delete('/{placementDrive}/opportunities/{opportunity}', [AdminPlacementDriveController::class, 'detachOpportunity']);
     });
 
     Route::get('/super-admin/dashboard', [SuperAdminDashboardController::class, 'index'])
