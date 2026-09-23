@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Admin;
 
+use App\Http\Controllers\Concerns\BuildsEligibilityPayload;
 use App\Http\Controllers\Concerns\FormatsApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreInternshipRequest;
@@ -18,15 +19,26 @@ use Illuminate\Support\Facades\Gate;
  */
 class InternshipController extends Controller
 {
+    use BuildsEligibilityPayload;
     use FormatsApiResponse;
+
+    private const ELIGIBILITY_FIELDS = [
+        'eligibility_enforced',
+        'minimum_cgpa',
+        'maximum_backlogs',
+        'eligible_department_ids',
+        'eligible_batch_ids',
+        'eligible_years',
+        'required_skills',
+    ];
 
     private const EAGER_LOAD = [
         'company',
         'creator',
         'updater',
         'eligibilityCriteria',
-        'eligibleDepartments',
-        'eligibleBatches',
+        'eligibleDepartments.department',
+        'eligibleBatches.batch',
         'eligibleYears',
         'requiredSkills',
     ];
@@ -74,14 +86,11 @@ class InternshipController extends Controller
         Gate::authorize('create', Internship::class);
 
         $internship = DB::transaction(function () use ($request) {
-            $data = $request->safe()->except('eligibility');
+            $data = $request->safe()->except(self::ELIGIBILITY_FIELDS);
             $data['posted_by'] = $request->user()->id;
 
             $internship = Internship::create($data);
-
-            if ($eligibility = $request->validated('eligibility')) {
-                $internship->syncEligibility($eligibility);
-            }
+            $internship->syncEligibility($this->eligibilityPayloadFromRequest($request));
 
             return $internship;
         });
@@ -109,14 +118,11 @@ class InternshipController extends Controller
         Gate::authorize('update', $internship);
 
         DB::transaction(function () use ($request, $internship) {
-            $data = $request->safe()->except('eligibility');
+            $data = $request->safe()->except(self::ELIGIBILITY_FIELDS);
             $data['updated_by'] = $request->user()->id;
 
             $internship->update($data);
-
-            if ($request->has('eligibility')) {
-                $internship->syncEligibility($request->validated('eligibility'));
-            }
+            $internship->syncEligibility($this->eligibilityPayloadFromRequest($request));
         });
 
         $internship->refresh()->load(self::EAGER_LOAD);

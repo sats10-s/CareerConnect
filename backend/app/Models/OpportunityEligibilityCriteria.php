@@ -13,6 +13,7 @@ class OpportunityEligibilityCriteria extends Model
     protected $table = 'opportunity_eligibility_criteria';
 
     protected $fillable = [
+        'eligibility_enforced',
         'min_cgpa',
         'max_backlogs',
     ];
@@ -20,6 +21,7 @@ class OpportunityEligibilityCriteria extends Model
     protected function casts(): array
     {
         return [
+            'eligibility_enforced' => 'boolean',
             'min_cgpa' => 'decimal:2',
             'max_backlogs' => 'integer',
         ];

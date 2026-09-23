@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Admin;
 
+use App\Http\Controllers\Concerns\BuildsEligibilityPayload;
 use App\Http\Controllers\Concerns\FormatsApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreJobPostingRequest;
@@ -17,19 +18,34 @@ use Illuminate\Support\Facades\Gate;
  * Placement-admin management of job postings. Route-gated by
  * auth:sanctum + role:PLACEMENT_ADMIN,SUPER_ADMIN (see routes/api.php);
  * JobPostingPolicy adds the object-level authorization layer on top of
- * that route gate.
+ * that route gate. That role gate (nobody but PLACEMENT_ADMIN/
+ * SUPER_ADMIN can reach these actions at all) is also what satisfies
+ * "only admins may create or modify eligibility criteria" - eligibility
+ * is configured through this same create/update contract, not a
+ * separate endpoint (see BuildsEligibilityPayload).
  */
 class JobPostingController extends Controller
 {
+    use BuildsEligibilityPayload;
     use FormatsApiResponse;
+
+    private const ELIGIBILITY_FIELDS = [
+        'eligibility_enforced',
+        'minimum_cgpa',
+        'maximum_backlogs',
+        'eligible_department_ids',
+        'eligible_batch_ids',
+        'eligible_years',
+        'required_skills',
+    ];
 
     private const EAGER_LOAD = [
         'company',
         'creator',
         'updater',
         'eligibilityCriteria',
-        'eligibleDepartments',
-        'eligibleBatches',
+        'eligibleDepartments.department',
+        'eligibleBatches.batch',
         'eligibleYears',
         'requiredSkills',
     ];
@@ -77,14 +93,11 @@ class JobPostingController extends Controller
         Gate::authorize('create', JobPosting::class);
 
         $jobPosting = DB::transaction(function () use ($request) {
-            $data = $request->safe()->except('eligibility');
+            $data = $request->safe()->except(self::ELIGIBILITY_FIELDS);
             $data['posted_by'] = $request->user()->id;
 
             $jobPosting = JobPosting::create($data);
-
-            if ($eligibility = $request->validated('eligibility')) {
-                $jobPosting->syncEligibility($eligibility);
-            }
+            $jobPosting->syncEligibility($this->eligibilityPayloadFromRequest($request));
 
             return $jobPosting;
         });
@@ -112,14 +125,11 @@ class JobPostingController extends Controller
         Gate::authorize('update', $jobPosting);
 
         DB::transaction(function () use ($request, $jobPosting) {
-            $data = $request->safe()->except('eligibility');
+            $data = $request->safe()->except(self::ELIGIBILITY_FIELDS);
             $data['updated_by'] = $request->user()->id;
 
             $jobPosting->update($data);
-
-            if ($request->has('eligibility')) {
-                $jobPosting->syncEligibility($request->validated('eligibility'));
-            }
+            $jobPosting->syncEligibility($this->eligibilityPayloadFromRequest($request));
         });
 
         $jobPosting->refresh()->load(self::EAGER_LOAD);

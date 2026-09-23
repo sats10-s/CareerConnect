@@ -92,14 +92,13 @@ class InternshipTest extends TestCase
             'application_deadline' => now()->addMonth()->toDateString(),
             'openings' => 2,
             'status' => 'published',
-            'eligibility' => [
-                'min_cgpa' => 6.5,
-                'max_backlogs' => 2,
-                'department_ids' => [$this->department->id],
-                'batch_ids' => [$this->batch->id],
-                'years' => [2, 3],
-                'skills' => ['Docker', 'Linux'],
-            ],
+            'eligibility_enforced' => true,
+            'minimum_cgpa' => 6.5,
+            'maximum_backlogs' => 2,
+            'eligible_department_ids' => [$this->department->id],
+            'eligible_batch_ids' => [$this->batch->id],
+            'eligible_years' => [2, 3],
+            'required_skills' => ['Docker', 'Linux'],
         ], $overrides);
     }
 
@@ -127,6 +126,7 @@ class InternshipTest extends TestCase
         $this->assertDatabaseHas('opportunity_eligibility_criteria', [
             'opportunity_type' => Internship::class,
             'opportunity_id' => $internship->id,
+            'eligibility_enforced' => true,
             'max_backlogs' => 2,
         ]);
         $this->assertDatabaseHas('opportunity_required_skills', [

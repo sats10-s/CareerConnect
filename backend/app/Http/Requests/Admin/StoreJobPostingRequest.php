@@ -15,12 +15,16 @@ use Illuminate\Validation\Rule;
  * controller additionally calls Gate::authorize('create', ...) via
  * JobPostingPolicy - this class only validates field shape.
  *
- * The optional `eligibility` sub-payload is the normalized criteria
- * persisted via JobPosting::syncEligibility() (see
- * App\Models\Concerns\HasEligibilityCriteria) - it is intentionally
- * NOT flattened into top-level fields so it can be shared verbatim
- * with StoreInternshipRequest/UpdateJobPostingRequest/
- * UpdateInternshipRequest.
+ * The optional flat eligibility fields (`eligibility_enforced`,
+ * `eligible_department_ids`, `eligible_batch_ids`, `eligible_years`,
+ * `minimum_cgpa`, `maximum_backlogs`, `required_skills`) are the
+ * admin-facing eligibility-configuration contract; see
+ * App\Http\Controllers\Concerns\BuildsEligibilityPayload for how they
+ * get translated into JobPosting::syncEligibility()'s internal shape
+ * (App\Models\Concerns\HasEligibilityCriteria) - none of them are
+ * fillable on JobPosting itself, so the controller strips them out of
+ * the create/update payload before calling JobPosting::create()/
+ * update().
  */
 class StoreJobPostingRequest extends FormRequest
 {
@@ -44,17 +48,17 @@ class StoreJobPostingRequest extends FormRequest
             'status' => ['nullable', Rule::enum(OpportunityStatus::class)],
             'is_active' => ['nullable', 'boolean'],
 
-            'eligibility' => ['nullable', 'array'],
-            'eligibility.min_cgpa' => ['nullable', 'numeric', 'between:0,10'],
-            'eligibility.max_backlogs' => ['nullable', 'integer', 'min:0'],
-            'eligibility.department_ids' => ['nullable', 'array'],
-            'eligibility.department_ids.*' => ['integer', 'exists:departments,id'],
-            'eligibility.batch_ids' => ['nullable', 'array'],
-            'eligibility.batch_ids.*' => ['integer', 'exists:batches,id'],
-            'eligibility.years' => ['nullable', 'array'],
-            'eligibility.years.*' => ['integer', 'between:1,4'],
-            'eligibility.skills' => ['nullable', 'array'],
-            'eligibility.skills.*' => ['string', 'max:100'],
+            'eligibility_enforced' => ['nullable', 'boolean'],
+            'minimum_cgpa' => ['nullable', 'numeric', 'between:0,10'],
+            'maximum_backlogs' => ['nullable', 'integer', 'min:0'],
+            'eligible_department_ids' => ['nullable', 'array'],
+            'eligible_department_ids.*' => ['integer', 'exists:departments,id'],
+            'eligible_batch_ids' => ['nullable', 'array'],
+            'eligible_batch_ids.*' => ['integer', 'exists:batches,id'],
+            'eligible_years' => ['nullable', 'array'],
+            'eligible_years.*' => ['integer', 'between:1,4'],
+            'required_skills' => ['nullable', 'array'],
+            'required_skills.*' => ['string', 'max:100'],
         ];
     }
 }

@@ -105,14 +105,13 @@ class JobPostingTest extends TestCase
             'application_deadline' => now()->addMonth()->toDateString(),
             'openings' => 3,
             'status' => 'published',
-            'eligibility' => [
-                'min_cgpa' => 7.5,
-                'max_backlogs' => 1,
-                'department_ids' => [$this->department->id],
-                'batch_ids' => [$this->batch->id],
-                'years' => [3, 4],
-                'skills' => ['PHP', 'Laravel'],
-            ],
+            'eligibility_enforced' => true,
+            'minimum_cgpa' => 7.5,
+            'maximum_backlogs' => 1,
+            'eligible_department_ids' => [$this->department->id],
+            'eligible_batch_ids' => [$this->batch->id],
+            'eligible_years' => [3, 4],
+            'required_skills' => ['PHP', 'Laravel'],
         ], $overrides);
     }
 
@@ -141,6 +140,7 @@ class JobPostingTest extends TestCase
         $this->assertDatabaseHas('opportunity_eligibility_criteria', [
             'opportunity_type' => JobPosting::class,
             'opportunity_id' => $jobPosting->id,
+            'eligibility_enforced' => true,
             'max_backlogs' => 1,
         ]);
         $this->assertDatabaseHas('opportunity_eligible_departments', [
@@ -164,8 +164,11 @@ class JobPostingTest extends TestCase
             'skill_name' => 'Laravel',
         ]);
 
-        $response->assertJsonPath('data.eligibility.max_backlogs', 1);
-        $response->assertJsonPath('data.eligibility.skills', ['PHP', 'Laravel']);
+        $response->assertJsonPath('data.eligibility.enforced', true);
+        $response->assertJsonPath('data.eligibility.maximum_backlogs', 1);
+        $response->assertJsonPath('data.eligibility.required_skills', ['PHP', 'Laravel']);
+        $response->assertJsonPath('data.eligibility.departments.0.id', $this->department->id);
+        $response->assertJsonPath('data.eligibility.departments.0.name', 'Computer Science & Engineering');
     }
 
     public function test_student_cannot_create_a_job_posting(): void

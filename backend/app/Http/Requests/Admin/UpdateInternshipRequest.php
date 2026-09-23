@@ -37,17 +37,17 @@ class UpdateInternshipRequest extends FormRequest
             'status' => ['nullable', Rule::enum(OpportunityStatus::class)],
             'is_active' => ['nullable', 'boolean'],
 
-            'eligibility' => ['nullable', 'array'],
-            'eligibility.min_cgpa' => ['nullable', 'numeric', 'between:0,10'],
-            'eligibility.max_backlogs' => ['nullable', 'integer', 'min:0'],
-            'eligibility.department_ids' => ['nullable', 'array'],
-            'eligibility.department_ids.*' => ['integer', 'exists:departments,id'],
-            'eligibility.batch_ids' => ['nullable', 'array'],
-            'eligibility.batch_ids.*' => ['integer', 'exists:batches,id'],
-            'eligibility.years' => ['nullable', 'array'],
-            'eligibility.years.*' => ['integer', 'between:1,4'],
-            'eligibility.skills' => ['nullable', 'array'],
-            'eligibility.skills.*' => ['string', 'max:100'],
+            'eligibility_enforced' => ['nullable', 'boolean'],
+            'minimum_cgpa' => ['nullable', 'numeric', 'between:0,10'],
+            'maximum_backlogs' => ['nullable', 'integer', 'min:0'],
+            'eligible_department_ids' => ['nullable', 'array'],
+            'eligible_department_ids.*' => ['integer', 'exists:departments,id'],
+            'eligible_batch_ids' => ['nullable', 'array'],
+            'eligible_batch_ids.*' => ['integer', 'exists:batches,id'],
+            'eligible_years' => ['nullable', 'array'],
+            'eligible_years.*' => ['integer', 'between:1,4'],
+            'required_skills' => ['nullable', 'array'],
+            'required_skills.*' => ['string', 'max:100'],
         ];
     }
 

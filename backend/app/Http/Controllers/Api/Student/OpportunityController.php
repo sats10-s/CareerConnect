@@ -10,18 +10,20 @@ use App\Http\Resources\JobPostingResource;
 use App\Http\Resources\OpportunityListResource;
 use App\Models\Internship;
 use App\Models\JobPosting;
+use App\Services\OpportunityEligibilityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 /**
- * The published-opportunities listing a student browses. Route-gated
- * by auth:sanctum + role:STUDENT (see routes/api.php).
+ * The published-opportunities listing a student browses, plus the
+ * single-opportunity detail views. Route-gated by auth:sanctum +
+ * role:STUDENT (see routes/api.php).
  *
- * Backed by TWO separate tables (job_postings/internships) with no
- * shared base table, so a single query can't paginate across both
- * directly. Approach: build a lightweight UNION ALL of just
+ * index(): backed by TWO separate tables (job_postings/internships)
+ * with no shared base table, so a single query can't paginate across
+ * both directly. Approach: build a lightweight UNION ALL of just
  * (id, opportunity_type, sort columns) for whichever rows match the
  * filters/search across both tables - via ->toBase() so the union
  * returns plain rows rather than being (mis)hydrated as one Eloquent
@@ -30,16 +32,29 @@ use Illuminate\Support\Facades\Gate;
  * two "WHERE id IN (...)" queries instead of loading every matching
  * row from both tables up front.
  *
- * This endpoint only lists PUBLISHED opportunities. Filtering the list
- * down to what a given student is actually eligible for (matching
- * their cgpa/backlogs/department/batch/year against the criteria
- * stored via HasEligibilityCriteria) is explicitly out of scope for
- * this increment - see the module spec's "do not proceed to ...
- * eligibility calculation".
+ * PRODUCT RULE - do not weaken this: index() lists every PUBLISHED
+ * opportunity to every student, full stop. It never filters, sorts, or
+ * hides anything based on eligibility - the admin decides eligibility
+ * criteria, this app never decides who "should" see an opportunity.
+ * Eligibility only appears in showJob()/showInternship() below, as
+ * informational status about ONE opportunity the student already
+ * found, never as a listing filter.
+ *
+ * showJob()/showInternship(): the detail payload merges in a sibling
+ * `my_eligibility` key - the authenticated student's own evaluation
+ * against that opportunity's admin-configured criteria (see
+ * OpportunityEligibilityService) - alongside the resource's own
+ * `eligibility` block (the configured criteria themselves, same as
+ * what an admin sees). The student is always derived from
+ * $request->user()->student, never trusted from the URL/request.
  */
 class OpportunityController extends Controller
 {
     use FormatsApiResponse;
+
+    public function __construct(
+        private readonly OpportunityEligibilityService $eligibilityService,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -100,36 +115,42 @@ class OpportunityController extends Controller
         );
     }
 
-    public function showJob(JobPosting $jobPosting): JsonResponse
+    public function showJob(Request $request, JobPosting $jobPosting): JsonResponse
     {
         Gate::authorize('view', $jobPosting);
 
         $jobPosting->load([
             'company',
             'eligibilityCriteria',
-            'eligibleDepartments',
-            'eligibleBatches',
+            'eligibleDepartments.department',
+            'eligibleBatches.batch',
             'eligibleYears',
             'requiredSkills',
         ]);
 
-        return $this->success(data: new JobPostingResource($jobPosting), message: 'Job posting retrieved successfully.');
+        $data = (new JobPostingResource($jobPosting))->resolve();
+        $data['my_eligibility'] = $this->eligibilityService->evaluate($request->user()->student, $jobPosting);
+
+        return $this->success(data: $data, message: 'Job posting retrieved successfully.');
     }
 
-    public function showInternship(Internship $internship): JsonResponse
+    public function showInternship(Request $request, Internship $internship): JsonResponse
     {
         Gate::authorize('view', $internship);
 
         $internship->load([
             'company',
             'eligibilityCriteria',
-            'eligibleDepartments',
-            'eligibleBatches',
+            'eligibleDepartments.department',
+            'eligibleBatches.batch',
             'eligibleYears',
             'requiredSkills',
         ]);
 
-        return $this->success(data: new InternshipResource($internship), message: 'Internship retrieved successfully.');
+        $data = (new InternshipResource($internship))->resolve();
+        $data['my_eligibility'] = $this->eligibilityService->evaluate($request->user()->student, $internship);
+
+        return $this->success(data: $data, message: 'Internship retrieved successfully.');
     }
 
     /**
