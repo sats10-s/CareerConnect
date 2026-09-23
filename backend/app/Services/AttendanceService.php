@@ -211,7 +211,7 @@ class AttendanceService
      * percentage and counts rather than invent thresholds when none are
      * configured.
      *
-     * @return array{internship_assignment_id: int, total_days: int, present_days: int, absent_days: int, leave_days: int, attendance_percentage: float, last_attendance_date: ?string, current_streak: int}
+     * @return array{internship_assignment_id: int, total_days: int, present_days: int, absent_days: int, leave_days: int, attendance_percentage: int|float, last_attendance_date: ?string, current_streak: int}
      */
     public function getAssignmentAttendanceSummary(InternshipAssignment $assignment): array
     {
@@ -226,7 +226,15 @@ class AttendanceService
         $leave = (int) ($counts[AttendanceStatus::LEAVE->value] ?? 0);
         $totalMarked = $present + $absent + $leave;
 
-        $percentage = $totalMarked > 0 ? round(($present / $totalMarked) * 100, 2) : 0.0;
+        // Zero marked days is a genuinely different case from "0% marked
+        // and present" - there is no percentage to speak of yet, so this
+        // returns the plain integer 0 rather than a float. round() always
+        // returns a float, so every other branch (including a genuine
+        // 0% or 100% of at least one marked day) stays a float; only the
+        // "nothing marked at all" case is an int. Both serialize as
+        // valid JSON numbers, so this never changes what any consumer of
+        // the value can do with it.
+        $percentage = $totalMarked > 0 ? round(($present / $totalMarked) * 100, 2) : 0;
 
         $lastAttendanceDate = DB::table('attendance')
             ->where('internship_assignment_id', $assignment->id)
