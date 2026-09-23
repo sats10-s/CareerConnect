@@ -200,10 +200,10 @@ class InternshipDocumentIntegrationTest extends TestCase
         $fixture = $this->activatedAssignment();
 
         Sanctum::actingAs($fixture['faculty']->user, ['*']);
-        $this->postJson("/api/faculty/internship-assignments/{$fixture['assignment_id']}/attendance", [
+        $attendance = $this->postJson("/api/faculty/internship-assignments/{$fixture['assignment_id']}/attendance", [
             'attendance_date' => now()->toDateString(),
             'status' => 'PRESENT',
-        ])->assertCreated();
+        ])->assertCreated()->json('data');
 
         $document = $this->uploadDocument($fixture);
 
@@ -215,12 +215,28 @@ class InternshipDocumentIntegrationTest extends TestCase
         Sanctum::actingAs($fixture['faculty']->user, ['*']);
         $this->patchJson("/api/faculty/internship-documents/{$document['id']}/status", ['status' => 'UNDER_REVIEW'])->assertOk();
         $this->assertSame(1, \App\Models\Attendance::where('internship_assignment_id', $fixture['assignment_id'])->count());
+        $this->assertDatabaseHas('attendance', ['id' => $attendance['id'], 'status' => 'PRESENT']);
 
-        // ...and marking attendance must never touch the document.
-        $this->postJson("/api/faculty/internship-assignments/{$fixture['assignment_id']}/attendance", [
-            'attendance_date' => now()->subDay()->toDateString(),
-            'status' => 'ABSENT',
-        ])->assertCreated();
+        // ...and updating attendance must never touch the document.
+        //
+        // A second attendance_date is deliberately not used here: at
+        // fixture creation time the assignment's started_at is "now",
+        // so per AttendanceService::assertDateWithinPeriod() (rejects
+        // any date before the assignment's start) and
+        // ::assertNotFutureDate() (rejects any date after today), the
+        // only attendance_date value that is valid for a brand-new
+        // assignment is today - already used above for the PRESENT
+        // record. Marking a second, earlier date (as this test
+        // originally did with now()->subDay()) is not a legitimate
+        // attendance entry for this fixture and correctly fails
+        // AttendanceService's own start-date validation - see
+        // AttendanceTest::test_date_before_internship_start_is_rejected(),
+        // which asserts exactly that rejection. Updating the existing
+        // attendance record's status instead exercises a second,
+        // independent Attendance write (through the real faculty
+        // update endpoint) without relying on an invalid date or on
+        // the current wall-clock date advancing.
+        $this->patchJson("/api/faculty/attendance/{$attendance['id']}", ['status' => 'ABSENT'])->assertOk();
         $this->assertDatabaseHas('internship_documents', ['id' => $document['id'], 'status' => 'UNDER_REVIEW']);
     }
 
