@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Admin\ApplicationController as AdminApplicationController;
+use App\Http\Controllers\Api\Admin\InternshipAssignmentController as AdminInternshipAssignmentController;
 use App\Http\Controllers\Api\Admin\InternshipController;
 use App\Http\Controllers\Api\Admin\InterviewController as AdminInterviewController;
 use App\Http\Controllers\Api\Admin\JobPostingController;
@@ -10,6 +11,8 @@ use App\Http\Controllers\Api\Dashboard\AdminDashboardController;
 use App\Http\Controllers\Api\Dashboard\FacultyDashboardController;
 use App\Http\Controllers\Api\Dashboard\StudentDashboardController;
 use App\Http\Controllers\Api\Dashboard\SuperAdminDashboardController;
+use App\Http\Controllers\Api\Faculty\InternshipAssignmentController as FacultyInternshipAssignmentController;
+use App\Http\Controllers\Api\Faculty\StudentController as FacultyStudentController;
 use App\Http\Controllers\Api\MetaController;
 use App\Http\Controllers\Api\Student\ApplicationController as StudentApplicationController;
 use App\Http\Controllers\Api\Student\CertificationController;
@@ -183,6 +186,38 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{placementDrive}/opportunities', [AdminPlacementDriveController::class, 'attachOpportunity']);
         Route::delete('/{placementDrive}/opportunities/{opportunity}', [AdminPlacementDriveController::class, 'detachOpportunity']);
     });
+
+    // Internship Assignment + Faculty Coordination - the faculty-
+    // coordination relationship for a SELECTED internship application
+    // (Student -> Internship -> Application -> SELECTED -> Internship
+    // Assignment -> Faculty Coordinator). Object-level authorization is
+    // enforced by InternshipAssignmentPolicy inside
+    // Api\Admin\InternshipAssignmentController /
+    // Api\Faculty\InternshipAssignmentController, on top of these role
+    // gates - faculty access is strictly assignment-based: a faculty
+    // member can only ever see assignments/students explicitly
+    // assigned to THEM (see the policy's docblock), never all students
+    // or all internships, and cannot create, reassign, activate,
+    // complete or cancel anything - those remain admin-only.
+    Route::prefix('admin/internship-assignments')->middleware('role:PLACEMENT_ADMIN,SUPER_ADMIN')->group(function () {
+        Route::get('/', [AdminInternshipAssignmentController::class, 'index']);
+        Route::post('/', [AdminInternshipAssignmentController::class, 'store']);
+        Route::get('/{assignment}', [AdminInternshipAssignmentController::class, 'show']);
+
+        Route::patch('/{assignment}/faculty', [AdminInternshipAssignmentController::class, 'reassignFaculty']);
+
+        Route::post('/{assignment}/activate', [AdminInternshipAssignmentController::class, 'activate']);
+        Route::post('/{assignment}/complete', [AdminInternshipAssignmentController::class, 'complete']);
+        Route::post('/{assignment}/cancel', [AdminInternshipAssignmentController::class, 'cancel']);
+    });
+
+    Route::prefix('faculty/internship-assignments')->middleware('role:FACULTY')->group(function () {
+        Route::get('/', [FacultyInternshipAssignmentController::class, 'index']);
+        Route::get('/{assignment}', [FacultyInternshipAssignmentController::class, 'show']);
+    });
+
+    Route::get('/faculty/students', [FacultyStudentController::class, 'index'])
+        ->middleware('role:FACULTY');
 
     Route::get('/super-admin/dashboard', [SuperAdminDashboardController::class, 'index'])
         ->middleware('role:SUPER_ADMIN');

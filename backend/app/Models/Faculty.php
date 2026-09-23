@@ -36,4 +36,18 @@ class Faculty extends Model
     {
         return $this->hasMany(Student::class, 'faculty_mentor_id');
     }
+
+    /**
+     * Internship Assignment + Faculty Coordination - every
+     * InternshipAssignment row this faculty member coordinates. This
+     * is the SOLE source of truth for "this faculty's students" (see
+     * App\Http\Controllers\Api\Faculty\StudentController - the module
+     * spec explicitly says not to create a separate faculty-student
+     * relationship table); distinct from mentees() above, which is the
+     * pre-existing, unrelated general mentorship relation.
+     */
+    public function internshipAssignments(): HasMany
+    {
+        return $this->hasMany(InternshipAssignment::class);
+    }
 }

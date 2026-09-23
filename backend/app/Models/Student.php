@@ -67,6 +67,20 @@ class Student extends Model
         return $this->hasMany(Application::class);
     }
 
+    /**
+     * Internship Assignment + Faculty Coordination - every
+     * InternshipAssignment row belonging to this student, across
+     * however many internship applications they've had. Distinct from
+     * facultyMentor()/faculty_mentor_id above, which is a pre-existing,
+     * unrelated general mentorship assignment - this is specifically
+     * the faculty-coordination relationship for a SELECTED internship
+     * application (see App\Models\InternshipAssignment's docblock).
+     */
+    public function internshipAssignments(): HasMany
+    {
+        return $this->hasMany(InternshipAssignment::class);
+    }
+
     public function skills(): HasMany
     {
         return $this->hasMany(StudentSkill::class);
