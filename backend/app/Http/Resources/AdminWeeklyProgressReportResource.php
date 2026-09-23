@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Resources\Concerns\FormatsOpportunitySummary;
 use Illuminate\Http\Request;
 
 /**
@@ -11,9 +12,21 @@ use Illuminate\Http\Request;
  * controller's context is always-admin by route middleware and doesn't
  * need WeeklyProgressReportResource's runtime viewerIsAdmin() check.
  * Mirrors AdminAttendanceResource exactly.
+ *
+ * Declares its own `use FormatsOpportunitySummary;` even though the
+ * parent class already does - opportunitySummary() is declared
+ * `private` in that trait, and PHP does not make a private
+ * (trait-provided or otherwise) method callable from a subclass, only
+ * from the exact class it was compiled into. Every other Admin*
+ * resource in this codebase that calls opportunitySummary() (e.g.
+ * AdminApplicationResource, AdminInterviewResource) independently
+ * `use`s the trait for the same reason - this mirrors that existing
+ * pattern rather than inventing a new one.
  */
 class AdminWeeklyProgressReportResource extends WeeklyProgressReportResource
 {
+    use FormatsOpportunitySummary;
+
     public function toArray(Request $request): array
     {
         $base = parent::toArray($request);

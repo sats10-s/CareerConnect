@@ -138,7 +138,20 @@ class WeeklyProgressReportService
             $report->update([
                 'week_start_date' => $weekStart,
                 'week_end_date' => $weekEnd,
-                'work_done' => array_key_exists('work_done', $data) ? $data['work_done'] : $report->work_done,
+                // work_done is NOT NULL at the schema level (see the
+                // 2024_01_10_000001 migration's own docblock) even
+                // though UpdateWeeklyProgressReportRequest legitimately
+                // allows it to be blanked out mid-draft (see that
+                // request's docblock) - Laravel's global
+                // ConvertEmptyStringsToNull middleware turns a
+                // client-supplied '' into null before it ever reaches
+                // here, so a blanked-out work_done is normalized back
+                // to '' rather than persisted as null. An empty DRAFT/
+                // CHANGES_REQUESTED work_done is exactly what
+                // assertContentComplete() (via submit()) exists to
+                // reject with a clean business error - it must never
+                // surface as a database-level failure instead.
+                'work_done' => array_key_exists('work_done', $data) ? ($data['work_done'] ?? '') : $report->work_done,
                 'learning_outcomes' => array_key_exists('learning_outcomes', $data) ? $data['learning_outcomes'] : $report->learning_outcomes,
                 'challenges' => array_key_exists('challenges', $data) ? $data['challenges'] : $report->challenges,
                 'next_week_plan' => array_key_exists('next_week_plan', $data) ? $data['next_week_plan'] : $report->next_week_plan,
