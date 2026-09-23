@@ -3,11 +3,13 @@
 use App\Http\Controllers\Api\Admin\ApplicationController as AdminApplicationController;
 use App\Http\Controllers\Api\Admin\AttendanceController as AdminAttendanceController;
 use App\Http\Controllers\Api\Admin\InternshipAssignmentController as AdminInternshipAssignmentController;
+use App\Http\Controllers\Api\Admin\InternshipCompletionController as AdminInternshipCompletionController;
 use App\Http\Controllers\Api\Admin\InternshipController;
 use App\Http\Controllers\Api\Admin\InternshipDocumentController as AdminInternshipDocumentController;
 use App\Http\Controllers\Api\Admin\InterviewController as AdminInterviewController;
 use App\Http\Controllers\Api\Admin\JobPostingController;
 use App\Http\Controllers\Api\Admin\PlacementDriveController as AdminPlacementDriveController;
+use App\Http\Controllers\Api\Admin\PpoRecordController as AdminPpoRecordController;
 use App\Http\Controllers\Api\Admin\WeeklyProgressReportController as AdminWeeklyProgressReportController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\Dashboard\AdminDashboardController;
@@ -16,7 +18,9 @@ use App\Http\Controllers\Api\Dashboard\StudentDashboardController;
 use App\Http\Controllers\Api\Dashboard\SuperAdminDashboardController;
 use App\Http\Controllers\Api\Faculty\AttendanceController as FacultyAttendanceController;
 use App\Http\Controllers\Api\Faculty\InternshipAssignmentController as FacultyInternshipAssignmentController;
+use App\Http\Controllers\Api\Faculty\InternshipCompletionController as FacultyInternshipCompletionController;
 use App\Http\Controllers\Api\Faculty\InternshipDocumentController as FacultyInternshipDocumentController;
+use App\Http\Controllers\Api\Faculty\PpoRecordController as FacultyPpoRecordController;
 use App\Http\Controllers\Api\Faculty\StudentController as FacultyStudentController;
 use App\Http\Controllers\Api\Faculty\WeeklyProgressReportController as FacultyWeeklyProgressReportController;
 use App\Http\Controllers\Api\MetaController;
@@ -24,10 +28,12 @@ use App\Http\Controllers\Api\Student\ApplicationController as StudentApplication
 use App\Http\Controllers\Api\Student\AttendanceController as StudentAttendanceController;
 use App\Http\Controllers\Api\Student\CertificationController;
 use App\Http\Controllers\Api\Student\ExperienceController;
+use App\Http\Controllers\Api\Student\InternshipCompletionController as StudentInternshipCompletionController;
 use App\Http\Controllers\Api\Student\InternshipDocumentController as StudentInternshipDocumentController;
 use App\Http\Controllers\Api\Student\InterviewController as StudentInterviewController;
 use App\Http\Controllers\Api\Student\OpportunityController;
 use App\Http\Controllers\Api\Student\PlacementDriveController as StudentPlacementDriveController;
+use App\Http\Controllers\Api\Student\PpoRecordController as StudentPpoRecordController;
 use App\Http\Controllers\Api\Student\ProjectController;
 use App\Http\Controllers\Api\Student\ResumeController;
 use App\Http\Controllers\Api\Student\SkillController;
@@ -332,6 +338,66 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{document}', [AdminInternshipDocumentController::class, 'show']);
         Route::get('/{document}/download', [AdminInternshipDocumentController::class, 'download']);
     });
+
+    // Internship Completion & PPO - scoped exclusively through
+    // InternshipAssignment -> Faculty/Student, mirroring Attendance/
+    // Weekly Progress Reports/Internship Documents' own scoping pattern
+    // (see App\Models\InternshipCompletion/PpoRecord's docblocks for
+    // why neither model has a student_id/faculty_id column of its
+    // own). Object-level authorization is enforced by
+    // InternshipCompletionPolicy/PpoRecordPolicy inside each
+    // controller, on top of these role gates. There is no admin
+    // create/update/finalize route for either resource - admin gets
+    // read-only visibility only (see Api\Admin\InternshipCompletionController/
+    // PpoRecordController's docblocks), matching the module spec's own
+    // Admin API list (GET-only for both).
+    //
+    // The module spec's own route list gives no PPO write route at all,
+    // and no dedicated completion-finalize route - both are reasoned
+    // additions; see StorePpoRecordRequest's and
+    // FinalizeInternshipCompletionRequest's docblocks for the full
+    // routing rationale. store()/update() for both resources are
+    // {assignment}-scoped (never a {completion}/{ppoRecord} segment),
+    // exactly matching the module spec's own
+    // POST/PATCH .../internship-assignments/{assignment}/completion
+    // shape - mirrors the Attendance/Weekly Progress Reports precedent
+    // of a plain `Route::middleware('role:FACULTY')->group(...)` block
+    // with full explicit paths, rather than nesting under the
+    // pre-existing `faculty/internship-assignments` prefix group above
+    // (which only ever handles read access to the assignment itself).
+    Route::middleware('role:FACULTY')->group(function () {
+        Route::post('/faculty/internship-assignments/{assignment}/completion', [FacultyInternshipCompletionController::class, 'store']);
+        Route::patch('/faculty/internship-assignments/{assignment}/completion', [FacultyInternshipCompletionController::class, 'update']);
+        Route::post('/faculty/internship-assignments/{assignment}/ppo', [FacultyPpoRecordController::class, 'store']);
+        Route::patch('/faculty/internship-assignments/{assignment}/ppo', [FacultyPpoRecordController::class, 'update']);
+    });
+
+    Route::prefix('faculty/internship-completions')->middleware('role:FACULTY')->group(function () {
+        Route::get('/', [FacultyInternshipCompletionController::class, 'index']);
+        Route::get('/{completion}', [FacultyInternshipCompletionController::class, 'show']);
+        Route::post('/{completion}/finalize', [FacultyInternshipCompletionController::class, 'finalize']);
+    });
+
+    Route::prefix('faculty/ppo-records')->middleware('role:FACULTY')->group(function () {
+        Route::get('/', [FacultyPpoRecordController::class, 'index']);
+        Route::get('/{ppoRecord}', [FacultyPpoRecordController::class, 'show']);
+    });
+
+    Route::prefix('admin/internship-completions')->middleware('role:PLACEMENT_ADMIN,SUPER_ADMIN')->group(function () {
+        Route::get('/', [AdminInternshipCompletionController::class, 'index']);
+        Route::get('/{completion}', [AdminInternshipCompletionController::class, 'show']);
+    });
+
+    Route::prefix('admin/ppo-records')->middleware('role:PLACEMENT_ADMIN,SUPER_ADMIN')->group(function () {
+        Route::get('/', [AdminPpoRecordController::class, 'index']);
+        Route::get('/{ppoRecord}', [AdminPpoRecordController::class, 'show']);
+    });
+
+    Route::get('/student/internship-completion', [StudentInternshipCompletionController::class, 'show'])
+        ->middleware('role:STUDENT');
+
+    Route::get('/student/ppo', [StudentPpoRecordController::class, 'show'])
+        ->middleware('role:STUDENT');
 
     Route::get('/super-admin/dashboard', [SuperAdminDashboardController::class, 'index'])
         ->middleware('role:SUPER_ADMIN');

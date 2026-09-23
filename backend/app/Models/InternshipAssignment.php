@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * The faculty-coordination relationship for a SELECTED internship
@@ -118,5 +119,30 @@ class InternshipAssignment extends Model
     public function internshipDocuments(): HasMany
     {
         return $this->hasMany(InternshipDocument::class);
+    }
+
+    /**
+     * Internship Completion & PPO - the single closing record for this
+     * assignment, if one has been recorded yet (see
+     * App\Models\InternshipCompletion's docblock and the
+     * internship_completions migration's unique-per-assignment index).
+     * HasOne rather than HasMany - unlike attendance/weeklyProgressReports/
+     * internshipDocuments, there is at most one of these per assignment.
+     */
+    public function completion(): HasOne
+    {
+        return $this->hasOne(InternshipCompletion::class);
+    }
+
+    /**
+     * Internship Completion & PPO - the single optional Pre-Placement
+     * Offer record for this assignment, if one has been recorded (see
+     * App\Models\PpoRecord's docblock and the ppo_records migration's
+     * unique-per-assignment index). A PPO is entirely optional - most
+     * assignments will never have one.
+     */
+    public function ppoRecord(): HasOne
+    {
+        return $this->hasOne(PpoRecord::class);
     }
 }
