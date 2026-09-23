@@ -108,25 +108,46 @@ class AttendanceController extends Controller
             ->orderByDesc('attendance_date')
             ->get();
 
-        $response = $this->success(
-            data: [
-                'assignment' => new InternshipAssignmentListResource($assignment),
-                'summary' => new AttendanceSummaryResource($this->attendanceService->getAssignmentAttendanceSummary($assignment)),
-                'records' => AttendanceListResource::collection($records),
-            ],
-            message: 'Attendance retrieved successfully.',
-        );
+        return $this->summaryResponse([
+            'assignment' => new InternshipAssignmentListResource($assignment),
+            'summary' => new AttendanceSummaryResource($this->attendanceService->getAssignmentAttendanceSummary($assignment)),
+            'records' => AttendanceListResource::collection($records),
+        ]);
+    }
 
-        // attendance_percentage is a genuine PHP float that can
-        // legitimately land on a whole number - 0 or 100 - and PHP's
-        // default JSON encoding collapses a whole-number float to
-        // "100" instead of "100.0" unless explicitly told to preserve
-        // the fraction. Scoped to just this one response, not the
-        // shared FormatsApiResponse trait every controller in this
-        // codebase uses, since no other endpoint returns a raw float
-        // that needs it.
-        $response->setEncodingOptions($response->getEncodingOptions() | JSON_PRESERVE_ZERO_FRACTION);
-
-        return $response;
+    /**
+     * The same {success, message, data} envelope
+     * FormatsApiResponse::success() builds for forAssignment(), but
+     * encoded directly with JSON_PRESERVE_ZERO_FRACTION from the
+     * start. attendance_percentage (AttendanceSummaryResource) is a
+     * genuine PHP float that can legitimately land on a whole number
+     * - 0 or 100 - and PHP's default JSON encoding collapses a
+     * whole-number float to "100" instead of "100.0" unless that flag
+     * is active at the moment of the actual encode call.
+     *
+     * Setting the flag AFTER success() has already built the response
+     * does not work: Symfony's JsonResponse::setEncodingOptions()
+     * re-decodes the response's already-encoded JSON string to
+     * re-apply the new options, but by then a whole-number percentage
+     * has already been written out as the bare integer "100" (using
+     * the default options active at the first encode) and decodes
+     * back as a PHP int, not a float - re-encoding an int with
+     * JSON_PRESERVE_ZERO_FRACTION changes nothing, since the flag
+     * only affects genuine float values. Building the response in one
+     * pass, with the flag already active, avoids that lossy
+     * round-trip.
+     *
+     * Scoped to just this one response, not the shared
+     * FormatsApiResponse trait every controller in this codebase
+     * uses, since no other endpoint returns a raw float that needs
+     * it.
+     */
+    private function summaryResponse(array $data): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'message' => 'Attendance retrieved successfully.',
+            'data' => $data,
+        ], 200, [], JSON_PRESERVE_ZERO_FRACTION);
     }
 }
