@@ -23,6 +23,20 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * InternshipResource payload via PlacementDriveResource's admin-only
  * `jobs`/`internships` blocks - this class is deliberately not that.
  *
+ * `application_status` is the requesting student's own application
+ * status for this attached opportunity, where one exists - see
+ * Api\Student\PlacementDriveController::attachApplicationStatuses(),
+ * which sets it as a plain dynamic attribute on each
+ * PlacementDriveOpportunity row BEFORE this resource ever resolves,
+ * the same "compute once, read as an attribute" pattern
+ * App\Http\Controllers\Concerns\ComputesPlacementDriveStats already
+ * uses for application_count/selected_count/interview_count on the
+ * drive itself. Gated by array_key_exists() rather than isset(),
+ * since the attribute is deliberately set to null for "no
+ * application" - isset() would treat that null the same as "never
+ * set" and silently drop the key. It is never set on the admin
+ * surface, so it never appears there.
+ *
  * @mixin \App\Models\PlacementDriveOpportunity
  */
 class PlacementDriveOpportunityResource extends JsonResource
@@ -35,6 +49,10 @@ class PlacementDriveOpportunityResource extends JsonResource
             'attachment_id' => $this->id,
             'opportunity' => $this->whenLoaded('opportunity', fn () => $this->opportunitySummary($this->opportunity)),
             'attached_at' => $this->created_at,
+            'application_status' => $this->when(
+                array_key_exists('application_status', $this->resource->getAttributes()),
+                fn () => $this->application_status,
+            ),
         ];
     }
 }

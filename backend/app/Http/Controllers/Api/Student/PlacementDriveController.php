@@ -8,8 +8,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\PlacementDriveListResource;
 use App\Http\Resources\PlacementDriveResource;
 use App\Models\Application;
-use App\Models\Internship;
-use App\Models\JobPosting;
 use App\Models\PlacementDrive;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -73,59 +71,66 @@ class PlacementDriveController extends Controller
             'opportunities.opportunity.company',
         ]);
 
-        $data = (new PlacementDriveResource($placementDrive))->toArray($request);
-        $data['opportunities'] = $this->withApplicationStatus($request, $placementDrive, $data['opportunities'] ?? []);
+        $this->attachApplicationStatuses($request, $placementDrive);
 
-        return $this->success(data: $data, message: 'Placement drive retrieved successfully.');
+        return $this->success(data: new PlacementDriveResource($placementDrive), message: 'Placement drive retrieved successfully.');
     }
 
     /**
-     * Merges the authenticated student's own application status onto
-     * each attached-opportunity summary, where one exists - never a
-     * second eligibility/filtering system, purely informational (see
-     * the module spec's "application status where applicable").
-     * Ownership is always derived from $request->user()->student,
-     * never trusted from the request.
+     * Sets `application_status` as a plain dynamic attribute on each
+     * already-loaded PlacementDriveOpportunity row, BEFORE
+     * PlacementDriveResource/PlacementDriveOpportunityResource ever
+     * serialize the drive - the same "compute once, read as an
+     * attribute" pattern
+     * App\Http\Controllers\Concerns\ComputesPlacementDriveStats uses
+     * for the drive's own application/selected/interview counts (see
+     * that trait's docblock). This is what fixes the type boundary:
+     * earlier this method ran AFTER
+     * (new PlacementDriveResource($placementDrive))->toArray($request),
+     * mutating what it assumed was a plain PHP array - but toArray()
+     * does not recursively resolve nested resources, so
+     * $data['opportunities'] was actually still an
+     * AnonymousResourceCollection object, not an array. Operating on
+     * the underlying Eloquent rows first, and letting
+     * PlacementDriveResource serialize normally afterwards, avoids
+     * that boundary entirely and needs no manual array reconstruction.
      *
-     * @param array<int, array<string, mixed>> $opportunities
-     * @return array<int, array<string, mixed>>
+     * Never a second eligibility/filtering system - purely
+     * informational (see the module spec's "application status where
+     * applicable"). Ownership is always derived from
+     * $request->user()->student, never trusted from the request.
      */
-    private function withApplicationStatus(Request $request, PlacementDrive $placementDrive, array $opportunities): array
+    private function attachApplicationStatuses(Request $request, PlacementDrive $placementDrive): void
     {
+        $opportunities = $placementDrive->opportunities;
+
+        if ($opportunities->isEmpty()) {
+            return;
+        }
+
         $student = $request->user()->student;
 
         if (! $student) {
-            return array_map(fn ($item) => $item + ['application_status' => null], $opportunities);
-        }
+            $opportunities->each(fn ($row) => $row->setAttribute('application_status', null));
 
-        $pairs = $placementDrive->opportunities->map(fn ($row) => [
-            'type' => $row->opportunity_type,
-            'id' => $row->opportunity_id,
-        ]);
-
-        if ($pairs->isEmpty()) {
-            return array_map(fn ($item) => $item + ['application_status' => null], $opportunities);
+            return;
         }
 
         $applications = Application::query()
             ->where('student_id', $student->id)
-            ->where(function ($query) use ($pairs) {
-                foreach ($pairs as $pair) {
-                    $query->orWhere(function ($inner) use ($pair) {
-                        $inner->where('applicable_type', $pair['type'])->where('applicable_id', $pair['id']);
+            ->where(function ($query) use ($opportunities) {
+                foreach ($opportunities as $row) {
+                    $query->orWhere(function ($inner) use ($row) {
+                        $inner->where('applicable_type', $row->opportunity_type)->where('applicable_id', $row->opportunity_id);
                     });
                 }
             })
             ->get()
             ->keyBy(fn ($application) => $application->applicable_type.':'.$application->applicable_id);
 
-        return array_map(function ($item) use ($applications) {
-            $type = ($item['opportunity']['type'] ?? null) === 'internship' ? Internship::class : JobPosting::class;
-            $key = $type.':'.($item['opportunity']['id'] ?? null);
-
-            $item['application_status'] = $applications->get($key)?->status?->value;
-
-            return $item;
-        }, $opportunities);
+        $opportunities->each(function ($row) use ($applications) {
+            $key = $row->opportunity_type.':'.$row->opportunity_id;
+            $row->setAttribute('application_status', $applications->get($key)?->status?->value);
+        });
     }
 }
