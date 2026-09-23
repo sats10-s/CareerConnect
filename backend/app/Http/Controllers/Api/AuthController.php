@@ -11,6 +11,7 @@ use App\Services\Auth\RegistrationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
@@ -71,7 +72,19 @@ class AuthController extends Controller
 
     public function logout(Request $request): JsonResponse
     {
-        $request->user()?->currentAccessToken()?->delete();
+        // currentAccessToken() is a real, deletable PersonalAccessToken
+        // (an Eloquent model) only for a bearer-token client. For a
+        // stateful SPA/session request, Sanctum's guard instead attaches
+        // a Laravel\Sanctum\TransientToken stand-in - which has no
+        // delete() method at all - so calling ->delete() unconditionally
+        // throws for every session-authenticated logout. The session
+        // itself (invalidated below, when present) is what actually
+        // needs revoking in that case; there is no token row to delete.
+        $accessToken = $request->user()?->currentAccessToken();
+
+        if ($accessToken instanceof PersonalAccessToken) {
+            $accessToken->delete();
+        }
 
         if ($request->hasSession()) {
             Auth::guard('web')->logout();

@@ -358,4 +358,44 @@ class AuthenticationTest extends TestCase
 
         $this->actingAs($user)->postJson('/api/auth/logout')->assertOk();
     }
+
+    /**
+     * Regression test for AuthController::logout(). currentAccessToken()
+     * is only a real, deletable Laravel\Sanctum\PersonalAccessToken for
+     * a bearer-token client - the fix that stopped logout crashing on
+     * Laravel\Sanctum\TransientToken (the session-auth stand-in, which
+     * has no delete() method) must not have done so by skipping
+     * deletion altogether. This proves a real token row is still
+     * revoked on logout for a token-based client.
+     */
+    public function test_logout_revokes_the_bearer_token_for_token_based_clients(): void
+    {
+        $user = User::create([
+            'name' => 'Arjun Malhotra',
+            'email' => 'arjun@careerconnect.edu',
+            'password' => Hash::make('Password@123'),
+            'role_id' => $this->studentRole->id,
+        ]);
+        Student::create([
+            'user_id' => $user->id,
+            'roll_number' => 'CC24009',
+            'department_id' => $this->department->id,
+            'batch_id' => $this->batch->id,
+        ]);
+
+        $login = $this->postJson('/api/auth/login', [
+            'email' => 'arjun@careerconnect.edu',
+            'password' => 'Password@123',
+        ]);
+        $login->assertOk();
+        $token = $login->json('token');
+
+        $this->assertDatabaseCount('personal_access_tokens', 1);
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson('/api/auth/logout')
+            ->assertOk();
+
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+    }
 }
