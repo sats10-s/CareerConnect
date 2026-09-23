@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\Admin\InternshipController;
 use App\Http\Controllers\Api\Admin\InterviewController as AdminInterviewController;
 use App\Http\Controllers\Api\Admin\JobPostingController;
 use App\Http\Controllers\Api\Admin\PlacementDriveController as AdminPlacementDriveController;
+use App\Http\Controllers\Api\Admin\WeeklyProgressReportController as AdminWeeklyProgressReportController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\Dashboard\AdminDashboardController;
 use App\Http\Controllers\Api\Dashboard\FacultyDashboardController;
@@ -15,6 +16,7 @@ use App\Http\Controllers\Api\Dashboard\SuperAdminDashboardController;
 use App\Http\Controllers\Api\Faculty\AttendanceController as FacultyAttendanceController;
 use App\Http\Controllers\Api\Faculty\InternshipAssignmentController as FacultyInternshipAssignmentController;
 use App\Http\Controllers\Api\Faculty\StudentController as FacultyStudentController;
+use App\Http\Controllers\Api\Faculty\WeeklyProgressReportController as FacultyWeeklyProgressReportController;
 use App\Http\Controllers\Api\MetaController;
 use App\Http\Controllers\Api\Student\ApplicationController as StudentApplicationController;
 use App\Http\Controllers\Api\Student\AttendanceController as StudentAttendanceController;
@@ -26,6 +28,7 @@ use App\Http\Controllers\Api\Student\PlacementDriveController as StudentPlacemen
 use App\Http\Controllers\Api\Student\ProjectController;
 use App\Http\Controllers\Api\Student\ResumeController;
 use App\Http\Controllers\Api\Student\SkillController;
+use App\Http\Controllers\Api\Student\WeeklyProgressReportController as StudentWeeklyProgressReportController;
 use App\Http\Controllers\Api\StudentProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -253,6 +256,43 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/', [AdminAttendanceController::class, 'index']);
         Route::get('/{attendance}', [AdminAttendanceController::class, 'show']);
         Route::patch('/{attendance}', [AdminAttendanceController::class, 'update']);
+    });
+
+    // Weekly Progress Reports - scoped exclusively through
+    // InternshipAssignment -> Faculty/Student, mirroring Attendance's
+    // own scoping pattern (see App\Models\WeeklyProgressReport's
+    // docblock for why this model has no student_id/faculty_id column
+    // of its own). Object-level authorization is enforced by
+    // WeeklyProgressReportPolicy (and, for the assignment-scoped GET
+    // routes below, InternshipAssignmentPolicy::view()) inside each
+    // controller, on top of these role gates. There is no admin
+    // create/update/submit/review route - admin gets read-only
+    // visibility only (see Api\Admin\WeeklyProgressReportController's
+    // docblock).
+    Route::prefix('student/weekly-reports')->middleware('role:STUDENT')->group(function () {
+        Route::get('/', [StudentWeeklyProgressReportController::class, 'index']);
+        Route::get('/{report}', [StudentWeeklyProgressReportController::class, 'show']);
+        Route::patch('/{report}', [StudentWeeklyProgressReportController::class, 'update']);
+        Route::post('/{report}/submit', [StudentWeeklyProgressReportController::class, 'submit']);
+    });
+
+    Route::middleware('role:STUDENT')->group(function () {
+        Route::get('/student/internship-assignments/{assignment}/weekly-reports', [StudentWeeklyProgressReportController::class, 'forAssignment']);
+        Route::post('/student/internship-assignments/{assignment}/weekly-reports', [StudentWeeklyProgressReportController::class, 'store']);
+    });
+
+    Route::prefix('faculty/weekly-reports')->middleware('role:FACULTY')->group(function () {
+        Route::get('/', [FacultyWeeklyProgressReportController::class, 'index']);
+        Route::get('/{report}', [FacultyWeeklyProgressReportController::class, 'show']);
+        Route::post('/{report}/review', [FacultyWeeklyProgressReportController::class, 'review']);
+    });
+
+    Route::get('/faculty/internship-assignments/{assignment}/weekly-reports', [FacultyWeeklyProgressReportController::class, 'forAssignment'])
+        ->middleware('role:FACULTY');
+
+    Route::prefix('admin/weekly-reports')->middleware('role:PLACEMENT_ADMIN,SUPER_ADMIN')->group(function () {
+        Route::get('/', [AdminWeeklyProgressReportController::class, 'index']);
+        Route::get('/{report}', [AdminWeeklyProgressReportController::class, 'show']);
     });
 
     Route::get('/super-admin/dashboard', [SuperAdminDashboardController::class, 'index'])

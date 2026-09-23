@@ -95,4 +95,16 @@ class InternshipAssignment extends Model
     {
         return $this->hasMany(Attendance::class);
     }
+
+    /**
+     * Weekly Progress Reports - every WeeklyProgressReport row created
+     * against this assignment. This is the ONLY path to an assignment's
+     * weekly reports; see App\Models\WeeklyProgressReport's docblock
+     * for why that model has no student()/faculty() relation of its
+     * own, mirroring attendance() above.
+     */
+    public function weeklyProgressReports(): HasMany
+    {
+        return $this->hasMany(WeeklyProgressReport::class);
+    }
 }
