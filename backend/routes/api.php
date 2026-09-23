@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Dashboard\FacultyDashboardController;
 use App\Http\Controllers\Api\Dashboard\StudentDashboardController;
 use App\Http\Controllers\Api\Dashboard\SuperAdminDashboardController;
 use App\Http\Controllers\Api\MetaController;
+use App\Http\Controllers\Api\StudentProfileController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -35,6 +36,11 @@ Route::get('/meta/batches', [MetaController::class, 'batches']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/student/dashboard', [StudentDashboardController::class, 'index'])
+        ->middleware('role:STUDENT');
+
+    Route::get('/student/profile', [StudentProfileController::class, 'show'])
+        ->middleware('role:STUDENT');
+    Route::put('/student/profile', [StudentProfileController::class, 'update'])
         ->middleware('role:STUDENT');
 
     Route::get('/faculty/dashboard', [FacultyDashboardController::class, 'index'])

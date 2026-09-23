@@ -12,6 +12,7 @@ import { SuperAdminLayout } from '@/layouts/SuperAdminLayout'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { RegisterPage } from '@/pages/auth/RegisterPage'
 import { StudentDashboardPage } from '@/pages/student/Dashboard'
+import { StudentProfilePage } from '@/pages/student/Profile'
 import { FacultyDashboardPage } from '@/pages/faculty/Dashboard'
 import { AdminDashboardPage } from '@/pages/admin/Dashboard'
 import { SuperAdminDashboardPage } from '@/pages/superadmin/Dashboard'
@@ -62,6 +63,7 @@ export default function App() {
         <Route element={<ProtectedRoute allowedRoles={['STUDENT']} />}>
           <Route path="/student" element={<StudentLayout />}>
             <Route path="dashboard" element={<StudentDashboardPage />} />
+            <Route path="profile" element={<StudentProfilePage />} />
             {placeholderRoutesFor('STUDENT')}
           </Route>
         </Route>

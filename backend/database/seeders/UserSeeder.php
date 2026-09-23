@@ -94,6 +94,9 @@ class UserSeeder extends Seeder
                     'roll_number' => sprintf('CC%02d%03d', 24, $index + 1),
                     'department_id' => $departments[$index % $departments->count()]->id,
                     'batch_id' => $batches[$index % $batches->count()]->id,
+                    'year' => ($index % 4) + 1,
+                    'cgpa' => round(6.5 + ($index % 7) * 0.5, 2),
+                    'backlogs' => $index % 5 === 0 ? 1 : 0,
                     'phone' => '98765'.str_pad((string) ($index + 1), 5, '0', STR_PAD_LEFT),
                     'faculty_mentor_id' => $facultyProfiles[$index % count($facultyProfiles)]->id,
                 ]

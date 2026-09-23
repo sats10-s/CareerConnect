@@ -2,8 +2,13 @@ export type Role = 'STUDENT' | 'FACULTY' | 'PLACEMENT_ADMIN' | 'SUPER_ADMIN'
 
 export interface StudentProfile {
   roll_number: string
+  department_id: number | null
   department: string | null
+  batch_id: number | null
   batch: string | null
+  year: number | null
+  cgpa: number | null
+  backlogs: number | null
   phone: string | null
 }
 
@@ -37,7 +42,19 @@ export interface RegisterPayload {
   roll_number: string
   department_id: number
   batch_id: number
+  year: number
   phone?: string
+}
+
+/** Payload for PUT /student/profile - what a student can edit about themselves. */
+export interface StudentProfileUpdatePayload {
+  roll_number: string
+  department_id: number
+  batch_id: number
+  year: number
+  cgpa?: number | null
+  backlogs?: number | null
+  phone?: string | null
 }
 
 export interface ApiValidationError {

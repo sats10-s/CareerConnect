@@ -20,8 +20,13 @@ class UserResource extends JsonResource
             'is_active' => $this->is_active,
             'student' => $this->whenLoaded('student', fn () => [
                 'roll_number' => $this->student->roll_number,
+                'department_id' => $this->student->department_id,
                 'department' => $this->student->department?->name,
+                'batch_id' => $this->student->batch_id,
                 'batch' => $this->student->batch?->name,
+                'year' => $this->student->year,
+                'cgpa' => $this->student->cgpa === null ? null : (float) $this->student->cgpa,
+                'backlogs' => $this->student->backlogs,
                 'phone' => $this->student->phone,
             ]),
             'faculty' => $this->whenLoaded('faculty', fn () => [

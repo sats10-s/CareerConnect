@@ -17,6 +17,7 @@ interface FormState {
   roll_number: string
   department_id: string
   batch_id: string
+  year: string
   phone: string
 }
 
@@ -28,8 +29,11 @@ const EMPTY_FORM: FormState = {
   roll_number: '',
   department_id: '',
   batch_id: '',
+  year: '',
   phone: '',
 }
+
+const YEAR_OPTIONS = [1, 2, 3, 4] as const
 
 export function RegisterPage() {
   const { register } = useAuth()
@@ -60,6 +64,7 @@ export function RegisterPage() {
         ...form,
         department_id: Number(form.department_id),
         batch_id: Number(form.batch_id),
+        year: Number(form.year),
       })
       navigate(dashboardPathForRole(user.role), { replace: true })
     } catch (err) {
@@ -112,7 +117,7 @@ export function RegisterPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div>
             <label className="label" htmlFor="department_id">Department</label>
             <select id="department_id" required className="input" value={form.department_id} onChange={(e) => update('department_id', e.target.value)}>
@@ -132,6 +137,16 @@ export function RegisterPage() {
               ))}
             </select>
             {fieldError('batch_id') && <p className="mt-1 text-xs text-red-600">{fieldError('batch_id')}</p>}
+          </div>
+          <div>
+            <label className="label" htmlFor="year">Year</label>
+            <select id="year" required className="input" value={form.year} onChange={(e) => update('year', e.target.value)}>
+              <option value="">Select…</option>
+              {YEAR_OPTIONS.map((y) => (
+                <option key={y} value={y}>Year {y}</option>
+              ))}
+            </select>
+            {fieldError('year') && <p className="mt-1 text-xs text-red-600">{fieldError('year')}</p>}
           </div>
         </div>
 

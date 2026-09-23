@@ -57,14 +57,17 @@ class AuthenticationTest extends TestCase
             'roll_number' => 'CC24001',
             'department_id' => $this->department->id,
             'batch_id' => $this->batch->id,
+            'year' => 2,
         ]);
 
         $response->assertCreated();
         $response->assertJsonPath('data.email', 'aarav@careerconnect.edu');
         $response->assertJsonPath('data.role', RoleName::STUDENT->value);
 
+        $response->assertJsonPath('data.student.year', 2);
+
         $this->assertDatabaseHas('users', ['email' => 'aarav@careerconnect.edu']);
-        $this->assertDatabaseHas('students', ['roll_number' => 'CC24001']);
+        $this->assertDatabaseHas('students', ['roll_number' => 'CC24001', 'year' => 2]);
 
         // The password must never be stored in plaintext.
         $stored = User::where('email', 'aarav@careerconnect.edu')->firstOrFail();
@@ -82,10 +85,11 @@ class AuthenticationTest extends TestCase
             'roll_number' => '',
             'department_id' => 999999,
             'batch_id' => 999999,
+            'year' => 7,
         ]);
 
         $response->assertStatus(422);
-        $response->assertJsonValidationErrors(['name', 'email', 'password', 'roll_number', 'department_id', 'batch_id']);
+        $response->assertJsonValidationErrors(['name', 'email', 'password', 'roll_number', 'department_id', 'batch_id', 'year']);
     }
 
     public function test_registration_rejects_duplicate_college_email(): void
@@ -111,6 +115,7 @@ class AuthenticationTest extends TestCase
             'roll_number' => 'CC24002',
             'department_id' => $this->department->id,
             'batch_id' => $this->batch->id,
+            'year' => 1,
         ]);
 
         $response->assertStatus(422);

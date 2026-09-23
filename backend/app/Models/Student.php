@@ -16,9 +16,21 @@ class Student extends Model
         'roll_number',
         'department_id',
         'batch_id',
+        'year',
+        'cgpa',
+        'backlogs',
         'phone',
         'faculty_mentor_id',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'year' => 'integer',
+            'cgpa' => 'decimal:2',
+            'backlogs' => 'integer',
+        ];
+    }
 
     public function user(): BelongsTo
     {

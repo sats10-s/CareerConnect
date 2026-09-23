@@ -26,6 +26,7 @@ class RegisterRequest extends FormRequest
             'roll_number' => ['required', 'string', 'max:32', 'unique:students,roll_number'],
             'department_id' => ['required', 'integer', 'exists:departments,id'],
             'batch_id' => ['required', 'integer', 'exists:batches,id'],
+            'year' => ['required', 'integer', 'between:1,4'],
             'phone' => ['nullable', 'string', 'max:20'],
         ];
     }

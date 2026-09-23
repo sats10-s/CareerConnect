@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Hash;
 class RegistrationService
 {
     /**
-     * @param  array{name: string, email: string, password: string, roll_number: string, department_id: int, batch_id: int, phone?: string|null}  $data
+     * @param  array{name: string, email: string, password: string, roll_number: string, department_id: int, batch_id: int, year: int, phone?: string|null}  $data
      */
     public function registerStudent(array $data): User
     {
@@ -37,6 +37,7 @@ class RegistrationService
                 'roll_number' => $data['roll_number'],
                 'department_id' => $data['department_id'],
                 'batch_id' => $data['batch_id'],
+                'year' => $data['year'],
                 'phone' => $data['phone'] ?? null,
             ]);
 
