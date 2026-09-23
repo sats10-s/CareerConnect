@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\InternshipController;
+use App\Http\Controllers\Api\Admin\JobPostingController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\Dashboard\AdminDashboardController;
 use App\Http\Controllers\Api\Dashboard\FacultyDashboardController;
@@ -8,6 +10,7 @@ use App\Http\Controllers\Api\Dashboard\SuperAdminDashboardController;
 use App\Http\Controllers\Api\MetaController;
 use App\Http\Controllers\Api\Student\CertificationController;
 use App\Http\Controllers\Api\Student\ExperienceController;
+use App\Http\Controllers\Api\Student\OpportunityController;
 use App\Http\Controllers\Api\Student\ProjectController;
 use App\Http\Controllers\Api\Student\ResumeController;
 use App\Http\Controllers\Api\Student\SkillController;
@@ -77,6 +80,30 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])
         ->middleware('role:PLACEMENT_ADMIN,SUPER_ADMIN');
+
+    // Jobs & Internships Backend Foundation - placement-admin management.
+    // Object-level authorization (beyond this role gate) is enforced by
+    // JobPostingPolicy/InternshipPolicy inside each controller action.
+    Route::prefix('admin')->middleware('role:PLACEMENT_ADMIN,SUPER_ADMIN')->group(function () {
+        Route::get('/jobs', [JobPostingController::class, 'index']);
+        Route::post('/jobs', [JobPostingController::class, 'store']);
+        Route::get('/jobs/{jobPosting}', [JobPostingController::class, 'show']);
+        Route::match(['put', 'patch'], '/jobs/{jobPosting}', [JobPostingController::class, 'update']);
+
+        Route::get('/internships', [InternshipController::class, 'index']);
+        Route::post('/internships', [InternshipController::class, 'store']);
+        Route::get('/internships/{internship}', [InternshipController::class, 'show']);
+        Route::match(['put', 'patch'], '/internships/{internship}', [InternshipController::class, 'update']);
+    });
+
+    // Jobs & Internships Backend Foundation - the student-facing
+    // published-opportunities listing (see Api\Student\OpportunityController
+    // for the cross-table union/pagination behind /student/opportunities).
+    Route::prefix('student/opportunities')->middleware('role:STUDENT')->group(function () {
+        Route::get('/', [OpportunityController::class, 'index']);
+        Route::get('/jobs/{jobPosting}', [OpportunityController::class, 'showJob']);
+        Route::get('/internships/{internship}', [OpportunityController::class, 'showInternship']);
+    });
 
     Route::get('/super-admin/dashboard', [SuperAdminDashboardController::class, 'index'])
         ->middleware('role:SUPER_ADMIN');
