@@ -27,6 +27,17 @@ use Illuminate\Support\Facades\Schema;
  * the identity of who it used to be. `to_faculty_id` is NOT nullable
  * (a reassignment always has a destination) and restrictOnDelete()
  * to keep that guarantee.
+ *
+ * The internship_assignment_id foreign key is given an explicit,
+ * short constraint name (`ia_faculty_history_assignment_fk`) instead
+ * of Laravel's auto-generated one. The auto-generated name would be
+ * `internship_assignment_faculty_history_internship_assignment_id_foreign`
+ * (70 characters), which exceeds MySQL's 64-character identifier
+ * limit - the same class of error hit by the sibling
+ * internship_assignment_status_history migration, fixed here
+ * preemptively before it can fail the same way. Column, referenced
+ * table/id, and cascadeOnDelete() behavior are unchanged - only the
+ * constraint's name changed.
  */
 return new class extends Migration
 {
@@ -34,12 +45,16 @@ return new class extends Migration
     {
         Schema::create('internship_assignment_faculty_history', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('internship_assignment_id')->constrained('internship_assignments')->cascadeOnDelete();
+            $table->foreignId('internship_assignment_id');
             $table->foreignId('from_faculty_id')->nullable()->constrained('faculty')->nullOnDelete();
             $table->foreignId('to_faculty_id')->constrained('faculty')->restrictOnDelete();
             $table->foreignId('changed_by')->constrained('users')->restrictOnDelete();
             $table->text('remarks')->nullable();
             $table->timestamp('created_at')->useCurrent();
+
+            $table->foreign('internship_assignment_id', 'ia_faculty_history_assignment_fk')
+                ->references('id')->on('internship_assignments')
+                ->cascadeOnDelete();
 
             $table->index(['internship_assignment_id', 'created_at'], 'ia_faculty_history_assignment_created_idx');
         });
