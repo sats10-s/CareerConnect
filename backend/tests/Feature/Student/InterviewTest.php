@@ -169,6 +169,20 @@ class InterviewTest extends TestCase
         $student = $this->makeStudent();
         $interview = $this->makeInterview($student, $jobPosting);
 
+        // makeInterview() ends by acting as $this->admin (it drives the
+        // real admin endpoint to create the fixture interview), and
+        // Sanctum::actingAs() sets the resolved user directly on the
+        // guard - that stays in effect for any later request in this
+        // test until something re-authenticates or the guard is reset.
+        // Every other test here calls Sanctum::actingAs() again after
+        // makeInterview() and so never notices this; this is the one
+        // test that actually wants a logged-out request, so it must
+        // explicitly forget the guards first - otherwise this "guest"
+        // request is still authenticated as the admin, and gets 403
+        // (wrong role) from EnsureUserHasRole instead of the intended
+        // 401 (no user at all).
+        $this->app->make('auth')->forgetGuards();
+
         $this->getJson('/api/student/interviews')->assertStatus(401);
         $this->getJson("/api/student/interviews/{$interview['id']}")->assertStatus(401);
     }
