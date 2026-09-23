@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Admin\ApplicationController as AdminApplicationController;
 use App\Http\Controllers\Api\Admin\InternshipController;
+use App\Http\Controllers\Api\Admin\InterviewController as AdminInterviewController;
 use App\Http\Controllers\Api\Admin\JobPostingController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\Dashboard\AdminDashboardController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\Api\MetaController;
 use App\Http\Controllers\Api\Student\ApplicationController as StudentApplicationController;
 use App\Http\Controllers\Api\Student\CertificationController;
 use App\Http\Controllers\Api\Student\ExperienceController;
+use App\Http\Controllers\Api\Student\InterviewController as StudentInterviewController;
 use App\Http\Controllers\Api\Student\OpportunityController;
 use App\Http\Controllers\Api\Student\ProjectController;
 use App\Http\Controllers\Api\Student\ResumeController;
@@ -129,6 +131,30 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/', [AdminApplicationController::class, 'index']);
         Route::get('/{application}', [AdminApplicationController::class, 'show']);
         Route::patch('/{application}/status', [AdminApplicationController::class, 'updateStatus']);
+        Route::post('/{application}/interviews', [AdminInterviewController::class, 'store']);
+    });
+
+    // Interview Management - a student's own interviews (list/detail),
+    // tied to their own applications. Object-level ownership is
+    // enforced by InterviewPolicy inside Api\Student\InterviewController,
+    // on top of this role gate.
+    Route::prefix('student/interviews')->middleware('role:STUDENT')->group(function () {
+        Route::get('/', [StudentInterviewController::class, 'index']);
+        Route::get('/{interview}', [StudentInterviewController::class, 'show']);
+    });
+
+    // Interview Management - placement-admin management of interviews.
+    // Object-level authorization is enforced by InterviewPolicy inside
+    // Api\Admin\InterviewController, on top of this role gate. Creation
+    // lives under admin/applications/{application}/interviews above,
+    // since an interview always belongs to a specific application.
+    Route::prefix('admin/interviews')->middleware('role:PLACEMENT_ADMIN,SUPER_ADMIN')->group(function () {
+        Route::get('/', [AdminInterviewController::class, 'index']);
+        Route::get('/{interview}', [AdminInterviewController::class, 'show']);
+        Route::patch('/{interview}', [AdminInterviewController::class, 'update']);
+        Route::post('/{interview}/reschedule', [AdminInterviewController::class, 'reschedule']);
+        Route::post('/{interview}/complete', [AdminInterviewController::class, 'complete']);
+        Route::post('/{interview}/cancel', [AdminInterviewController::class, 'cancel']);
     });
 
     Route::get('/super-admin/dashboard', [SuperAdminDashboardController::class, 'index'])
