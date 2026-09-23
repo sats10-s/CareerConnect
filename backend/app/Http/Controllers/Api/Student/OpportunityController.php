@@ -3,13 +3,16 @@
 namespace App\Http\Controllers\Api\Student;
 
 use App\Enums\OpportunityStatus;
+use App\Exceptions\ApplicationException;
 use App\Http\Controllers\Concerns\FormatsApiResponse;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\ApplicationResource;
 use App\Http\Resources\InternshipResource;
 use App\Http\Resources\JobPostingResource;
 use App\Http\Resources\OpportunityListResource;
 use App\Models\Internship;
 use App\Models\JobPosting;
+use App\Services\ApplicationService;
 use App\Services\OpportunityEligibilityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -47,6 +50,15 @@ use Illuminate\Support\Facades\Gate;
  * `eligibility` block (the configured criteria themselves, same as
  * what an admin sees). The student is always derived from
  * $request->user()->student, never trusted from the URL/request.
+ *
+ * applyToJob()/applyToInternship() (Application Lifecycle increment):
+ * live here rather than on Api\Student\ApplicationController because
+ * they need the same Gate::authorize('view', $opportunity) resolution
+ * showJob()/showInternship() already do - a student gets the same 403
+ * for trying to apply to a draft/closed/archived opportunity as they
+ * would for viewing one. All the actual business rules (published-only,
+ * no duplicates, eligibility enforcement) live in
+ * App\Services\ApplicationService, not here.
  */
 class OpportunityController extends Controller
 {
@@ -54,6 +66,7 @@ class OpportunityController extends Controller
 
     public function __construct(
         private readonly OpportunityEligibilityService $eligibilityService,
+        private readonly ApplicationService $applicationService,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -151,6 +164,43 @@ class OpportunityController extends Controller
         $data['my_eligibility'] = $this->eligibilityService->evaluate($request->user()->student, $internship);
 
         return $this->success(data: $data, message: 'Internship retrieved successfully.');
+    }
+
+    public function applyToJob(Request $request, JobPosting $jobPosting): JsonResponse
+    {
+        Gate::authorize('view', $jobPosting);
+
+        return $this->apply($request, $jobPosting);
+    }
+
+    public function applyToInternship(Request $request, Internship $internship): JsonResponse
+    {
+        Gate::authorize('view', $internship);
+
+        return $this->apply($request, $internship);
+    }
+
+    private function apply(Request $request, JobPosting|Internship $opportunity): JsonResponse
+    {
+        $student = $request->user()->student;
+
+        if (! $student) {
+            return $this->failure('Your student profile could not be found.', status: 422);
+        }
+
+        try {
+            $application = $this->applicationService->apply($student, $opportunity, $request->user());
+        } catch (ApplicationException $e) {
+            return $this->failure($e->getMessage(), $e->reasons(), $e->status());
+        }
+
+        $application->load(['applicable.company', 'statusHistory' => fn ($q) => $q->orderBy('created_at')]);
+
+        return $this->success(
+            data: new ApplicationResource($application),
+            message: 'Application submitted successfully.',
+            status: 201,
+        );
     }
 
     /**

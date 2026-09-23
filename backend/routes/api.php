@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\ApplicationController as AdminApplicationController;
 use App\Http\Controllers\Api\Admin\InternshipController;
 use App\Http\Controllers\Api\Admin\JobPostingController;
 use App\Http\Controllers\Api\AuthController;
@@ -8,6 +9,7 @@ use App\Http\Controllers\Api\Dashboard\FacultyDashboardController;
 use App\Http\Controllers\Api\Dashboard\StudentDashboardController;
 use App\Http\Controllers\Api\Dashboard\SuperAdminDashboardController;
 use App\Http\Controllers\Api\MetaController;
+use App\Http\Controllers\Api\Student\ApplicationController as StudentApplicationController;
 use App\Http\Controllers\Api\Student\CertificationController;
 use App\Http\Controllers\Api\Student\ExperienceController;
 use App\Http\Controllers\Api\Student\OpportunityController;
@@ -99,10 +101,34 @@ Route::middleware('auth:sanctum')->group(function () {
     // Jobs & Internships Backend Foundation - the student-facing
     // published-opportunities listing (see Api\Student\OpportunityController
     // for the cross-table union/pagination behind /student/opportunities).
+    // The .../apply routes (Application Lifecycle increment) live in this
+    // same group since they need the identical job/internship route-model
+    // resolution the show routes already use - see
+    // OpportunityController::applyToJob/applyToInternship.
     Route::prefix('student/opportunities')->middleware('role:STUDENT')->group(function () {
         Route::get('/', [OpportunityController::class, 'index']);
         Route::get('/jobs/{jobPosting}', [OpportunityController::class, 'showJob']);
         Route::get('/internships/{internship}', [OpportunityController::class, 'showInternship']);
+        Route::post('/jobs/{jobPosting}/apply', [OpportunityController::class, 'applyToJob']);
+        Route::post('/internships/{internship}/apply', [OpportunityController::class, 'applyToInternship']);
+    });
+
+    // Application Lifecycle - a student's own applications (list/detail/
+    // withdraw). Object-level ownership is enforced by ApplicationPolicy
+    // inside Api\Student\ApplicationController, on top of this role gate.
+    Route::prefix('student/applications')->middleware('role:STUDENT')->group(function () {
+        Route::get('/', [StudentApplicationController::class, 'index']);
+        Route::get('/{application}', [StudentApplicationController::class, 'show']);
+        Route::post('/{application}/withdraw', [StudentApplicationController::class, 'withdraw']);
+    });
+
+    // Application Lifecycle - placement-admin management of applications.
+    // Object-level authorization is enforced by ApplicationPolicy inside
+    // Api\Admin\ApplicationController, on top of this role gate.
+    Route::prefix('admin/applications')->middleware('role:PLACEMENT_ADMIN,SUPER_ADMIN')->group(function () {
+        Route::get('/', [AdminApplicationController::class, 'index']);
+        Route::get('/{application}', [AdminApplicationController::class, 'show']);
+        Route::patch('/{application}/status', [AdminApplicationController::class, 'updateStatus']);
     });
 
     Route::get('/super-admin/dashboard', [SuperAdminDashboardController::class, 'index'])
