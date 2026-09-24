@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\Admin\JobPostingController;
 use App\Http\Controllers\Api\Admin\NotificationController as AdminNotificationController;
 use App\Http\Controllers\Api\Admin\PlacementDriveController as AdminPlacementDriveController;
 use App\Http\Controllers\Api\Admin\PpoRecordController as AdminPpoRecordController;
+use App\Http\Controllers\Api\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Api\Admin\WeeklyProgressReportController as AdminWeeklyProgressReportController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\Dashboard\AdminDashboardController;
@@ -28,6 +29,7 @@ use App\Http\Controllers\Api\Faculty\InternshipCompletionController as FacultyIn
 use App\Http\Controllers\Api\Faculty\InternshipDocumentController as FacultyInternshipDocumentController;
 use App\Http\Controllers\Api\Faculty\NotificationController as FacultyNotificationController;
 use App\Http\Controllers\Api\Faculty\PpoRecordController as FacultyPpoRecordController;
+use App\Http\Controllers\Api\Faculty\ReportController as FacultyReportController;
 use App\Http\Controllers\Api\Faculty\StudentController as FacultyStudentController;
 use App\Http\Controllers\Api\Faculty\WeeklyProgressReportController as FacultyWeeklyProgressReportController;
 use App\Http\Controllers\Api\MetaController;
@@ -44,6 +46,7 @@ use App\Http\Controllers\Api\Student\OpportunityController;
 use App\Http\Controllers\Api\Student\PlacementDriveController as StudentPlacementDriveController;
 use App\Http\Controllers\Api\Student\PpoRecordController as StudentPpoRecordController;
 use App\Http\Controllers\Api\Student\ProjectController;
+use App\Http\Controllers\Api\Student\ReportController as StudentReportController;
 use App\Http\Controllers\Api\Student\ResumeController;
 use App\Http\Controllers\Api\Student\SkillController;
 use App\Http\Controllers\Api\Student\WeeklyProgressReportController as StudentWeeklyProgressReportController;
@@ -478,5 +481,54 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::match(['put', 'patch'], '/{announcement}', [AdminAnnouncementController::class, 'update']);
         Route::post('/{announcement}/publish', [AdminAnnouncementController::class, 'publish']);
         Route::post('/{announcement}/archive', [AdminAnnouncementController::class, 'archive']);
+    });
+
+    // Reports & Analytics - read-only aggregate/analytics endpoints,
+    // entirely additive alongside the pre-existing Api\Dashboard\*
+    // controllers above (/api/{role}/dashboard), which are deliberately
+    // left untouched. Every report is computed by the
+    // App\Services\Reporting\* services - the SAME calculation path the
+    // Excel Sync Center's analytical exports now delegate to (see
+    // App\Services\ExcelExportService), so an API report and its Excel
+    // equivalent can never silently disagree.
+    //
+    // Student/faculty routes return only the acting user's own data
+    // (see Api\Student\ReportController / Api\Faculty\ReportController -
+    // no id parameter exists on either, so there is nothing to swap for
+    // an IDOR attempt). The admin report endpoints are mounted TWICE -
+    // once under `admin/reports` (role:PLACEMENT_ADMIN,SUPER_ADMIN,
+    // matching every other admin/* group in this file) and once under
+    // `super-admin/reports` (role:SUPER_ADMIN only) - both routing to
+    // the SAME Api\Admin\ReportController class, since a super admin's
+    // institution-wide report is identical in shape and scope to an
+    // admin's; duplicating the controller class would only duplicate
+    // the exact same code for no behavioural difference (see that
+    // controller's own docblock).
+    Route::get('/student/reports/summary', [StudentReportController::class, 'summary'])
+        ->middleware('role:STUDENT');
+
+    Route::get('/faculty/reports/summary', [FacultyReportController::class, 'summary'])
+        ->middleware('role:FACULTY');
+
+    Route::prefix('admin/reports')->middleware('role:PLACEMENT_ADMIN,SUPER_ADMIN')->group(function () {
+        Route::get('/dashboard', [AdminReportController::class, 'dashboard']);
+        Route::get('/placements', [AdminReportController::class, 'placements']);
+        Route::get('/applications', [AdminReportController::class, 'applications']);
+        Route::get('/internships', [AdminReportController::class, 'internships']);
+        Route::get('/attendance', [AdminReportController::class, 'attendance']);
+        Route::get('/faculty', [AdminReportController::class, 'faculty']);
+        Route::get('/companies', [AdminReportController::class, 'companies']);
+        Route::get('/trends', [AdminReportController::class, 'trends']);
+    });
+
+    Route::prefix('super-admin/reports')->middleware('role:SUPER_ADMIN')->group(function () {
+        Route::get('/dashboard', [AdminReportController::class, 'dashboard']);
+        Route::get('/placements', [AdminReportController::class, 'placements']);
+        Route::get('/applications', [AdminReportController::class, 'applications']);
+        Route::get('/internships', [AdminReportController::class, 'internships']);
+        Route::get('/attendance', [AdminReportController::class, 'attendance']);
+        Route::get('/faculty', [AdminReportController::class, 'faculty']);
+        Route::get('/companies', [AdminReportController::class, 'companies']);
+        Route::get('/trends', [AdminReportController::class, 'trends']);
     });
 });

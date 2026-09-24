@@ -18,9 +18,10 @@ use App\Models\PlacementDrive;
 use App\Models\PpoRecord;
 use App\Models\Student;
 use App\Models\WeeklyProgressReport;
+use App\Services\Reporting\ApplicationReportService;
+use App\Services\Reporting\PlacementReportService;
 use App\Services\Support\SheetTitleSanitizer;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
@@ -62,6 +63,27 @@ class ExcelExportService
     private const CHUNK_SIZE = 500;
 
     private const HEADER_FILL = 'FFE2E8F0';
+
+    /**
+     * Reports & Analytics module - the Application Summary/Status
+     * Summary/X-wise Placement Report analytical exports below now
+     * delegate their aggregation to these two Reporting services
+     * (App\Services\Reporting\PlacementReportService::summary()/
+     * breakdownBy(), App\Services\Reporting\ApplicationReportService::funnel())
+     * rather than running their own copy of the same GROUP BY/COUNT
+     * queries. This is deliberate, not incidental: it is what makes the
+     * Excel export and the `/api/admin/reports/*` endpoints
+     * mathematically incapable of disagreeing - both read the exact
+     * same query. See PlacementReportService's own docblock for the
+     * full semantic definitions (students_shortlisted/interviewed as
+     * historical figures, selection_rate's denominator, etc.) that
+     * therefore now also govern these Excel exports, superseding this
+     * class's own prior from-scratch computation of the same numbers.
+     */
+    public function __construct(
+        private readonly PlacementReportService $placementReportService,
+        private readonly ApplicationReportService $applicationReportService,
+    ) {}
 
     /**
      * @param array<string, mixed> $filters
@@ -495,24 +517,21 @@ class ExcelExportService
     }
 
     /**
-     * Module spec's own headline example of the STUDENTS-vs-APPLICATIONS
-     * distinction: one multi-sheet workbook whose first sheet is a
-     * single-number overview (never conflating "how many applications"
-     * with "how many distinct students applied" - a student with 5
-     * applications must count once in the student figures and 5 times
-     * in the application figures) and whose second sheet breaks the
-     * same two counts down by opportunity type.
+     * Reports & Analytics module - this sheet's headline figures now
+     * come from App\Services\Reporting\PlacementReportService::summary()
+     * (see this class's constructor docblock) rather than being
+     * recomputed here; only the "by opportunity type" breakdown sheet
+     * below is still queried directly, since it is not one of
+     * PlacementReportService's own published metrics. Module spec's
+     * own headline example of the STUDENTS-vs-APPLICATIONS distinction
+     * is preserved exactly: a student with 5 applications counts once
+     * in the student figures and 5 times in the application figures.
      *
      * @param array<string, mixed> $filters
      */
     private function buildApplicationSummary(array $filters): Spreadsheet
     {
-        $base = Application::query();
-        $this->applyDateRange($base, 'applied_at', $filters);
-        $this->applyApplicationEntityFilters($base, $filters);
-
-        $totalApplications = (clone $base)->count();
-        $totalDistinctStudents = (clone $base)->distinct('student_id')->count('student_id');
+        $summary = $this->placementReportService->summary($filters);
 
         $spreadsheet = new Spreadsheet();
         $overview = $spreadsheet->getActiveSheet();
@@ -520,11 +539,15 @@ class ExcelExportService
         $overview->setTitle($overviewTitle);
         $this->writeHeader($overview, ['Metric', 'Count']);
         $this->writeDataRows($overview, 2, [
-            ['Total Applications', $totalApplications],
-            ['Distinct Students Who Applied', $totalDistinctStudents],
-            ['Avg. Applications per Student', $totalDistinctStudents > 0 ? round($totalApplications / $totalDistinctStudents, 2) : 0],
+            ['Total Applications', $summary['total_applications']],
+            ['Distinct Students Who Applied', $summary['unique_applicants']],
+            ['Avg. Applications per Student', $summary['avg_applications_per_applicant']],
         ]);
         $this->autosize($overview, 2);
+
+        $base = Application::query();
+        $this->applyDateRange($base, 'applied_at', $filters);
+        $this->applyApplicationEntityFilters($base, $filters);
 
         $byType = $spreadsheet->createSheet();
         $byType->setTitle(SheetTitleSanitizer::sanitize('By Opportunity Type', [$overviewTitle]));
@@ -542,28 +565,22 @@ class ExcelExportService
     }
 
     /**
-     * Per-status breakdown, again distinguishing application count from
-     * distinct-student count for the same reason as
-     * buildApplicationSummary().
+     * Per-status breakdown - now delegated to
+     * App\Services\Reporting\ApplicationReportService::funnel(), the
+     * exact same current-status distribution the
+     * `/api/admin/reports/applications` endpoint returns (see that
+     * method's docblock for why this is a live Application.status
+     * snapshot, never the historical ApplicationStatusHistory log).
      *
      * @param array<string, mixed> $filters
      */
     private function buildStatusSummary(array $filters): Spreadsheet
     {
-        $base = Application::query();
-        $this->applyDateRange($base, 'applied_at', $filters);
-        $this->applyApplicationEntityFilters($base, $filters);
+        $funnel = $this->applicationReportService->funnel($filters);
 
-        $rows = (clone $base)
-            ->selectRaw('status, COUNT(*) as application_count, COUNT(DISTINCT student_id) as student_count')
-            ->groupBy('status')
-            ->orderBy('status')
-            ->get()
-            // Application::status is cast to ApplicationStatus (a
-            // BackedEnum) on the model, so even this raw-aggregated
-            // row is hydrated with an enum instance, not a plain
-            // string - ->value is required here, not optional.
-            ->map(fn ($r) => [$r->status instanceof \BackedEnum ? $r->status->value : $r->status, $r->application_count, $r->student_count])
+        $rows = collect($funnel)
+            ->map(fn (array $counts, string $status) => [$status, $counts['applications'], $counts['students']])
+            ->values()
             ->all();
 
         $spreadsheet = new Spreadsheet();
@@ -579,18 +596,14 @@ class ExcelExportService
     /**
      * One row per company: total applications, distinct students who
      * applied, and how many of those applications reached SELECTED -
-     * the module spec's "company-wise placement report".
+     * the module spec's "company-wise placement report", now delegated
+     * to App\Services\Reporting\PlacementReportService::breakdownBy().
      *
      * @param array<string, mixed> $filters
      */
     private function buildCompanyWisePlacementReport(array $filters): Spreadsheet
     {
-        $rows = $this->placementReportRows(
-            groupByColumn: 'companies.id',
-            groupByLabelColumn: 'companies.name',
-            joinCompanies: true,
-            filters: $filters,
-        );
+        $rows = $this->placementBreakdownRows('company', $filters);
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -607,13 +620,7 @@ class ExcelExportService
      */
     private function buildDepartmentWisePlacementReport(array $filters): Spreadsheet
     {
-        $rows = $this->placementReportRows(
-            groupByColumn: 'departments.id',
-            groupByLabelColumn: 'departments.name',
-            joinCompanies: false,
-            joinDepartments: true,
-            filters: $filters,
-        );
+        $rows = $this->placementBreakdownRows('department', $filters);
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -630,13 +637,7 @@ class ExcelExportService
      */
     private function buildBatchWisePlacementReport(array $filters): Spreadsheet
     {
-        $rows = $this->placementReportRows(
-            groupByColumn: 'batches.id',
-            groupByLabelColumn: 'batches.name',
-            joinCompanies: false,
-            joinBatches: true,
-            filters: $filters,
-        );
+        $rows = $this->placementBreakdownRows('batch', $filters);
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -649,87 +650,26 @@ class ExcelExportService
     }
 
     /**
-     * Shared aggregation for the three "X-wise placement report"
-     * exports above - only the GROUP BY dimension differs, so the
-     * join/aggregate SQL is written once. "Students Selected" counts
-     * DISTINCT student_id among SELECTED applications, since a student
-     * could theoretically hold more than one SELECTED application
-     * across different opportunities and must still count once per
-     * group as "placed".
+     * Adapts App\Services\Reporting\PlacementReportService::breakdownBy()'s
+     * associative row shape (id/label/total_applications/
+     * distinct_students/students_selected/selection_rate) to this
+     * class's plain positional-array sheet-row convention. The
+     * aggregation itself - the join/GROUP BY SQL "Students Selected"
+     * counts DISTINCT student_id among SELECTED applications, since a
+     * student could theoretically hold more than one SELECTED
+     * application across different opportunities and must still count
+     * once per group as "placed" - now lives entirely in that service,
+     * not here; this is only the presentation adapter.
      *
      * @param array<string, mixed> $filters
      * @return list<array{0: string, 1: int, 2: int, 3: int, 4: float}>
      */
-    private function placementReportRows(
-        string $groupByColumn,
-        string $groupByLabelColumn,
-        bool $joinCompanies = false,
-        bool $joinDepartments = false,
-        bool $joinBatches = false,
-        array $filters = [],
-    ): array {
-        $query = DB::table('applications')
-            ->join('students', 'students.id', '=', 'applications.student_id');
-
-        if ($joinCompanies) {
-            $query->join('job_postings', function ($j) {
-                $j->on('job_postings.id', '=', 'applications.applicable_id')->where('applications.applicable_type', '=', JobPosting::class);
-            }, type: 'left')
-                ->join('internships', function ($j) {
-                    $j->on('internships.id', '=', 'applications.applicable_id')->where('applications.applicable_type', '=', Internship::class);
-                }, type: 'left')
-                ->join('companies', function ($j) {
-                    $j->on('companies.id', '=', 'job_postings.company_id')->orOn('companies.id', '=', 'internships.company_id');
-                }, type: 'left');
-        }
-
-        if ($joinDepartments) {
-            $query->join('departments', 'departments.id', '=', 'students.department_id');
-        }
-
-        if ($joinBatches) {
-            $query->join('batches', 'batches.id', '=', 'students.batch_id');
-        }
-
-        if (! empty($filters['department_id'])) {
-            $query->where('students.department_id', $filters['department_id']);
-        }
-
-        if (! empty($filters['batch_id'])) {
-            $query->where('students.batch_id', $filters['batch_id']);
-        }
-
-        if (! empty($filters['company_id']) && $joinCompanies) {
-            $query->where('companies.id', $filters['company_id']);
-        }
-
-        if (! empty($filters['date_from'])) {
-            $query->whereDate('applications.applied_at', '>=', $filters['date_from']);
-        }
-
-        if (! empty($filters['date_to'])) {
-            $query->whereDate('applications.applied_at', '<=', $filters['date_to']);
-        }
-
-        $rows = $query
-            ->whereNotNull($groupByColumn)
-            ->selectRaw(sprintf(
-                '%s as group_id, %s as group_label, COUNT(*) as total_applications, COUNT(DISTINCT applications.student_id) as distinct_students, COUNT(DISTINCT CASE WHEN applications.status = ? THEN applications.student_id END) as students_selected',
-                $groupByColumn,
-                $groupByLabelColumn,
-            ))
-            ->addBinding('SELECTED', 'select')
-            ->groupBy($groupByColumn, $groupByLabelColumn)
-            ->orderBy('group_label')
-            ->get();
-
-        return $rows->map(fn ($r) => [
-            $r->group_label,
-            (int) $r->total_applications,
-            (int) $r->distinct_students,
-            (int) $r->students_selected,
-            $r->distinct_students > 0 ? round(($r->students_selected / $r->distinct_students) * 100, 2) : 0.0,
-        ])->all();
+    private function placementBreakdownRows(string $dimension, array $filters): array
+    {
+        return array_map(
+            fn (array $row) => [$row['label'], $row['total_applications'], $row['distinct_students'], $row['students_selected'], $row['selection_rate']],
+            $this->placementReportService->breakdownBy($dimension, $filters),
+        );
     }
 
     /**
