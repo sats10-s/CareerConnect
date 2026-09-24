@@ -5,36 +5,59 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Design-system tokens - each backed by a CSS custom property so
-        // dark mode (see src/index.css's prefers-color-scheme block) is a
-        // second, deliberately-chosen palette rather than an inversion of
-        // this one. Keep the legacy `navy` scale for now (still referenced
-        // by a couple of untouched call sites) but new work should use
-        // these semantic names, not navy/gray.
-        canvas: 'var(--canvas)',
-        surface: 'var(--surface)',
-        sidebar: 'var(--sidebar)',
-        border: 'var(--border)',
+        // Institutional Ink design-system tokens - each backed by the
+        // --color-* CSS custom properties defined in src/index.css. Use
+        // these names (base/surface/ink/muted/hairline/primary/accent/
+        // success/warning/error/info) for new work.
+        base: 'var(--color-base)',
+        surface: 'var(--color-surface)',
+        muted: 'var(--color-muted)',
+        hairline: 'var(--color-hairline)',
+        ink: {
+          DEFAULT: 'var(--color-ink)',
+          soft: 'var(--color-muted)',
+          // Retired as a separate lighter tier - the spec defines only
+          // two text tiers (ink, muted). Kept as an alias, not a second
+          // value, so existing text-ink-faint call sites don't need a
+          // class-name change.
+          faint: 'var(--color-muted)',
+        },
+        primary: {
+          DEFAULT: 'var(--color-primary)',
+          hov: 'var(--color-primary-hov)',
+          tint: 'var(--color-primary-tint)',
+        },
+        accent: {
+          DEFAULT: 'var(--color-accent)',
+          str: 'var(--color-accent-str)',
+          tint: 'var(--color-accent-tint)',
+        },
+        success: { DEFAULT: 'var(--color-success-text)', bg: 'var(--color-success-bg)' },
+        warning: { DEFAULT: 'var(--color-warn-text)', bg: 'var(--color-warn-bg)' },
+        error: { DEFAULT: 'var(--color-danger-text)', bg: 'var(--color-danger-bg)' },
+        info: { DEFAULT: 'var(--color-info-text)', bg: 'var(--color-info-bg)' },
+
+        // Legacy alias names, kept so every existing component/page
+        // class (bg-canvas, bg-sidebar, bg-indigo, text-indigo,
+        // bg-indigo-tint, bg-gold*, text-gold-ink, border-border)
+        // keeps resolving with no component or page edits - per "do not
+        // rewrite functionality" / "only change presentation." Each one
+        // points at the exact same --color-* custom property as its
+        // named-above counterpart; there is no second, independently
+        // maintained value here.
+        canvas: 'var(--color-base)',
+        sidebar: 'var(--color-sidebar)',
+        border: 'var(--color-hairline)',
         indigo: {
-          DEFAULT: 'var(--indigo)',
-          tint: 'var(--indigo-tint)',
+          DEFAULT: 'var(--color-primary)',
+          tint: 'var(--color-primary-tint)',
         },
         gold: {
-          DEFAULT: 'var(--gold)',
-          bg: 'var(--gold-bg)',
-          // Text-safe gold: the base --gold value (#A9822E) does not clear
-          // 4.5:1 for small text even on --gold-bg (measured 3.10:1) - this
-          // darker variant is what small gold-toned text actually uses. See
-          // the design-system report for the full contrast audit.
-          ink: 'var(--gold-ink)',
-        },
-        success: { DEFAULT: 'var(--success)', bg: 'var(--success-bg)' },
-        warning: { DEFAULT: 'var(--warning)', bg: 'var(--warning-bg)' },
-        error: { DEFAULT: 'var(--error)', bg: 'var(--error-bg)' },
-        ink: {
-          DEFAULT: 'var(--ink)',
-          soft: 'var(--ink-soft)',
-          faint: 'var(--ink-faint)',
+          DEFAULT: 'var(--color-accent)',
+          bg: 'var(--color-accent-tint)',
+          // Text-safe accent - see src/index.css's token comment for the
+          // measured contrast ceiling of this exact spec value.
+          ink: 'var(--color-accent-str)',
         },
         navy: {
           50: '#eef2fb',
@@ -52,9 +75,18 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        // Display/editorial italic - the ONE serif-italic accent moment
-        // (dashboard greeting only). Never used for UI chrome/body text.
-        display: ['Newsreader', 'ui-serif', 'Georgia', 'serif'],
+        // Page/hero titles only - see the accent-italic dashboard
+        // greeting usage in src/index.css (.font-display-italic). Never
+        // used for UI chrome or body text.
+        serif: ['Source Serif 4', 'ui-serif', 'Georgia', 'serif'],
+        display: ['Source Serif 4', 'ui-serif', 'Georgia', 'serif'],
+      },
+      borderRadius: {
+        // Cards/modals per the Institutional Ink shape system (10-14px).
+        // Tailwind's default `xl` (0.75rem / 12px) already sits inside
+        // that range; named explicitly here so it reads as a deliberate
+        // token, not a coincidence of Tailwind's default scale.
+        xl: '12px',
       },
       keyframes: {
         'fade-in': {

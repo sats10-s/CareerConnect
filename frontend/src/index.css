@@ -3,81 +3,63 @@
 @tailwind utilities;
 
 /*
- * Design tokens - CareerConnect visual design system.
+ * Institutional Ink - CareerConnect design tokens.
  *
- * Light values are the spec's role-mapped palette (60% canvas / 30%
- * surface / 10% indigo+gold, per the 60-30-10 rule). Dark values are a
- * SEPARATE, deliberately chosen palette (deep charcoal/navy, brightened
- * indigo/gold) - not an inversion - each independently contrast-checked
- * against WCAG AA. See the design-system report for the full ratio audit.
+ * The 16 --color-* custom properties below are the exact values given in
+ * the design-system spec, unchanged. Everything after them in this block
+ * is DERIVED (via color-mix()) from those 16 tokens, to cover a few
+ * supporting roles the existing shared components already depended on
+ * (a tinted brand background, a tinted accent background, a slightly
+ * recessed sidebar panel) that the spec's 16 tokens don't individually
+ * name. None of these derived tokens introduce a new, independently
+ * chosen hex value - they are all computed from the spec tokens above
+ * them, and are kept in their own clearly-labeled block for that reason.
  *
- * Two tokens were adjusted from the literal spec values because they
- * measured below the required 4.5:1 for the text usage they're meant
- * for (verified with a WCAG relative-luminance contrast script, not
- * assumed):
- *   --ink-faint  spec gave #8D8E87 (3.12:1 on canvas, 3.31:1 on surface -
- *                fails). Darkened to #72736D (4.51:1 on canvas, 4.79:1 on
- *                surface). Scoped to canvas/surface only - not used on
- *                --sidebar, where it drops back under 4.5:1.
- *   --gold-ink   NEW token, not in the original spec. The spec's base
- *                --gold (#A9822E) on --gold-bg measures 3.10:1 - clears
- *                the 3:1 non-text/large-text threshold but not 4.5:1 for
- *                small text (e.g. a "Selected" status badge's label).
- *                --gold stays exactly as specified for its intended
- *                non-text uses (borders, icons, large numerals, rings,
- *                dots); --gold-ink (#876824, 4.54:1 on --gold-bg) is
- *                what small gold-toned text actually uses.
+ * Every pairing below was checked with a WCAG relative-luminance
+ * contrast script (not assumed):
+ *   - ink on base/surface: 17.2:1 / 17.9:1
+ *   - muted on base/surface: 5.7:1 / 6.0:1 (also used for what was
+ *     previously a separate, lighter "ink-faint" tier - the spec only
+ *     defines two text tiers, ink and muted, so that third tier is
+ *     retired rather than invented; muted comfortably clears 4.5:1
+ *     everywhere it's used)
+ *   - white on primary / primary-hov: 14.2:1 / 12.3:1
+ *   - primary on primary-tint (derived): 12.0:1
+ *   - success/warn/danger/info text on their spec bg: 5.4:1 / 4.5:1 /
+ *     5.9:1 / 8.3:1 - all clear 4.5:1
+ *   - accent-str on base or accent-tint (derived): ~3.6-3.7:1. This is
+ *     the ceiling for the spec's exact --color-accent-str value against
+ *     any near-white background - it clears 3:1 (large text / UI
+ *     components) but not 4.5:1 (normal text). Flagged in the
+ *     design-system report rather than silently substituted, since the
+ *     spec asked for this exact hex value. Kept to badge/label text only
+ *     (never body copy), consistent with --color-accent itself never
+ *     being used for text (see the accessibility rule below).
  */
 :root {
-  --canvas: #faf8f3;
-  --surface: #ffffff;
-  --sidebar: #f4f1e9;
-  --border: #e4e1d6;
+  --color-base: #fbfaf8;
+  --color-surface: #ffffff;
+  --color-ink: #14171f;
+  --color-muted: #5b6472;
+  --color-hairline: #e7e3da;
+  --color-primary: #1b2a4a;
+  --color-primary-hov: #223458;
+  --color-accent: #c9a227;
+  --color-accent-str: #9c7e1c;
 
-  --indigo: #2b3f8c;
-  --indigo-tint: #eef1fa;
+  --color-success-bg: #eaf1e7;
+  --color-success-text: #3e6b3a;
+  --color-warn-bg: #fbf1de;
+  --color-warn-text: #8a6a1e;
+  --color-danger-bg: #fbeaea;
+  --color-danger-text: #9b3b3b;
+  --color-info-bg: #e9edf3;
+  --color-info-text: #38445e;
 
-  --gold: #a9822e;
-  --gold-bg: #f6efdf;
-  --gold-ink: #876824;
-
-  --success: #1c6e45;
-  --success-bg: #e7f2ea;
-  --warning: #8a5b12;
-  --warning-bg: #f8efdd;
-  --error: #a93a2e;
-  --error-bg: #f8e9e7;
-
-  --ink: #20221f;
-  --ink-soft: #5c5d57;
-  --ink-faint: #72736d;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --canvas: #14161c;
-    --surface: #1c1f27;
-    --sidebar: #10121a;
-    --border: #2c2f3a;
-
-    --indigo: #8fa3ee;
-    --indigo-tint: #212a4d;
-
-    --gold: #d9b25c;
-    --gold-bg: #3a2f14;
-    --gold-ink: #f0ce85;
-
-    --success: #5fc08a;
-    --success-bg: #153224;
-    --warning: #e0ac55;
-    --warning-bg: #3a2a0e;
-    --error: #e88478;
-    --error-bg: #3a1b17;
-
-    --ink: #f2f1ec;
-    --ink-soft: #bdbeb6;
-    --ink-faint: #8f9098;
-  }
+  /* Derived - see block comment above. */
+  --color-primary-tint: color-mix(in srgb, var(--color-primary) 9%, var(--color-surface));
+  --color-accent-tint: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface));
+  --color-sidebar: color-mix(in srgb, var(--color-hairline) 30%, var(--color-base));
 }
 
 @layer base {
@@ -87,71 +69,98 @@
 
   body {
     @apply antialiased;
-    background-color: var(--canvas);
-    color: var(--ink);
+    background-color: var(--color-base);
+    color: var(--color-ink);
   }
 
   :focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--indigo);
+    box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-primary);
+  }
+
+  /* Respect reduced motion: collapse every animation/transition to
+     effectively-instant rather than removing them outright, so layout
+     driven by an animation's end state (e.g. a mounted/unmounted class)
+     still behaves the same way, just without the motion. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
 @layer components {
+  /* Shape system: buttons/inputs = 8px (rounded-lg), cards/modals =
+     10-14px (rounded-xl = 12px), 1px hairline border. Cards carry no
+     shadow by default - shadow is reserved for genuinely elevated
+     elements (modals, dropdown/menu popovers), applied at their own
+     call sites rather than baked into `.card`. */
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-60;
   }
 
   .btn-primary {
     @apply btn text-white;
-    background-color: var(--indigo);
+    background-color: var(--color-primary);
   }
   .btn-primary:hover {
-    background-color: color-mix(in srgb, var(--indigo) 88%, black);
+    background-color: var(--color-primary-hov);
   }
   .btn-primary:active {
-    background-color: color-mix(in srgb, var(--indigo) 78%, black);
+    background-color: color-mix(in srgb, var(--color-primary-hov) 85%, black);
   }
 
   .btn-secondary {
     @apply btn;
-    border: 1px solid var(--border);
-    background-color: var(--surface);
-    color: var(--ink);
+    border: 1px solid var(--color-hairline);
+    background-color: var(--color-surface);
+    color: var(--color-ink);
   }
   .btn-secondary:hover {
-    background-color: var(--sidebar);
+    background-color: var(--color-sidebar);
   }
 
   .card {
-    @apply rounded-xl shadow-sm;
-    border: 1px solid var(--border);
-    background-color: var(--surface);
+    @apply rounded-xl;
+    border: 1px solid var(--color-hairline);
+    background-color: var(--color-surface);
+  }
+
+  /* Opt-in for the rare genuinely-elevated card (a popover, a modal
+     surface) - not applied by default, per the shape-system rule. */
+  .card-elevated {
+    @apply card shadow-lg;
   }
 
   .input {
     @apply w-full rounded-lg px-3.5 py-2.5 text-sm transition-colors;
-    border: 1px solid var(--border);
-    background-color: var(--surface);
-    color: var(--ink);
+    border: 1px solid var(--color-hairline);
+    background-color: var(--color-surface);
+    color: var(--color-ink);
   }
   .input::placeholder {
-    color: var(--ink-faint);
+    color: var(--color-muted);
   }
   .input:focus {
     outline: none;
-    border-color: var(--indigo);
-    box-shadow: 0 0 0 1px var(--indigo);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 1px var(--color-primary);
   }
 
   .label {
     @apply mb-1.5 block text-sm font-medium;
-    color: var(--ink-soft);
+    color: var(--color-muted);
   }
 
-  /* The ONE serif-italic accent moment - dashboard greeting only. */
+  /* Page/hero titles only - see tailwind.config.js's fontFamily.serif.
+     Never used for UI chrome or body text. */
   .font-display-italic {
-    font-family: 'Newsreader', ui-serif, Georgia, serif;
+    font-family: 'Source Serif 4', ui-serif, Georgia, serif;
     font-style: italic;
   }
 }

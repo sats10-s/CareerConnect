@@ -14,7 +14,10 @@ const TONE_CLASSES: Record<StatusTone, string> = {
   success: 'bg-success-bg text-success',
   warning: 'bg-warning-bg text-warning',
   error: 'bg-error-bg text-error',
-  info: 'bg-indigo-tint text-indigo',
+  // The dedicated info-bg/info-text pair, not the primary-brand
+  // indigo/indigo-tint tokens - a status color should read as a status,
+  // not as "this row is the brand color for some reason."
+  info: 'bg-info-bg text-info',
   // Gold is reserved for achievement/selection - the <5% accent, never a
   // default interactive or informational tone.
   gold: 'bg-gold-bg text-gold-ink',
