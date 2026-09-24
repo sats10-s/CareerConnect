@@ -18,6 +18,7 @@ use App\Models\PlacementDrive;
 use App\Models\PpoRecord;
 use App\Models\Student;
 use App\Models\WeeklyProgressReport;
+use App\Services\Support\SheetTitleSanitizer;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -83,7 +84,7 @@ class ExcelExportService
     {
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle(substr($type->label(), 0, 31));
+        $sheet->setTitle(SheetTitleSanitizer::sanitize($type->label()));
 
         match ($type) {
             ExcelExportType::STUDENTS => $this->writeStudents($sheet, $filters),
@@ -515,7 +516,8 @@ class ExcelExportService
 
         $spreadsheet = new Spreadsheet();
         $overview = $spreadsheet->getActiveSheet();
-        $overview->setTitle('Overview');
+        $overviewTitle = SheetTitleSanitizer::sanitize('Overview');
+        $overview->setTitle($overviewTitle);
         $this->writeHeader($overview, ['Metric', 'Count']);
         $this->writeDataRows($overview, 2, [
             ['Total Applications', $totalApplications],
@@ -525,7 +527,7 @@ class ExcelExportService
         $this->autosize($overview, 2);
 
         $byType = $spreadsheet->createSheet();
-        $byType->setTitle('By Opportunity Type');
+        $byType->setTitle(SheetTitleSanitizer::sanitize('By Opportunity Type', [$overviewTitle]));
         $this->writeHeader($byType, ['Opportunity Type', 'Applications', 'Distinct Students']);
         $typeRows = (clone $base)
             ->selectRaw('applicable_type, COUNT(*) as application_count, COUNT(DISTINCT student_id) as student_count')
@@ -566,7 +568,7 @@ class ExcelExportService
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Status Summary');
+        $sheet->setTitle(SheetTitleSanitizer::sanitize('Status Summary'));
         $this->writeHeader($sheet, ['Status', 'Applications', 'Distinct Students']);
         $this->writeDataRows($sheet, 2, $rows);
         $this->autosize($sheet, 3);
@@ -592,7 +594,7 @@ class ExcelExportService
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Company-wise Placement');
+        $sheet->setTitle(SheetTitleSanitizer::sanitize('Company-wise Placement'));
         $this->writeHeader($sheet, ['Company', 'Total Applications', 'Distinct Students Applied', 'Students Selected', 'Selection Rate %']);
         $this->writeDataRows($sheet, 2, $rows);
         $this->autosize($sheet, 5);
@@ -615,7 +617,7 @@ class ExcelExportService
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Department-wise Placement');
+        $sheet->setTitle(SheetTitleSanitizer::sanitize('Department-wise Placement'));
         $this->writeHeader($sheet, ['Department', 'Total Applications', 'Distinct Students Applied', 'Students Selected', 'Selection Rate %']);
         $this->writeDataRows($sheet, 2, $rows);
         $this->autosize($sheet, 5);
@@ -638,7 +640,7 @@ class ExcelExportService
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Batch-wise Placement');
+        $sheet->setTitle(SheetTitleSanitizer::sanitize('Batch-wise Placement'));
         $this->writeHeader($sheet, ['Batch', 'Total Applications', 'Distinct Students Applied', 'Students Selected', 'Selection Rate %']);
         $this->writeDataRows($sheet, 2, $rows);
         $this->autosize($sheet, 5);
@@ -744,7 +746,7 @@ class ExcelExportService
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Student Application Report');
+        $sheet->setTitle(SheetTitleSanitizer::sanitize('Student Application Report'));
         $this->writeHeader($sheet, ['Roll Number', 'Name', 'Department', 'Batch', 'Total Applications', 'Selected', 'Rejected', 'Withdrawn', 'In Progress', 'Latest Status']);
 
         $rowIndex = 2;
@@ -815,7 +817,7 @@ class ExcelExportService
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Unplaced Students');
+        $sheet->setTitle(SheetTitleSanitizer::sanitize('Unplaced Students'));
         $this->writeHeader($sheet, ['Roll Number', 'Name', 'Department', 'Batch', 'Total Applications', 'Applications In Progress']);
 
         $this->streamRows($sheet, $query, fn (Student $s) => [
@@ -842,7 +844,7 @@ class ExcelExportService
     {
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Application Activity');
+        $sheet->setTitle(SheetTitleSanitizer::sanitize('Application Activity'));
         $this->writeHeader($sheet, ['Student Roll Number', 'Student Name', 'Company', 'Role/Title', 'From Status', 'To Status', 'Changed By', 'Changed At', 'Remarks']);
 
         $query = ApplicationStatusHistory::query()->with(['application.student.user', 'application.applicable.company', 'changedBy']);

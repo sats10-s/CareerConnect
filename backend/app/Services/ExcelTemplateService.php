@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\ExcelImportType;
+use App\Services\Support\SheetTitleSanitizer;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 
@@ -34,7 +35,7 @@ class ExcelTemplateService
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle(substr($type->label(), 0, 31));
+        $sheet->setTitle(SheetTitleSanitizer::sanitize($type->label()));
 
         $headers = array_map(
             fn (array $c) => $c['header'].($c['required'] ? self::REQUIRED_MARK : ''),
