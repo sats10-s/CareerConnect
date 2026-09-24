@@ -170,7 +170,17 @@ class NotificationEventsTest extends TestCase
         $this->assertTrue($this->notificationExists($fixture['faculty']->user->id, NotificationType::WEEKLY_REPORT_SUBMITTED));
     }
 
-    private function submittedWeeklyReport(array $fixture): int
+    /**
+     * Returns a report already legitimately moved through
+     * DRAFT -> SUBMITTED -> UNDER_REVIEW, via the real student
+     * submit + faculty review('action' => 'UNDER_REVIEW') endpoints -
+     * the only lifecycle path WeeklyProgressReportService allows into
+     * APPROVED/CHANGES_REQUESTED (see
+     * WeeklyProgressReportStatus::canTransitionTo() - SUBMITTED cannot
+     * move directly to either). Nothing here inserts into
+     * weekly_progress_reports directly.
+     */
+    private function reportUnderReview(array $fixture): int
     {
         Sanctum::actingAs($fixture['student'], ['*']);
         $reportId = $this->postJson("/api/student/internship-assignments/{$fixture['assignment_id']}/weekly-reports", [
@@ -182,13 +192,16 @@ class NotificationEventsTest extends TestCase
 
         $this->postJson("/api/student/weekly-reports/{$reportId}/submit")->assertOk();
 
+        Sanctum::actingAs($fixture['faculty']->user, ['*']);
+        $this->postJson("/api/faculty/weekly-reports/{$reportId}/review", ['action' => 'UNDER_REVIEW'])->assertOk();
+
         return $reportId;
     }
 
     public function test_weekly_report_approval_notifies_the_student(): void
     {
         $fixture = $this->activatedInternshipAssignmentFixture();
-        $reportId = $this->submittedWeeklyReport($fixture);
+        $reportId = $this->reportUnderReview($fixture);
 
         Sanctum::actingAs($fixture['faculty']->user, ['*']);
         $this->postJson("/api/faculty/weekly-reports/{$reportId}/review", ['action' => 'APPROVED'])->assertOk();
@@ -199,7 +212,7 @@ class NotificationEventsTest extends TestCase
     public function test_weekly_report_changes_requested_notifies_the_student(): void
     {
         $fixture = $this->activatedInternshipAssignmentFixture();
-        $reportId = $this->submittedWeeklyReport($fixture);
+        $reportId = $this->reportUnderReview($fixture);
 
         Sanctum::actingAs($fixture['faculty']->user, ['*']);
         $this->postJson("/api/faculty/weekly-reports/{$reportId}/review", [

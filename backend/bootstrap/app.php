@@ -13,6 +13,23 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    // The Notifications & Announcements module's listeners (app/Listeners)
+    // are registered explicitly, one by one, in
+    // App\Providers\AppServiceProvider::boot() - a deliberate choice,
+    // documented on that method, since this codebase had no listener
+    // registration precedent of any kind before that module. Laravel's
+    // event auto-discovery, however, is ON BY DEFAULT even without ever
+    // calling withEvents() - it scans app/Listeners and registers any
+    // handle()/__invoke() method by its type-hinted event parameter on
+    // its own. Left enabled, every one of those explicitly-registered
+    // listeners (all of which use the conventional `handle()` method
+    // name) would ALSO be auto-discovered, registering it a second time
+    // and firing it - and therefore creating its notification - twice
+    // per event. Disabling discovery here makes the explicit
+    // registration in AppServiceProvider::boot() the single
+    // authoritative place a listener is ever wired up, with no silent
+    // second path.
+    ->withEvents(discover: [])
     ->withMiddleware(function (Middleware $middleware) {
         // Enable Sanctum's stateful API middleware so the SPA can
         // authenticate via first-party cookies during local/dev use,
