@@ -25,11 +25,20 @@ return Application::configure(basePath: dirname(__DIR__))
     // listeners (all of which use the conventional `handle()` method
     // name) would ALSO be auto-discovered, registering it a second time
     // and firing it - and therefore creating its notification - twice
-    // per event. Disabling discovery here makes the explicit
-    // registration in AppServiceProvider::boot() the single
-    // authoritative place a listener is ever wired up, with no silent
-    // second path.
-    ->withEvents(discover: [])
+    // per event.
+    //
+    // NOTE: `discover: []` (an empty array) does NOT disable discovery -
+    // per Illuminate\Foundation\Configuration\ApplicationBuilder::withEvents(),
+    // a non-empty array only ADDS extra directories to scan
+    // (setEventDiscoveryPaths()), and an empty array is a complete no-op;
+    // discovery is only turned off by passing the literal boolean `false`
+    // (which calls AppEventServiceProvider::disableEventDiscovery()).
+    // `discover: []` was tried first and confirmed (via a still-duplicated
+    // PPO notification) to leave discovery fully active - `discover: false`
+    // is the actual switch. This makes the explicit registration in
+    // AppServiceProvider::boot() the single authoritative place a
+    // listener is ever wired up, with no silent second path.
+    ->withEvents(discover: false)
     ->withMiddleware(function (Middleware $middleware) {
         // Enable Sanctum's stateful API middleware so the SPA can
         // authenticate via first-party cookies during local/dev use,
