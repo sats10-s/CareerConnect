@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\AnnouncementController as AdminAnnouncementController;
 use App\Http\Controllers\Api\Admin\ApplicationController as AdminApplicationController;
 use App\Http\Controllers\Api\Admin\AttendanceController as AdminAttendanceController;
 use App\Http\Controllers\Api\Admin\ExcelExportController as AdminExcelExportController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\Api\Admin\InternshipController;
 use App\Http\Controllers\Api\Admin\InternshipDocumentController as AdminInternshipDocumentController;
 use App\Http\Controllers\Api\Admin\InterviewController as AdminInterviewController;
 use App\Http\Controllers\Api\Admin\JobPostingController;
+use App\Http\Controllers\Api\Admin\NotificationController as AdminNotificationController;
 use App\Http\Controllers\Api\Admin\PlacementDriveController as AdminPlacementDriveController;
 use App\Http\Controllers\Api\Admin\PpoRecordController as AdminPpoRecordController;
 use App\Http\Controllers\Api\Admin\WeeklyProgressReportController as AdminWeeklyProgressReportController;
@@ -19,14 +21,17 @@ use App\Http\Controllers\Api\Dashboard\AdminDashboardController;
 use App\Http\Controllers\Api\Dashboard\FacultyDashboardController;
 use App\Http\Controllers\Api\Dashboard\StudentDashboardController;
 use App\Http\Controllers\Api\Dashboard\SuperAdminDashboardController;
+use App\Http\Controllers\Api\Faculty\AnnouncementController as FacultyAnnouncementController;
 use App\Http\Controllers\Api\Faculty\AttendanceController as FacultyAttendanceController;
 use App\Http\Controllers\Api\Faculty\InternshipAssignmentController as FacultyInternshipAssignmentController;
 use App\Http\Controllers\Api\Faculty\InternshipCompletionController as FacultyInternshipCompletionController;
 use App\Http\Controllers\Api\Faculty\InternshipDocumentController as FacultyInternshipDocumentController;
+use App\Http\Controllers\Api\Faculty\NotificationController as FacultyNotificationController;
 use App\Http\Controllers\Api\Faculty\PpoRecordController as FacultyPpoRecordController;
 use App\Http\Controllers\Api\Faculty\StudentController as FacultyStudentController;
 use App\Http\Controllers\Api\Faculty\WeeklyProgressReportController as FacultyWeeklyProgressReportController;
 use App\Http\Controllers\Api\MetaController;
+use App\Http\Controllers\Api\Student\AnnouncementController as StudentAnnouncementController;
 use App\Http\Controllers\Api\Student\ApplicationController as StudentApplicationController;
 use App\Http\Controllers\Api\Student\AttendanceController as StudentAttendanceController;
 use App\Http\Controllers\Api\Student\CertificationController;
@@ -34,6 +39,7 @@ use App\Http\Controllers\Api\Student\ExperienceController;
 use App\Http\Controllers\Api\Student\InternshipCompletionController as StudentInternshipCompletionController;
 use App\Http\Controllers\Api\Student\InternshipDocumentController as StudentInternshipDocumentController;
 use App\Http\Controllers\Api\Student\InterviewController as StudentInterviewController;
+use App\Http\Controllers\Api\Student\NotificationController as StudentNotificationController;
 use App\Http\Controllers\Api\Student\OpportunityController;
 use App\Http\Controllers\Api\Student\PlacementDriveController as StudentPlacementDriveController;
 use App\Http\Controllers\Api\Student\PpoRecordController as StudentPpoRecordController;
@@ -420,5 +426,57 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/imports/{batch}/rollback', [AdminExcelImportController::class, 'rollback']);
         Route::get('/templates/{type}', [AdminExcelTemplateController::class, 'show']);
         Route::get('/exports/{type}', [AdminExcelExportController::class, 'show']);
+    });
+
+    // Notifications & Announcements - persistent in-app notifications
+    // (App\Models\Notification, one row per recipient) and admin-
+    // authored announcements (App\Models\Announcement). Object-level
+    // authorization is enforced by NotificationPolicy/AnnouncementPolicy
+    // inside each controller action, on top of these role gates -
+    // NotificationPolicy in particular has NO admin bypass at all (see
+    // its own docblock): every role, SUPER_ADMIN included, can only
+    // ever read/mark its OWN notifications. Announcement management
+    // (create/edit/publish/archive) is admin-only; student/faculty
+    // announcement routes are read-only (list/show), matching the
+    // module spec's "Students and Faculty ... cannot create/edit/
+    // publish/archive".
+    Route::prefix('student/notifications')->middleware('role:STUDENT')->group(function () {
+        Route::get('/', [StudentNotificationController::class, 'index']);
+        Route::get('/unread-count', [StudentNotificationController::class, 'unreadCount']);
+        Route::patch('/{notification}/read', [StudentNotificationController::class, 'markRead']);
+        Route::post('/read-all', [StudentNotificationController::class, 'markAllRead']);
+    });
+
+    Route::prefix('faculty/notifications')->middleware('role:FACULTY')->group(function () {
+        Route::get('/', [FacultyNotificationController::class, 'index']);
+        Route::get('/unread-count', [FacultyNotificationController::class, 'unreadCount']);
+        Route::patch('/{notification}/read', [FacultyNotificationController::class, 'markRead']);
+        Route::post('/read-all', [FacultyNotificationController::class, 'markAllRead']);
+    });
+
+    Route::prefix('admin/notifications')->middleware('role:PLACEMENT_ADMIN,SUPER_ADMIN')->group(function () {
+        Route::get('/', [AdminNotificationController::class, 'index']);
+        Route::get('/unread-count', [AdminNotificationController::class, 'unreadCount']);
+        Route::patch('/{notification}/read', [AdminNotificationController::class, 'markRead']);
+        Route::post('/read-all', [AdminNotificationController::class, 'markAllRead']);
+    });
+
+    Route::prefix('student/announcements')->middleware('role:STUDENT')->group(function () {
+        Route::get('/', [StudentAnnouncementController::class, 'index']);
+        Route::get('/{announcement}', [StudentAnnouncementController::class, 'show']);
+    });
+
+    Route::prefix('faculty/announcements')->middleware('role:FACULTY')->group(function () {
+        Route::get('/', [FacultyAnnouncementController::class, 'index']);
+        Route::get('/{announcement}', [FacultyAnnouncementController::class, 'show']);
+    });
+
+    Route::prefix('admin/announcements')->middleware('role:PLACEMENT_ADMIN,SUPER_ADMIN')->group(function () {
+        Route::get('/', [AdminAnnouncementController::class, 'index']);
+        Route::post('/', [AdminAnnouncementController::class, 'store']);
+        Route::get('/{announcement}', [AdminAnnouncementController::class, 'show']);
+        Route::match(['put', 'patch'], '/{announcement}', [AdminAnnouncementController::class, 'update']);
+        Route::post('/{announcement}/publish', [AdminAnnouncementController::class, 'publish']);
+        Route::post('/{announcement}/archive', [AdminAnnouncementController::class, 'archive']);
     });
 });

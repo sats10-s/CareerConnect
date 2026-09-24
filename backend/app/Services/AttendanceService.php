@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\AttendanceStatus;
 use App\Enums\InternshipAssignmentStatus;
+use App\Events\AttendanceMarked;
 use App\Exceptions\AttendanceException;
 use App\Models\Attendance;
 use App\Models\AttendanceHistory;
@@ -89,6 +90,8 @@ class AttendanceService
                 ]);
 
                 $this->recordHistory($attendance, null, $status, null, $checkIn, null, $checkOut, null, $remarks, $actingUser);
+
+                event(new AttendanceMarked($attendance, null, $status, $actingUser));
 
                 return $attendance;
             });
@@ -183,6 +186,8 @@ class AttendanceService
             ]);
 
             $this->recordHistory($attendance, $oldStatus, $newStatus, $oldCheckIn, $newCheckIn, $oldCheckOut, $newCheckOut, $oldRemarks, $newRemarks, $actingUser);
+
+            event(new AttendanceMarked($attendance, $oldStatus, $newStatus, $actingUser));
 
             return $attendance->fresh();
         });
