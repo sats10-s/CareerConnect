@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Concerns\BuildsExcelFixtures;
 use Tests\Concerns\BuildsPlacementFixtures;
 use Tests\TestCase;
@@ -42,9 +43,7 @@ class ExcelExportTemplateTest extends TestCase
         return array_map(fn (string $v) => [$v], ExcelImportType::values());
     }
 
-    /**
-     * @dataProvider importTypes
-     */
+    #[DataProvider('importTypes')]
     public function test_every_import_type_has_a_downloadable_template_with_a_header_row(string $type): void
     {
         Sanctum::actingAs($this->admin, ['*']);
@@ -72,9 +71,7 @@ class ExcelExportTemplateTest extends TestCase
         return array_map(fn (ExcelExportType $t) => [$t->value], array_filter(ExcelExportType::cases(), fn ($t) => $t->isRaw()));
     }
 
-    /**
-     * @dataProvider rawExportTypes
-     */
+    #[DataProvider('rawExportTypes')]
     public function test_every_raw_export_type_downloads_a_readable_workbook(string $type): void
     {
         Sanctum::actingAs($this->admin, ['*']);
@@ -91,9 +88,7 @@ class ExcelExportTemplateTest extends TestCase
         return array_map(fn (ExcelExportType $t) => [$t->value], array_filter(ExcelExportType::cases(), fn ($t) => $t->isAnalytical()));
     }
 
-    /**
-     * @dataProvider analyticalExportTypes
-     */
+    #[DataProvider('analyticalExportTypes')]
     public function test_every_analytical_export_type_downloads_a_readable_workbook(string $type): void
     {
         Sanctum::actingAs($this->admin, ['*']);
