@@ -1,0 +1,993 @@
+<?php
+
+namespace App\Services;
+
+use App\Enums\ExcelExportType;
+use App\Exceptions\ExcelImportException;
+use App\Models\Application;
+use App\Models\ApplicationStatusHistory;
+use App\Models\Attendance;
+use App\Models\Company;
+use App\Models\Internship;
+use App\Models\InternshipAssignment;
+use App\Models\InternshipCompletion;
+use App\Models\InternshipDocument;
+use App\Models\Interview;
+use App\Models\JobPosting;
+use App\Models\PlacementDrive;
+use App\Models\PpoRecord;
+use App\Models\Student;
+use App\Models\WeeklyProgressReport;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+
+/**
+ * Builds every downloadable Excel Sync Center export (module spec
+ * sections 19-31) as an in-memory PhpSpreadsheet workbook - the
+ * controller (Api\Admin\ExcelExportController) is the only thing that
+ * ever turns the returned Spreadsheet into bytes on the wire (via
+ * PhpOffice\PhpSpreadsheet\Writer\Xlsx), so this class has zero HTTP
+ * concerns and is trivially unit-testable.
+ *
+ * RAW exports (module spec section 19) stream straight off the
+ * relevant Eloquent model with eager-loaded relations and
+ * chunkById() - never a bare ->get() - so a 10,000-row Students export
+ * does not hold 10,000 full models (with relations) in memory at once,
+ * and never runs an N+1 query per row for its "Department"/"Batch"
+ * columns.
+ *
+ * ANALYTICAL exports (module spec sections 20-31) are computed with a
+ * single GROUP BY/COUNT(DISTINCT ...) query per metric rather than by
+ * pulling every row into PHP and tallying it here - the module spec's
+ * own "STUDENTS vs APPLICATIONS" distinction (one student may have
+ * several applications; a naive COUNT(*) conflates the two) is the
+ * textbook reason to let MySQL do this with COUNT(DISTINCT student_id)
+ * alongside a plain COUNT(*), not to loop over a collection in PHP.
+ *
+ * Every raw/analytical builder accepts the SAME `$filters` shape
+ * (module spec sections 19/26 - "filterable by ..."):
+ *   department_id, batch_id, year, company_id, status, faculty_id,
+ *   applicable_type ('job'|'internship'), date_from, date_to
+ * A filter that does not apply to a given export type is silently
+ * ignored by that type's own applyFilters() (documented per method) -
+ * this mirrors how every list endpoint in this codebase already
+ * treats an inapplicable query parameter, rather than erroring.
+ */
+class ExcelExportService
+{
+    private const CHUNK_SIZE = 500;
+
+    private const HEADER_FILL = 'FFE2E8F0';
+
+    /**
+     * @param array<string, mixed> $filters
+     */
+    public function build(ExcelExportType $type, array $filters): Spreadsheet
+    {
+        return $type->isRaw()
+            ? $this->buildRaw($type, $filters)
+            : $this->buildAnalytical($type, $filters);
+    }
+
+    // =========================================================================
+    // RAW EXPORTS
+    // =========================================================================
+
+    /**
+     * @param array<string, mixed> $filters
+     */
+    private function buildRaw(ExcelExportType $type, array $filters): Spreadsheet
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle(substr($type->label(), 0, 31));
+
+        match ($type) {
+            ExcelExportType::STUDENTS => $this->writeStudents($sheet, $filters),
+            ExcelExportType::APPLICATIONS => $this->writeApplications($sheet, $filters),
+            ExcelExportType::INTERVIEWS => $this->writeInterviews($sheet, $filters),
+            ExcelExportType::INTERNSHIP_ASSIGNMENTS => $this->writeInternshipAssignments($sheet, $filters),
+            ExcelExportType::PPO_RECORDS => $this->writePpoRecords($sheet, $filters),
+            ExcelExportType::ATTENDANCE => $this->writeAttendance($sheet, $filters),
+            ExcelExportType::INTERNSHIP_COMPLETIONS => $this->writeInternshipCompletions($sheet, $filters),
+            ExcelExportType::WEEKLY_PROGRESS_REPORTS => $this->writeWeeklyProgressReports($sheet, $filters),
+            ExcelExportType::INTERNSHIP_DOCUMENTS => $this->writeInternshipDocuments($sheet, $filters),
+            ExcelExportType::PLACEMENT_DRIVES => $this->writePlacementDrives($sheet, $filters),
+            ExcelExportType::COMPANIES => $this->writeCompanies($sheet, $filters),
+            default => throw new ExcelImportException('Not a raw export type.'),
+        };
+
+        return $spreadsheet;
+    }
+
+    /**
+     * Supports: department_id, batch_id, year.
+     *
+     * @param array<string, mixed> $filters
+     */
+    private function writeStudents(Worksheet $sheet, array $filters): void
+    {
+        $headers = ['Roll Number', 'Name', 'College Email', 'Personal Email', 'Department', 'Batch', 'Year', 'Phone', 'CGPA', 'Backlogs', 'Faculty Mentor', 'LinkedIn', 'GitHub', 'Portfolio'];
+        $this->writeHeader($sheet, $headers);
+
+        $query = Student::query()->with(['user', 'department', 'batch', 'facultyMentor.user']);
+        $this->applyStudentScopeFilters($query, $filters);
+
+        $this->streamRows($sheet, $query, fn (Student $s) => [
+            $s->roll_number,
+            $s->user?->name,
+            $s->user?->email,
+            $s->personal_email,
+            $s->department?->name,
+            $s->batch?->name,
+            $s->year,
+            $s->phone,
+            $s->cgpa,
+            $s->backlogs,
+            $s->facultyMentor?->user?->name,
+            $s->linkedin_url,
+            $s->github_url,
+            $s->portfolio_url,
+        ]);
+    }
+
+    /**
+     * Supports: status, date_from/date_to (on applied_at), department_id,
+     * batch_id, applicable_type ('job'|'internship'), company_id.
+     *
+     * @param array<string, mixed> $filters
+     */
+    private function writeApplications(Worksheet $sheet, array $filters): void
+    {
+        $headers = ['Student Roll Number', 'Student Name', 'Opportunity Type', 'Company', 'Role/Title', 'Status', 'Applied At', 'Selected At', 'Withdrawn At', 'Rejection Reason'];
+        $this->writeHeader($sheet, $headers);
+
+        $query = Application::query()->with(['student.user', 'student.department', 'student.batch', 'applicable.company']);
+        $this->applyDateRange($query, 'applied_at', $filters);
+
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (! empty($filters['department_id'])) {
+            $query->whereHas('student', fn (Builder $q) => $q->where('department_id', $filters['department_id']));
+        }
+
+        if (! empty($filters['batch_id'])) {
+            $query->whereHas('student', fn (Builder $q) => $q->where('batch_id', $filters['batch_id']));
+        }
+
+        if (! empty($filters['applicable_type'])) {
+            $query->where('applicable_type', $filters['applicable_type'] === 'internship' ? Internship::class : JobPosting::class);
+        }
+
+        if (! empty($filters['company_id'])) {
+            $query->where(function (Builder $q) use ($filters) {
+                $q->whereHasMorph('applicable', [JobPosting::class, Internship::class], fn (Builder $sub) => $sub->where('company_id', $filters['company_id']));
+            });
+        }
+
+        $this->streamRows($sheet, $query, function (Application $a) {
+            $opportunity = $a->applicable;
+
+            return [
+                $a->student?->roll_number,
+                $a->student?->user?->name,
+                $a->applicable_type === Internship::class ? 'Internship' : 'Job',
+                $opportunity?->company?->name,
+                $opportunity?->title,
+                $a->status->value,
+                $a->applied_at?->toDateTimeString(),
+                $a->selected_at?->toDateTimeString(),
+                $a->withdrawn_at?->toDateTimeString(),
+                $a->rejection_reason,
+            ];
+        });
+    }
+
+    /**
+     * Supports: status, date_from/date_to (on scheduled_at).
+     *
+     * @param array<string, mixed> $filters
+     */
+    private function writeInterviews(Worksheet $sheet, array $filters): void
+    {
+        $headers = ['Student Roll Number', 'Student Name', 'Company', 'Role/Title', 'Round', 'Status', 'Scheduled At', 'Mode', 'Venue', 'Meeting Link', 'Interviewer'];
+        $this->writeHeader($sheet, $headers);
+
+        $query = Interview::query()->with(['application.student.user', 'application.applicable.company']);
+        $this->applyDateRange($query, 'scheduled_at', $filters);
+
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        $this->streamRows($sheet, $query, function (Interview $i) {
+            $application = $i->application;
+            $opportunity = $application?->applicable;
+
+            return [
+                $application?->student?->roll_number,
+                $application?->student?->user?->name,
+                $opportunity?->company?->name,
+                $opportunity?->title,
+                $i->round,
+                $i->status->value,
+                $i->scheduled_at?->toDateTimeString(),
+                $i->mode,
+                $i->venue,
+                $i->meeting_url,
+                $i->interviewer_name,
+            ];
+        });
+    }
+
+    /**
+     * Supports: status, department_id, batch_id, company_id, faculty_id,
+     * date_from/date_to (on assigned_at).
+     *
+     * @param array<string, mixed> $filters
+     */
+    private function writeInternshipAssignments(Worksheet $sheet, array $filters): void
+    {
+        $headers = ['Student Roll Number', 'Student Name', 'Company', 'Internship Role', 'Faculty', 'Status', 'Assigned At', 'Started At', 'Ended At'];
+        $this->writeHeader($sheet, $headers);
+
+        $query = InternshipAssignment::query()->with(['student.user', 'internship.company', 'faculty.user']);
+        $this->applyDateRange($query, 'assigned_at', $filters);
+
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (! empty($filters['faculty_id'])) {
+            $query->where('faculty_id', $filters['faculty_id']);
+        }
+
+        if (! empty($filters['company_id'])) {
+            $query->whereHas('internship', fn (Builder $q) => $q->where('company_id', $filters['company_id']));
+        }
+
+        if (! empty($filters['department_id'])) {
+            $query->whereHas('student', fn (Builder $q) => $q->where('department_id', $filters['department_id']));
+        }
+
+        if (! empty($filters['batch_id'])) {
+            $query->whereHas('student', fn (Builder $q) => $q->where('batch_id', $filters['batch_id']));
+        }
+
+        $this->streamRows($sheet, $query, fn (InternshipAssignment $a) => [
+            $a->student?->roll_number,
+            $a->student?->user?->name,
+            $a->internship?->company?->name,
+            $a->internship?->title,
+            $a->faculty?->user?->name,
+            $a->status->value,
+            $a->assigned_at?->toDateTimeString(),
+            $a->started_at?->toDateTimeString(),
+            $a->ended_at?->toDateTimeString(),
+        ]);
+    }
+
+    /**
+     * Supports: status, company_id, date_from/date_to (on offered_at).
+     *
+     * @param array<string, mixed> $filters
+     */
+    private function writePpoRecords(Worksheet $sheet, array $filters): void
+    {
+        $headers = ['Student Roll Number', 'Student Name', 'Company', 'Designation', 'Package', 'Status', 'Offered At', 'Joining Date'];
+        $this->writeHeader($sheet, $headers);
+
+        $query = PpoRecord::query()->with(['internshipAssignment.student.user', 'company']);
+        $this->applyDateRange($query, 'offered_at', $filters);
+
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (! empty($filters['company_id'])) {
+            $query->where('company_id', $filters['company_id']);
+        }
+
+        $this->streamRows($sheet, $query, fn (PpoRecord $p) => [
+            $p->internshipAssignment?->student?->roll_number,
+            $p->internshipAssignment?->student?->user?->name,
+            $p->company?->name,
+            $p->designation,
+            $p->package,
+            $p->status->value,
+            $p->offered_at?->toDateString(),
+            $p->joining_date?->toDateString(),
+        ]);
+    }
+
+    /**
+     * Supports: status, date_from/date_to (on attendance_date).
+     *
+     * @param array<string, mixed> $filters
+     */
+    private function writeAttendance(Worksheet $sheet, array $filters): void
+    {
+        $headers = ['Student Roll Number', 'Student Name', 'Internship', 'Date', 'Status', 'Check In', 'Check Out'];
+        $this->writeHeader($sheet, $headers);
+
+        $query = Attendance::query()->with(['internshipAssignment.student.user', 'internshipAssignment.internship']);
+        $this->applyDateRange($query, 'attendance_date', $filters);
+
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        $this->streamRows($sheet, $query, fn (Attendance $a) => [
+            $a->internshipAssignment?->student?->roll_number,
+            $a->internshipAssignment?->student?->user?->name,
+            $a->internshipAssignment?->internship?->title,
+            $a->attendance_date?->toDateString(),
+            $a->status->value,
+            $a->check_in_time,
+            $a->check_out_time,
+        ]);
+    }
+
+    /**
+     * Supports: status, date_from/date_to (on completion_date).
+     *
+     * @param array<string, mixed> $filters
+     */
+    private function writeInternshipCompletions(Worksheet $sheet, array $filters): void
+    {
+        $headers = ['Student Roll Number', 'Student Name', 'Company', 'Completion Date', 'Outcome', 'Status', 'Finalized At', 'Final Remarks'];
+        $this->writeHeader($sheet, $headers);
+
+        $query = InternshipCompletion::query()->with(['internshipAssignment.student.user', 'internshipAssignment.internship.company']);
+        $this->applyDateRange($query, 'completion_date', $filters);
+
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        $this->streamRows($sheet, $query, fn (InternshipCompletion $c) => [
+            $c->internshipAssignment?->student?->roll_number,
+            $c->internshipAssignment?->student?->user?->name,
+            $c->internshipAssignment?->internship?->company?->name,
+            $c->completion_date?->toDateString(),
+            $c->outcome?->value,
+            $c->status->value,
+            $c->finalized_at?->toDateTimeString(),
+            $c->final_remarks,
+        ]);
+    }
+
+    /**
+     * Supports: status, date_from/date_to (on week_start_date).
+     *
+     * @param array<string, mixed> $filters
+     */
+    private function writeWeeklyProgressReports(Worksheet $sheet, array $filters): void
+    {
+        $headers = ['Student Roll Number', 'Student Name', 'Week #', 'Week Start', 'Week End', 'Status', 'Submitted At', 'Reviewed At'];
+        $this->writeHeader($sheet, $headers);
+
+        $query = WeeklyProgressReport::query()->with(['internshipAssignment.student.user']);
+        $this->applyDateRange($query, 'week_start_date', $filters);
+
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        $this->streamRows($sheet, $query, fn (WeeklyProgressReport $w) => [
+            $w->internshipAssignment?->student?->roll_number,
+            $w->internshipAssignment?->student?->user?->name,
+            $w->week_number,
+            $w->week_start_date?->toDateString(),
+            $w->week_end_date?->toDateString(),
+            $w->status->value,
+            $w->student_submitted_at?->toDateTimeString(),
+            $w->faculty_reviewed_at?->toDateTimeString(),
+        ]);
+    }
+
+    /**
+     * Supports: status, date_from/date_to (on created_at).
+     *
+     * @param array<string, mixed> $filters
+     */
+    private function writeInternshipDocuments(Worksheet $sheet, array $filters): void
+    {
+        $headers = ['Student Roll Number', 'Student Name', 'Document Type', 'Title', 'Status', 'Submitted At', 'Reviewed At'];
+        $this->writeHeader($sheet, $headers);
+
+        $query = InternshipDocument::query()->with(['internshipAssignment.student.user']);
+        $this->applyDateRange($query, 'created_at', $filters);
+
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        $this->streamRows($sheet, $query, fn (InternshipDocument $d) => [
+            $d->internshipAssignment?->student?->roll_number,
+            $d->internshipAssignment?->student?->user?->name,
+            $d->document_type?->value,
+            $d->title,
+            $d->status->value,
+            $d->submitted_at?->toDateTimeString(),
+            $d->reviewed_at?->toDateTimeString(),
+        ]);
+    }
+
+    /**
+     * Supports: status, company_id, date_from/date_to (on scheduled_at).
+     *
+     * @param array<string, mixed> $filters
+     */
+    private function writePlacementDrives(Worksheet $sheet, array $filters): void
+    {
+        $headers = ['Title', 'Company', 'Drive Type', 'Venue', 'Scheduled At', 'Application Deadline', 'Status'];
+        $this->writeHeader($sheet, $headers);
+
+        $query = PlacementDrive::query()->with(['company']);
+        $this->applyDateRange($query, 'scheduled_at', $filters);
+
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (! empty($filters['company_id'])) {
+            $query->where('company_id', $filters['company_id']);
+        }
+
+        $this->streamRows($sheet, $query, fn (PlacementDrive $d) => [
+            $d->title,
+            $d->company?->name,
+            $d->drive_type?->value,
+            $d->venue,
+            $d->scheduled_at?->toDateTimeString(),
+            $d->application_deadline?->toDateTimeString(),
+            $d->status->value,
+        ]);
+    }
+
+    /**
+     * No filters supported beyond the implicit full listing - a
+     * company directory is small enough that filtering it was never
+     * requested by the module spec.
+     *
+     * @param array<string, mixed> $filters
+     */
+    private function writeCompanies(Worksheet $sheet, array $filters): void
+    {
+        $headers = ['Name', 'Industry', 'Website', 'Active'];
+        $this->writeHeader($sheet, $headers);
+
+        $this->streamRows($sheet, Company::query(), fn (Company $c) => [
+            $c->name,
+            $c->industry,
+            $c->website,
+            $c->is_active ? 'Yes' : 'No',
+        ]);
+    }
+
+    // =========================================================================
+    // ANALYTICAL / SUMMARY EXPORTS
+    // =========================================================================
+
+    /**
+     * @param array<string, mixed> $filters
+     */
+    private function buildAnalytical(ExcelExportType $type, array $filters): Spreadsheet
+    {
+        return match ($type) {
+            ExcelExportType::APPLICATION_SUMMARY => $this->buildApplicationSummary($filters),
+            ExcelExportType::STATUS_SUMMARY => $this->buildStatusSummary($filters),
+            ExcelExportType::COMPANY_WISE_PLACEMENT_REPORT => $this->buildCompanyWisePlacementReport($filters),
+            ExcelExportType::DEPARTMENT_WISE_PLACEMENT_REPORT => $this->buildDepartmentWisePlacementReport($filters),
+            ExcelExportType::BATCH_WISE_PLACEMENT_REPORT => $this->buildBatchWisePlacementReport($filters),
+            ExcelExportType::STUDENT_APPLICATION_REPORT => $this->buildStudentApplicationReport($filters),
+            ExcelExportType::UNPLACED_STUDENT_REPORT => $this->buildUnplacedStudentReport($filters),
+            ExcelExportType::STUDENT_APPLICATION_ACTIVITY => $this->buildStudentApplicationActivity($filters),
+            default => throw new ExcelImportException('Not an analytical export type.'),
+        };
+    }
+
+    /**
+     * Module spec's own headline example of the STUDENTS-vs-APPLICATIONS
+     * distinction: one multi-sheet workbook whose first sheet is a
+     * single-number overview (never conflating "how many applications"
+     * with "how many distinct students applied" - a student with 5
+     * applications must count once in the student figures and 5 times
+     * in the application figures) and whose second sheet breaks the
+     * same two counts down by opportunity type.
+     *
+     * @param array<string, mixed> $filters
+     */
+    private function buildApplicationSummary(array $filters): Spreadsheet
+    {
+        $base = Application::query();
+        $this->applyDateRange($base, 'applied_at', $filters);
+        $this->applyApplicationEntityFilters($base, $filters);
+
+        $totalApplications = (clone $base)->count();
+        $totalDistinctStudents = (clone $base)->distinct('student_id')->count('student_id');
+
+        $spreadsheet = new Spreadsheet();
+        $overview = $spreadsheet->getActiveSheet();
+        $overview->setTitle('Overview');
+        $this->writeHeader($overview, ['Metric', 'Count']);
+        $this->writeDataRows($overview, 2, [
+            ['Total Applications', $totalApplications],
+            ['Distinct Students Who Applied', $totalDistinctStudents],
+            ['Avg. Applications per Student', $totalDistinctStudents > 0 ? round($totalApplications / $totalDistinctStudents, 2) : 0],
+        ]);
+        $this->autosize($overview, 2);
+
+        $byType = $spreadsheet->createSheet();
+        $byType->setTitle('By Opportunity Type');
+        $this->writeHeader($byType, ['Opportunity Type', 'Applications', 'Distinct Students']);
+        $typeRows = (clone $base)
+            ->selectRaw('applicable_type, COUNT(*) as application_count, COUNT(DISTINCT student_id) as student_count')
+            ->groupBy('applicable_type')
+            ->get()
+            ->map(fn ($r) => [$r->applicable_type === Internship::class ? 'Internship' : 'Job', $r->application_count, $r->student_count])
+            ->all();
+        $this->writeDataRows($byType, 2, $typeRows);
+        $this->autosize($byType, 3);
+
+        return $spreadsheet;
+    }
+
+    /**
+     * Per-status breakdown, again distinguishing application count from
+     * distinct-student count for the same reason as
+     * buildApplicationSummary().
+     *
+     * @param array<string, mixed> $filters
+     */
+    private function buildStatusSummary(array $filters): Spreadsheet
+    {
+        $base = Application::query();
+        $this->applyDateRange($base, 'applied_at', $filters);
+        $this->applyApplicationEntityFilters($base, $filters);
+
+        $rows = (clone $base)
+            ->selectRaw('status, COUNT(*) as application_count, COUNT(DISTINCT student_id) as student_count')
+            ->groupBy('status')
+            ->orderBy('status')
+            ->get()
+            // Application::status is cast to ApplicationStatus (a
+            // BackedEnum) on the model, so even this raw-aggregated
+            // row is hydrated with an enum instance, not a plain
+            // string - ->value is required here, not optional.
+            ->map(fn ($r) => [$r->status instanceof \BackedEnum ? $r->status->value : $r->status, $r->application_count, $r->student_count])
+            ->all();
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Status Summary');
+        $this->writeHeader($sheet, ['Status', 'Applications', 'Distinct Students']);
+        $this->writeDataRows($sheet, 2, $rows);
+        $this->autosize($sheet, 3);
+
+        return $spreadsheet;
+    }
+
+    /**
+     * One row per company: total applications, distinct students who
+     * applied, and how many of those applications reached SELECTED -
+     * the module spec's "company-wise placement report".
+     *
+     * @param array<string, mixed> $filters
+     */
+    private function buildCompanyWisePlacementReport(array $filters): Spreadsheet
+    {
+        $rows = $this->placementReportRows(
+            groupByColumn: 'companies.id',
+            groupByLabelColumn: 'companies.name',
+            joinCompanies: true,
+            filters: $filters,
+        );
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Company-wise Placement');
+        $this->writeHeader($sheet, ['Company', 'Total Applications', 'Distinct Students Applied', 'Students Selected', 'Selection Rate %']);
+        $this->writeDataRows($sheet, 2, $rows);
+        $this->autosize($sheet, 5);
+
+        return $spreadsheet;
+    }
+
+    /**
+     * @param array<string, mixed> $filters
+     */
+    private function buildDepartmentWisePlacementReport(array $filters): Spreadsheet
+    {
+        $rows = $this->placementReportRows(
+            groupByColumn: 'departments.id',
+            groupByLabelColumn: 'departments.name',
+            joinCompanies: false,
+            joinDepartments: true,
+            filters: $filters,
+        );
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Department-wise Placement');
+        $this->writeHeader($sheet, ['Department', 'Total Applications', 'Distinct Students Applied', 'Students Selected', 'Selection Rate %']);
+        $this->writeDataRows($sheet, 2, $rows);
+        $this->autosize($sheet, 5);
+
+        return $spreadsheet;
+    }
+
+    /**
+     * @param array<string, mixed> $filters
+     */
+    private function buildBatchWisePlacementReport(array $filters): Spreadsheet
+    {
+        $rows = $this->placementReportRows(
+            groupByColumn: 'batches.id',
+            groupByLabelColumn: 'batches.name',
+            joinCompanies: false,
+            joinBatches: true,
+            filters: $filters,
+        );
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Batch-wise Placement');
+        $this->writeHeader($sheet, ['Batch', 'Total Applications', 'Distinct Students Applied', 'Students Selected', 'Selection Rate %']);
+        $this->writeDataRows($sheet, 2, $rows);
+        $this->autosize($sheet, 5);
+
+        return $spreadsheet;
+    }
+
+    /**
+     * Shared aggregation for the three "X-wise placement report"
+     * exports above - only the GROUP BY dimension differs, so the
+     * join/aggregate SQL is written once. "Students Selected" counts
+     * DISTINCT student_id among SELECTED applications, since a student
+     * could theoretically hold more than one SELECTED application
+     * across different opportunities and must still count once per
+     * group as "placed".
+     *
+     * @param array<string, mixed> $filters
+     * @return list<array{0: string, 1: int, 2: int, 3: int, 4: float}>
+     */
+    private function placementReportRows(
+        string $groupByColumn,
+        string $groupByLabelColumn,
+        bool $joinCompanies = false,
+        bool $joinDepartments = false,
+        bool $joinBatches = false,
+        array $filters = [],
+    ): array {
+        $query = DB::table('applications')
+            ->join('students', 'students.id', '=', 'applications.student_id');
+
+        if ($joinCompanies) {
+            $query->join('job_postings', function ($j) {
+                $j->on('job_postings.id', '=', 'applications.applicable_id')->where('applications.applicable_type', '=', JobPosting::class);
+            }, type: 'left')
+                ->join('internships', function ($j) {
+                    $j->on('internships.id', '=', 'applications.applicable_id')->where('applications.applicable_type', '=', Internship::class);
+                }, type: 'left')
+                ->join('companies', function ($j) {
+                    $j->on('companies.id', '=', 'job_postings.company_id')->orOn('companies.id', '=', 'internships.company_id');
+                }, type: 'left');
+        }
+
+        if ($joinDepartments) {
+            $query->join('departments', 'departments.id', '=', 'students.department_id');
+        }
+
+        if ($joinBatches) {
+            $query->join('batches', 'batches.id', '=', 'students.batch_id');
+        }
+
+        if (! empty($filters['department_id'])) {
+            $query->where('students.department_id', $filters['department_id']);
+        }
+
+        if (! empty($filters['batch_id'])) {
+            $query->where('students.batch_id', $filters['batch_id']);
+        }
+
+        if (! empty($filters['company_id']) && $joinCompanies) {
+            $query->where('companies.id', $filters['company_id']);
+        }
+
+        if (! empty($filters['date_from'])) {
+            $query->whereDate('applications.applied_at', '>=', $filters['date_from']);
+        }
+
+        if (! empty($filters['date_to'])) {
+            $query->whereDate('applications.applied_at', '<=', $filters['date_to']);
+        }
+
+        $rows = $query
+            ->whereNotNull($groupByColumn)
+            ->selectRaw(sprintf(
+                '%s as group_id, %s as group_label, COUNT(*) as total_applications, COUNT(DISTINCT applications.student_id) as distinct_students, COUNT(DISTINCT CASE WHEN applications.status = ? THEN applications.student_id END) as students_selected',
+                $groupByColumn,
+                $groupByLabelColumn,
+            ))
+            ->addBinding('SELECTED', 'select')
+            ->groupBy($groupByColumn, $groupByLabelColumn)
+            ->orderBy('group_label')
+            ->get();
+
+        return $rows->map(fn ($r) => [
+            $r->group_label,
+            (int) $r->total_applications,
+            (int) $r->distinct_students,
+            (int) $r->students_selected,
+            $r->distinct_students > 0 ? round(($r->students_selected / $r->distinct_students) * 100, 2) : 0.0,
+        ])->all();
+    }
+
+    /**
+     * One row per student: how many applications they have made and
+     * their breakdown by status, plus their most recent application's
+     * status - the module spec's "student application report".
+     *
+     * @param array<string, mixed> $filters
+     */
+    private function buildStudentApplicationReport(array $filters): Spreadsheet
+    {
+        $studentQuery = Student::query()->with(['user', 'department', 'batch']);
+        $this->applyStudentScopeFilters($studentQuery, $filters);
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Student Application Report');
+        $this->writeHeader($sheet, ['Roll Number', 'Name', 'Department', 'Batch', 'Total Applications', 'Selected', 'Rejected', 'Withdrawn', 'In Progress', 'Latest Status']);
+
+        $rowIndex = 2;
+
+        $studentQuery->chunkById(self::CHUNK_SIZE, function ($students) use ($sheet, &$rowIndex) {
+            $studentIds = $students->pluck('id')->all();
+
+            $counts = Application::query()
+                ->whereIn('student_id', $studentIds)
+                ->selectRaw('student_id, status, COUNT(*) as c')
+                ->groupBy('student_id', 'status')
+                ->get()
+                // ->status is cast to the ApplicationStatus BackedEnum
+                // on the model even from this raw-aggregated row; it
+                // must be flattened to its plain string value BEFORE
+                // pluck('c', 'status') below, since a BackedEnum
+                // instance is not a legal PHP array key.
+                ->map(fn ($r) => (object) ['student_id' => $r->student_id, 'status' => $r->status instanceof \BackedEnum ? $r->status->value : $r->status, 'c' => $r->c])
+                ->groupBy('student_id');
+
+            $latest = Application::query()
+                ->whereIn('student_id', $studentIds)
+                ->orderByDesc('applied_at')
+                ->get(['student_id', 'status', 'applied_at'])
+                ->groupBy('student_id')
+                ->map(fn ($rows) => $rows->first());
+
+            foreach ($students as $student) {
+                $byStatus = ($counts->get($student->id) ?? collect())->pluck('c', 'status');
+                $total = $byStatus->sum();
+                $inProgress = $total - ($byStatus->get('SELECTED', 0) + $byStatus->get('REJECTED', 0) + $byStatus->get('WITHDRAWN', 0));
+
+                $sheet->fromArray([
+                    $student->roll_number,
+                    $student->user?->name,
+                    $student->department?->name,
+                    $student->batch?->name,
+                    $total,
+                    $byStatus->get('SELECTED', 0),
+                    $byStatus->get('REJECTED', 0),
+                    $byStatus->get('WITHDRAWN', 0),
+                    max($inProgress, 0),
+                    $latest->get($student->id)?->status?->value ?? '—',
+                ], null, 'A'.$rowIndex, true);
+                $rowIndex++;
+            }
+        });
+
+        $this->autosize($sheet, 10);
+
+        return $spreadsheet;
+    }
+
+    /**
+     * Every student with zero SELECTED application - the module spec's
+     * "unplaced student report". Uses a NOT EXISTS-shaped
+     * whereDoesntHave() rather than pulling every student and every
+     * application into PHP to compute the complement there.
+     *
+     * @param array<string, mixed> $filters
+     */
+    private function buildUnplacedStudentReport(array $filters): Spreadsheet
+    {
+        $query = Student::query()
+            ->with(['user', 'department', 'batch'])
+            ->whereDoesntHave('applications', fn (Builder $q) => $q->where('status', 'SELECTED'));
+        $this->applyStudentScopeFilters($query, $filters);
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Unplaced Students');
+        $this->writeHeader($sheet, ['Roll Number', 'Name', 'Department', 'Batch', 'Total Applications', 'Applications In Progress']);
+
+        $this->streamRows($sheet, $query, fn (Student $s) => [
+            $s->roll_number,
+            $s->user?->name,
+            $s->department?->name,
+            $s->batch?->name,
+            $s->applications()->count(),
+            $s->applications()->whereNotIn('status', ['REJECTED', 'WITHDRAWN'])->count(),
+        ]);
+
+        return $spreadsheet;
+    }
+
+    /**
+     * One row per application status-history entry - a chronological
+     * activity log ("what changed, when, by whom") rather than a
+     * point-in-time snapshot, which is what distinguishes this from
+     * buildStudentApplicationReport() above.
+     *
+     * @param array<string, mixed> $filters
+     */
+    private function buildStudentApplicationActivity(array $filters): Spreadsheet
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Application Activity');
+        $this->writeHeader($sheet, ['Student Roll Number', 'Student Name', 'Company', 'Role/Title', 'From Status', 'To Status', 'Changed By', 'Changed At', 'Remarks']);
+
+        $query = ApplicationStatusHistory::query()->with(['application.student.user', 'application.applicable.company', 'changedBy']);
+        $this->applyDateRange($query, 'created_at', $filters);
+
+        if (! empty($filters['department_id'])) {
+            $query->whereHas('application.student', fn (Builder $q) => $q->where('department_id', $filters['department_id']));
+        }
+
+        if (! empty($filters['batch_id'])) {
+            $query->whereHas('application.student', fn (Builder $q) => $q->where('batch_id', $filters['batch_id']));
+        }
+
+        $this->streamRows($sheet, $query, function (ApplicationStatusHistory $h) {
+            $application = $h->application;
+            $opportunity = $application?->applicable;
+
+            return [
+                $application?->student?->roll_number,
+                $application?->student?->user?->name,
+                $opportunity?->company?->name,
+                $opportunity?->title,
+                $h->from_status?->value ?? '—',
+                $h->to_status->value,
+                $h->changedBy?->name,
+                $h->created_at?->toDateTimeString(),
+                $h->remarks,
+            ];
+        });
+
+        return $spreadsheet;
+    }
+
+    // =========================================================================
+    // shared filter / write helpers
+    // =========================================================================
+
+    /**
+     * @param array<string, mixed> $filters
+     */
+    private function applyStudentScopeFilters(Builder $query, array $filters): void
+    {
+        if (! empty($filters['department_id'])) {
+            $query->where('department_id', $filters['department_id']);
+        }
+
+        if (! empty($filters['batch_id'])) {
+            $query->where('batch_id', $filters['batch_id']);
+        }
+
+        if (! empty($filters['year'])) {
+            $query->where('year', $filters['year']);
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $filters
+     */
+    private function applyApplicationEntityFilters(Builder $query, array $filters): void
+    {
+        if (! empty($filters['department_id'])) {
+            $query->whereHas('student', fn (Builder $q) => $q->where('department_id', $filters['department_id']));
+        }
+
+        if (! empty($filters['batch_id'])) {
+            $query->whereHas('student', fn (Builder $q) => $q->where('batch_id', $filters['batch_id']));
+        }
+
+        if (! empty($filters['applicable_type'])) {
+            $query->where('applicable_type', $filters['applicable_type'] === 'internship' ? Internship::class : JobPosting::class);
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $filters
+     */
+    private function applyDateRange(Builder $query, string $column, array $filters): void
+    {
+        if (! empty($filters['date_from'])) {
+            $query->whereDate($column, '>=', $filters['date_from']);
+        }
+
+        if (! empty($filters['date_to'])) {
+            $query->whereDate($column, '<=', $filters['date_to']);
+        }
+    }
+
+    /**
+     * @param array<int, string> $headers
+     */
+    private function writeHeader(Worksheet $sheet, array $headers): void
+    {
+        $sheet->fromArray($headers, null, 'A1');
+        $lastColumn = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($headers));
+        $range = 'A1:'.$lastColumn.'1';
+        $sheet->getStyle($range)->getFont()->setBold(true);
+        $sheet->getStyle($range)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB(self::HEADER_FILL);
+        $sheet->freezePane('A2');
+    }
+
+    /**
+     * Streams an Eloquent query's results directly into the sheet via
+     * chunkById() (module spec section 27: "use chunking... avoid
+     * loading everything into memory"), rather than ->get()->map(...) -
+     * the reason every raw/analytical export in this class that can
+     * grow large (anything per-application, per-attendance-record, or
+     * per-status-history-entry) uses this helper instead of building an
+     * in-memory array first.
+     *
+     * @param Builder $query
+     * @param callable(mixed): list<mixed> $rowMapper
+     */
+    private function streamRows(Worksheet $sheet, Builder $query, callable $rowMapper): void
+    {
+        $rowIndex = 2;
+        $columnCount = 0;
+
+        $query->chunkById(self::CHUNK_SIZE, function ($models) use ($sheet, $rowMapper, &$rowIndex, &$columnCount) {
+            foreach ($models as $model) {
+                $row = $rowMapper($model);
+                $columnCount = max($columnCount, count($row));
+                $sheet->fromArray($row, null, 'A'.$rowIndex, true);
+                $rowIndex++;
+            }
+        });
+
+        if ($columnCount > 0) {
+            $this->autosize($sheet, $columnCount);
+        }
+    }
+
+    /**
+     * @param list<list<mixed>> $rows
+     */
+    private function writeDataRows(Worksheet $sheet, int $startRow, array $rows): void
+    {
+        foreach ($rows as $offset => $row) {
+            $sheet->fromArray($row, null, 'A'.($startRow + $offset), true);
+        }
+    }
+
+    private function autosize(Worksheet $sheet, int $columnCount): void
+    {
+        for ($i = 1; $i <= $columnCount; $i++) {
+            $sheet->getColumnDimensionByColumn($i)->setAutoSize(true);
+        }
+    }
+}

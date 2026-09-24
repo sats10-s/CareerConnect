@@ -2,6 +2,9 @@
 
 use App\Http\Controllers\Api\Admin\ApplicationController as AdminApplicationController;
 use App\Http\Controllers\Api\Admin\AttendanceController as AdminAttendanceController;
+use App\Http\Controllers\Api\Admin\ExcelExportController as AdminExcelExportController;
+use App\Http\Controllers\Api\Admin\ExcelImportController as AdminExcelImportController;
+use App\Http\Controllers\Api\Admin\ExcelTemplateController as AdminExcelTemplateController;
 use App\Http\Controllers\Api\Admin\InternshipAssignmentController as AdminInternshipAssignmentController;
 use App\Http\Controllers\Api\Admin\InternshipCompletionController as AdminInternshipCompletionController;
 use App\Http\Controllers\Api\Admin\InternshipController;
@@ -401,4 +404,21 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/super-admin/dashboard', [SuperAdminDashboardController::class, 'index'])
         ->middleware('role:SUPER_ADMIN');
+
+    // Excel Sync Center (module spec sections 1-38) - bulk Excel
+    // import/export/templates/history. Route-gated to admins only
+    // (module spec section 33); object-level authorization is enforced
+    // by ExcelImportBatchPolicy inside each controller action, same
+    // pattern as every other admin-only module in this file. Matches
+    // the module spec's own exact route list (section 32).
+    Route::prefix('admin/excel')->middleware('role:PLACEMENT_ADMIN,SUPER_ADMIN')->group(function () {
+        Route::post('/import', [AdminExcelImportController::class, 'store']);
+        Route::get('/imports', [AdminExcelImportController::class, 'index']);
+        Route::get('/imports/{batch}', [AdminExcelImportController::class, 'show']);
+        Route::get('/imports/{batch}/preview', [AdminExcelImportController::class, 'preview']);
+        Route::post('/imports/{batch}/confirm', [AdminExcelImportController::class, 'confirm']);
+        Route::post('/imports/{batch}/rollback', [AdminExcelImportController::class, 'rollback']);
+        Route::get('/templates/{type}', [AdminExcelTemplateController::class, 'show']);
+        Route::get('/exports/{type}', [AdminExcelExportController::class, 'show']);
+    });
 });
