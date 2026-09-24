@@ -47,6 +47,52 @@ class ReportController extends Controller
         private readonly FacultyReportService $facultyReportService,
     ) {}
 
+    /**
+     * Overrides FormatsApiResponse::success() for this controller only
+     * (a class method always wins over a same-named trait method, so
+     * this needs no `insteadof`/`as` conflict resolution) to add
+     * JSON_PRESERVE_ZERO_FRACTION.
+     *
+     * Every Reporting service already returns its ratio/average/
+     * percentage fields (avg_applications_per_applicant, selection_rate,
+     * attendance_percentage, completion_rate, ppo_offer_rate, ...) as a
+     * genuine PHP float - round() always returns float, and every
+     * "else" branch for an empty denominator is the float literal 0.0,
+     * never int 0 (see PlacementReportService/AttendanceReportService/
+     * InternshipReportService's own return statements). The bug this
+     * fixes is downstream of that: PHP's json_encode(), by default,
+     * drops the fractional part of a *whole-number* float - json_encode(2.0)
+     * produces the JSON text "2", not "2.0" - and json_decode() then
+     * reads that JSON "2" back as a PHP int, not a float. That is
+     * exactly why `avg_applications_per_applicant` (a real float 2.0)
+     * round-tripped through the HTTP response as int 2 and failed
+     * assertSame(2.0, ...) - the PHP value was always correct; only the
+     * wire representation was ambiguous. JSON_PRESERVE_ZERO_FRACTION
+     * makes json_encode() always emit a decimal point for float values
+     * (2.0 stays "2.0", 100.0 stays "100.0", 0.0 stays "0.0"), so a
+     * consumer's JSON parser - and this codebase's own tests via
+     * json_decode() - can tell a ratio field's type apart from an
+     * integer count field's, without this controller (or any Reporting
+     * service) having to fake decimals with string formatting.
+     *
+     * This override is deliberately local to Api\Admin\ReportController
+     * (and its Api\Student\ReportController / Api\Faculty\ReportController
+     * siblings) rather than added to the shared FormatsApiResponse
+     * trait itself - every other controller in this codebase that uses
+     * that trait (Excel, Notifications, Announcements, Applications,
+     * ...) returns integer counts almost exclusively and has no
+     * documented need for this behavior change, so this stays scoped to
+     * the module that actually needs it.
+     */
+    protected function success(mixed $data = null, string $message = '', int $status = 200): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'data' => $data,
+        ], $status, [], JSON_PRESERVE_ZERO_FRACTION);
+    }
+
     public function dashboard(ReportFilterRequest $request): JsonResponse
     {
         return $this->success($this->dashboardAnalyticsService->forAdmin($request->filters()));

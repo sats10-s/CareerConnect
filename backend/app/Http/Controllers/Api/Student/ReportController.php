@@ -24,6 +24,27 @@ class ReportController extends Controller
 
     public function __construct(private readonly DashboardAnalyticsService $dashboardAnalyticsService) {}
 
+    /**
+     * Overrides FormatsApiResponse::success() for this controller only,
+     * to add JSON_PRESERVE_ZERO_FRACTION - see
+     * Api\Admin\ReportController::success()'s docblock for the full
+     * root-cause explanation (a whole-number PHP float like 0.0 is, by
+     * default, emitted by json_encode() as the JSON text "0", which
+     * json_decode() then reads back as int 0, not float 0.0). This
+     * controller's forStudent() payload includes the same kind of
+     * per-assignment `attendance_percentage` ratio field
+     * (App\Services\Reporting\AttendanceReportService::perAssignmentSummary())
+     * that motivated the identical override there.
+     */
+    protected function success(mixed $data = null, string $message = '', int $status = 200): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'data' => $data,
+        ], $status, [], JSON_PRESERVE_ZERO_FRACTION);
+    }
+
     public function summary(Request $request): JsonResponse
     {
         $student = $request->user()->student()->firstOrFail();
