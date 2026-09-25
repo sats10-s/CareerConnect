@@ -62,19 +62,29 @@ export default {
         },
       },
       fontFamily: {
+        // Twinz-style dark pass: the reference uses one bold sans
+        // family throughout, no serif anywhere. serif/display are kept
+        // pointed at Inter (not removed outright) purely as a safety
+        // net for any font-serif/font-display-italic class missed in
+        // this pass - new headings should just use font-bold/font-
+        // extrabold on the sans family, not these keys.
         sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        // Page/hero titles only - see the accent-italic dashboard
-        // greeting usage in src/index.css (.font-display-italic). Never
-        // used for UI chrome or body text.
-        serif: ['Source Serif 4', 'ui-serif', 'Georgia', 'serif'],
-        display: ['Source Serif 4', 'ui-serif', 'Georgia', 'serif'],
+        serif: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
-        // Cards/modals per the Institutional Ink shape system (10-14px).
-        // Tailwind's default `xl` (0.75rem / 12px) already sits inside
-        // that range; named explicitly here so it reads as a deliberate
-        // token, not a coincidence of Tailwind's default scale.
+        // Buttons/badges/inputs shape tier (unchanged by the dark
+        // pass - only buttons/badges became fully round, via rounded-
+        // full in index.css's .btn/.badge-eyebrow, not this token).
         xl: '12px',
+      },
+      boxShadow: {
+        // Same values as index.css's --shadow-glow/--shadow-glow-lg,
+        // exposed as Tailwind utilities (shadow-glow / shadow-glow-lg)
+        // for one-off mint-glow accents outside the .btn-primary/
+        // .card-featured component classes.
+        glow: '0 0 0 1px rgba(62, 207, 142, 0.45), 0 8px 28px -6px rgba(62, 207, 142, 0.55)',
+        'glow-lg': '0 0 0 1px rgba(62, 207, 142, 0.5), 0 12px 40px -8px rgba(62, 207, 142, 0.65)',
       },
       keyframes: {
         'fade-in': {

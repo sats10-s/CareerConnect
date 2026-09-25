@@ -26,7 +26,7 @@ export function LandingPage() {
       <header className="border-b border-hairline">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <span className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-accent">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-[color:var(--color-primary-ink)]">
               <GraduationCap className="h-[18px] w-[18px]" strokeWidth={2.2} />
             </span>
             <span className="text-sm font-bold text-ink">CareerConnect</span>
@@ -40,13 +40,13 @@ export function LandingPage() {
       </header>
 
       <main>
-        <section className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:gap-8 lg:py-24">
+        <section className="bg-grid relative mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:gap-8 lg:py-24">
           <div>
-            <span className="inline-flex items-center rounded-full border border-hairline bg-surface px-3 py-1 text-xs font-semibold text-muted">
+            <span className="badge-eyebrow">
               Internship &amp; Placement Portal
             </span>
 
-            <h1 className="mt-5 font-serif text-4xl leading-[1.08] tracking-tight text-ink sm:text-5xl lg:text-6xl">
+            <h1 className="mt-5 font-extrabold text-4xl leading-[1.08] tracking-tight text-ink sm:text-5xl lg:text-6xl">
               Build Your Career With The <span className="text-accent">Right</span> Opportunity.
             </h1>
 

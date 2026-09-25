@@ -85,7 +85,7 @@ export function RegisterPage() {
 
   return (
     <div>
-      <h1 className="font-serif text-3xl text-ink">Create your student account</h1>
+      <h1 className="font-extrabold tracking-tight text-3xl text-ink">Create your student account</h1>
       <p className="mt-1 text-sm text-muted">Faculty and admin accounts are provisioned by the placement office.</p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">

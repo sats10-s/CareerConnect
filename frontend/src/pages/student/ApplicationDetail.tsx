@@ -199,7 +199,7 @@ export function ApplicationDetailPage() {
         <CompanyLogo name={opportunity?.company?.name} logoPath={opportunity?.company?.logo_path} size="lg" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="font-serif text-2xl text-ink sm:text-3xl">{opportunity?.title ?? 'Opportunity unavailable'}</h1>
+            <h1 className="font-extrabold tracking-tight text-2xl text-ink sm:text-3xl">{opportunity?.title ?? 'Opportunity unavailable'}</h1>
             <span className="rounded-full border border-hairline px-2 py-0.5 text-xs font-medium text-muted">{typeLabel}</span>
           </div>
           <p className="mt-1 text-sm text-muted">{opportunity?.company?.name ?? 'Company not listed'}</p>

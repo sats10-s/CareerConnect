@@ -3,79 +3,68 @@
 @tailwind utilities;
 
 /*
- * CareerConnect design tokens - "Forest / Cream / Orange" palette
- * (Frontend Phase 1: Premium Visual Foundation).
+ * CareerConnect design tokens - "Twinz-style dark" palette.
  *
- * This replaces the previous "Institutional Ink" navy/gold palette.
- * Only the VALUES below changed - every custom-property NAME, and
- * every Tailwind alias in tailwind.config.js that points at them, is
- * unchanged, so every page/component built against those token
- * classes (bg-primary, text-ink, bg-sidebar, text-indigo, bg-gold*,
- * bg-success-bg, etc.) re-themes automatically with no JSX edits.
+ * Replaces the previous "Forest / Cream / Orange" light palette with a
+ * dark, single-accent system matching the reference (twinzdigital.com):
+ * near-black surfaces, a bright mint-green accent used for every CTA/
+ * highlight/glow, and no second brand color. As before, every custom-
+ * property NAME - and every Tailwind alias in tailwind.config.js that
+ * points at it - is unchanged, so this is a values-only swap: no
+ * component or page needed a class-name edit for color to follow.
+ * (Shape/typography DID change - see tailwind.config.js and the
+ * component layer below - those needed real edits, documented there.)
  *
- * The 9 --color-* values below are the exact hex values given in the
- * Frontend Phase 1 spec, unchanged. Everything after them is DERIVED
- * (via color-mix()) from those values - no independently-chosen hex
- * is introduced. --color-accent-str is new: the spec gives only one
- * orange (#E87532), which is a UI-fill/icon color, not a text color
- * (it fails text contrast on light backgrounds - see below); this
- * derived, darker orange is what badge/label text actually uses so
- * "orange" text stays legible without inventing an unrelated color.
- *
- * Every pairing below was checked with a WCAG relative-luminance
- * contrast script (not assumed):
- *   - ink on base/surface: 14.8:1 / 16.4:1
- *   - muted (secondary text) on base/surface: 5.1:1 / 5.7:1 - clears
- *     4.5:1 everywhere it's used for body-weight text
- *   - faint (tertiary/metadata text) on base/surface: 2.9:1 / 3.2:1 -
- *     below 4.5:1. Per spec this is the metadata tier (timestamps,
- *     helper captions) - kept to small/secondary text that isn't the
- *     sole carrier of meaning, never body copy or form labels. This
- *     mirrors the previous design-system's own documented approach of
- *     flagging a spec color's contrast ceiling rather than silently
- *     substituting a different hex.
- *   - white on primary / primary-hov (forest): 12.4:1 / 14.6:1
- *   - orange (accent) on primary/primary-hov (forest sidebar): 4.2:1 /
- *     4.9:1 - this is why the sidebar's active-nav accent is orange
- *     text/icon on the forest panel, not orange on cream (orange on
- *     cream/white is only ~2.7-3.0:1 - see the accessibility rule
- *     below: accent is a fill/icon/indicator color, never body text,
- *     on light backgrounds).
- *   - accent-str (derived) on base/surface: 4.7:1 / 5.2:1 - the
- *     text-safe orange, badge/label text only.
- *   - success/warning/error/info text on their own spec bg: 3.6:1 /
- *     2.5:1 / 3.9:1 / 4.6:1. Warning text in particular sits well
- *     under AA even for large text - flagged here rather than
- *     substituted, since the spec asked for these exact hex values.
- *     Compensate at the component level (StatusBadge): pair text with
- *     a colored dot/icon and never rely on the text color alone, and
- *     never drop below the 12-13px badge size this was measured at.
+ * Contrast checked with a WCAG relative-luminance script, not assumed:
+ *   - ink on base/surface: 17.9:1 / 16.5:1
+ *   - muted (secondary text) on base/surface: 7.5:1 / 6.9:1
+ *   - faint (tertiary/metadata text) on base: 4.0:1 - kept, as before,
+ *     to the metadata tier only (timestamps/captions), never body copy
+ *   - dark ink-on-mint (primary-filled buttons/badges): 9.6:1. White
+ *     text on the mint fill only measures 2.0:1, which is why filled
+ *     buttons use --color-primary-ink, not white, as their text color
+ *   - mint text on base/surface (ghost buttons, links, highlighted
+ *     headline words, badge text): 9.8:1 / 9.0:1
+ *   - warning/danger/info text on base: 10.9:1 / 6.4:1 / 10.3:1
  */
 :root {
-  --color-base: #F6F1E7;
-  --color-surface: #FFFDF8;
-  --color-ink: #18201D;
-  --color-muted: #5E6863;
-  --color-faint: #89918D;
-  --color-hairline: #DDD8CC;
-  --color-primary: #003C32;
-  --color-primary-hov: #002F28;
-  --color-accent: #E87532;
+  --color-base: #0A0D0B;
+  --color-surface: #141813;
+  --color-surface-raised: #1B211A;
+  --color-ink: #F3F6F2;
+  --color-muted: #9AA39B;
+  --color-faint: #6B746B;
+  --color-hairline: #262C24;
+  --color-primary: #3ECF8E;
+  --color-primary-hov: #34B87C;
+  /* Text/icon color for anything filled with --color-primary - see the
+     contrast note above, white-on-mint fails, near-black does not. */
+  --color-primary-ink: #06110B;
+  /* Single-accent system per the reference: accent IS primary, kept as
+     its own token only so existing accent-* aliases keep resolving. */
+  --color-accent: #3ECF8E;
 
-  --color-success-bg: #E7F4EC;
-  --color-success-text: #3E8B68;
-  --color-warn-bg: #FFF1DD;
-  --color-warn-text: #D88A32;
-  --color-danger-bg: #FBE9E7;
-  --color-danger-text: #C94B45;
-  --color-info-bg: #E8F1F4;
-  --color-info-text: #4C7180;
+  --color-success-text: #3ECF8E;
+  --color-warn-text: #F2B84B;
+  --color-danger-text: #F2665C;
+  --color-info-text: #5EC8F2;
 
-  /* Derived - see block comment above. */
-  --color-primary-tint: color-mix(in srgb, var(--color-primary) 9%, var(--color-surface));
-  --color-accent-tint: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface));
-  --color-accent-str: color-mix(in srgb, var(--color-accent) 72%, black);
-  --color-sidebar: color-mix(in srgb, var(--color-hairline) 30%, var(--color-base));
+  /* Derived - color-mix() against the dark surface, no independently
+     chosen hex. */
+  --color-primary-tint: color-mix(in srgb, var(--color-primary) 14%, var(--color-surface));
+  --color-accent-tint: var(--color-primary-tint);
+  --color-accent-str: var(--color-primary);
+  --color-sidebar: color-mix(in srgb, var(--color-hairline) 55%, var(--color-base));
+  --color-success-bg: color-mix(in srgb, var(--color-success-text) 16%, var(--color-surface));
+  --color-warn-bg: color-mix(in srgb, var(--color-warn-text) 16%, var(--color-surface));
+  --color-danger-bg: color-mix(in srgb, var(--color-danger-text) 16%, var(--color-surface));
+  --color-info-bg: color-mix(in srgb, var(--color-info-text) 16%, var(--color-surface));
+
+  /* The reference's signature treatment: a soft mint glow ringing
+     primary buttons and "featured" cards. Two layers - a crisp 1px
+     mint edge, then a diffuse blurred glow behind it. */
+  --shadow-glow: 0 0 0 1px color-mix(in srgb, var(--color-primary) 45%, transparent), 0 8px 28px -6px color-mix(in srgb, var(--color-primary) 55%, transparent);
+  --shadow-glow-lg: 0 0 0 1px color-mix(in srgb, var(--color-primary) 50%, transparent), 0 12px 40px -8px color-mix(in srgb, var(--color-primary) 65%, transparent);
 }
 
 @layer base {
@@ -91,13 +80,9 @@
 
   :focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-primary);
+    box-shadow: 0 0 0 2px var(--color-base), 0 0 0 4px var(--color-primary);
   }
 
-  /* Respect reduced motion: collapse every animation/transition to
-     effectively-instant rather than removing them outright, so layout
-     driven by an animation's end state (e.g. a mounted/unmounted class)
-     still behaves the same way, just without the motion. */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -111,23 +96,22 @@
 }
 
 @layer components {
-  /* Shape system: buttons/inputs = 7-9px (rounded-lg = 8px), cards/
-     modals = 10-14px (rounded-xl = 12px), 1px hairline border. Cards
-     carry a very subtle resting shadow (per spec) rather than none -
-     kept deliberately faint so it reads as "premium paper," not a
-     raised panel; genuinely elevated elements (modals, popovers) use
-     card-elevated on top of this for a stronger shadow. */
-  /* min-h-11 (44px) only below sm - the touch-target floor applies at
-     mobile widths; desktop keeps its tighter py-2.5 density. Every
-     interactive element gets tactile press feedback (active:scale),
-     not just primary buttons - per the motion system spec. */
+  /* Shape system, reference-matched: buttons/badges are fully rounded
+     pills (not rounded-lg), cards keep a generous 16px radius
+     (rounded-2xl), 1px hairline border. Buttons/inputs keep the
+     min-h-11 mobile touch-target floor and active:scale press
+     feedback from the motion-system pass. */
   .btn {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition duration-fast ease-out active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100 sm:min-h-0;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition duration-fast ease-out active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100 sm:min-h-0;
   }
 
+  /* Primary CTA - filled mint pill with the reference's signature
+     glow, near-black text (see the contrast note above). */
   .btn-primary {
-    @apply btn text-white;
+    @apply btn;
     background-color: var(--color-primary);
+    color: var(--color-primary-ink);
+    box-shadow: var(--shadow-glow);
   }
   .btn-primary:hover {
     background-color: var(--color-primary-hov);
@@ -136,6 +120,7 @@
     background-color: color-mix(in srgb, var(--color-primary-hov) 85%, black);
   }
 
+  /* Secondary - outline pill on the dark surface. */
   .btn-secondary {
     @apply btn;
     border: 1px solid var(--color-hairline);
@@ -143,22 +128,25 @@
     color: var(--color-ink);
   }
   .btn-secondary:hover {
-    background-color: var(--color-sidebar);
+    background-color: var(--color-surface-raised);
+    border-color: color-mix(in srgb, var(--color-primary) 30%, var(--color-hairline));
   }
 
-  /* Accent CTA (e.g. "Explore Jobs" on the landing page) - orange
-     fill + white text, per the button system's three-tier spec
-     (Primary = forest, Secondary = outline, Accent = orange). */
+  /* Accent - ghost pill (mint outline + mint text, transparent fill).
+     Since accent IS primary here (single-accent system), a second
+     filled button would just be a mint duplicate of btn-primary; the
+     reference itself pairs one filled CTA with one outlined one, so
+     that's the second tier here instead. */
   .btn-accent {
-    @apply btn text-white;
-    background-color: var(--color-accent);
+    @apply btn;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 45%, transparent);
+    background-color: transparent;
+    color: var(--color-primary);
   }
   .btn-accent:hover {
-    background-color: color-mix(in srgb, var(--color-accent) 88%, black);
+    background-color: var(--color-primary-tint);
   }
 
-  /* Destructive actions (withdraw, delete, archive) - added while
-     building the Applications page's withdraw confirmation. */
   .btn-danger {
     @apply btn text-white;
     background-color: var(--color-danger-text);
@@ -168,16 +156,42 @@
   }
 
   .card {
-    @apply rounded-xl;
+    @apply rounded-2xl;
     border: 1px solid var(--color-hairline);
     background-color: var(--color-surface);
-    box-shadow: 0 2px 8px rgba(24, 32, 29, 0.04);
+    box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.03) inset, 0 4px 20px rgba(0, 0, 0, 0.35);
   }
 
-  /* Opt-in for the rare genuinely-elevated card (a popover, a modal
-     surface) - stacks a stronger shadow on top of the resting one. */
   .card-elevated {
-    @apply card shadow-lg;
+    @apply card shadow-2xl;
+  }
+
+  /* "Featured" card treatment - the reference's numbered-service-card
+     set where one card gets a distinct mint-glow border + mint title.
+     Opt-in: stack onto .card, e.g. className="card card-featured". */
+  .card-featured {
+    border-color: color-mix(in srgb, var(--color-primary) 55%, var(--color-hairline));
+    box-shadow: var(--shadow-glow);
+  }
+
+  /* Dashed-border pill "eyebrow" badge - the reference's small
+     section-label chips ("OUR TRUSTED CLIENTS", "CORE SERVICE 02").
+     New this pass - not a restyle of an existing class. */
+  .badge-eyebrow {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide;
+    border: 1px dashed color-mix(in srgb, var(--color-primary) 55%, transparent);
+    background-color: color-mix(in srgb, var(--color-primary) 6%, transparent);
+    color: var(--color-primary);
+  }
+
+  /* Faint dot-grid texture for hero/panel backgrounds, masked to fade
+     out toward the edges so it reads as atmosphere, not a pattern.
+     New this pass. */
+  .bg-grid {
+    background-image: radial-gradient(color-mix(in srgb, var(--color-hairline) 90%, transparent) 1px, transparent 1px);
+    background-size: 22px 22px;
+    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%);
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%);
   }
 
   .input {
@@ -187,7 +201,7 @@
     color: var(--color-ink);
   }
   .input::placeholder {
-    color: var(--color-muted);
+    color: var(--color-faint);
   }
   .input:focus {
     outline: none;
@@ -198,12 +212,5 @@
   .label {
     @apply mb-1.5 block text-sm font-medium;
     color: var(--color-muted);
-  }
-
-  /* Page/hero titles only - see tailwind.config.js's fontFamily.serif.
-     Never used for UI chrome or body text. */
-  .font-display-italic {
-    font-family: 'Source Serif 4', ui-serif, Georgia, serif;
-    font-style: italic;
   }
 }

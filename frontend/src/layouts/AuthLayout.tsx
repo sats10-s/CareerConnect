@@ -18,7 +18,7 @@ export function AuthLayout() {
       <div className="flex min-h-screen flex-col items-center justify-center overflow-y-auto px-4 py-10 sm:px-8">
         <div className="w-full max-w-md">
           <div className="mb-8 flex flex-col items-center text-center lg:hidden">
-            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-accent">
+            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-[color:var(--color-primary-ink)]">
               <GraduationCap className="h-6 w-6" strokeWidth={2.2} />
             </span>
             <h1 className="mt-4 text-xl font-bold text-ink">CareerConnect</h1>

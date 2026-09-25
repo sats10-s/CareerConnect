@@ -25,18 +25,22 @@ export function HeroVisual() {
   return (
     <div className="relative mx-auto aspect-square w-full max-w-md sm:max-w-lg">
       <div
-        className="absolute inset-4 rounded-[28px] shadow-lg sm:inset-8"
-        style={{ background: 'linear-gradient(155deg, var(--color-primary) 0%, var(--color-primary-hov) 100%)' }}
+        className="bg-grid absolute inset-4 overflow-hidden rounded-[28px] sm:inset-8"
+        style={{
+          background: 'linear-gradient(155deg, var(--color-surface-raised) 0%, var(--color-base) 100%)',
+          boxShadow: 'var(--shadow-glow-lg)',
+          border: '1px solid var(--color-hairline)',
+        }}
       >
         <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
-          <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/10 text-accent">
+          <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-tint text-primary">
             <GraduationCap className="h-8 w-8" strokeWidth={1.75} />
           </span>
-          <p className="max-w-[16rem] text-sm font-medium leading-relaxed text-white/70">
+          <p className="max-w-[16rem] text-sm font-medium leading-relaxed text-muted">
             Your placement journey, tracked end to end - applications,
             interviews, offers.
           </p>
-          <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-accent">
+          <span className="badge-eyebrow">
             <Sparkles className="h-3.5 w-3.5" />
             Verified opportunities only
           </span>

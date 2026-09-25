@@ -135,7 +135,7 @@ export function OpportunityDetailPage({ type }: OpportunityDetailPageProps) {
       <div className="flex items-start gap-4">
         <CompanyLogo name={detail.company?.name} logoPath={detail.company?.logo_path} size="lg" />
         <div className="min-w-0">
-          <h1 className="font-serif text-2xl text-ink sm:text-3xl">{detail.title}</h1>
+          <h1 className="font-extrabold tracking-tight text-2xl text-ink sm:text-3xl">{detail.title}</h1>
           <p className="mt-1 text-sm text-muted">
             {detail.company?.name ?? 'Company not listed'}
             {detail.company?.industry ? ` · ${detail.company.industry}` : ''}

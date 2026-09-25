@@ -30,7 +30,7 @@ export function WelcomeHeader({ name, department, batch }: WelcomeHeaderProps) {
   return (
     <header>
       <p className="text-xs font-medium uppercase tracking-wide text-ink-faint">{masthead}</p>
-      <h1 className="font-display-italic mt-1 text-3xl text-ink sm:text-4xl">
+      <h1 className="font-extrabold tracking-tight mt-1 text-3xl text-ink sm:text-4xl">
         {timeOfDayGreeting(new Date())}, {firstName}
       </h1>
     </header>
