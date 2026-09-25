@@ -15,11 +15,14 @@ import { StudentDashboardPage } from '@/pages/student/Dashboard'
 import { StudentProfilePage } from '@/pages/student/Profile'
 import { StudentNotificationsPage } from '@/pages/student/Notifications'
 import { StudentApplicationsPage } from '@/pages/student/Applications'
+import { StudentJobsPage } from '@/pages/student/Jobs'
+import { StudentInternshipsPage } from '@/pages/student/Internships'
 import { FacultyDashboardPage } from '@/pages/faculty/Dashboard'
 import { AdminDashboardPage } from '@/pages/admin/Dashboard'
 import { AdminNotificationsPage } from '@/pages/admin/Notifications'
 import { SuperAdminDashboardPage } from '@/pages/superadmin/Dashboard'
 import { NotFoundPage } from '@/pages/NotFound'
+import { ToastViewport } from '@/components/ui/Toast'
 import { NAV_ITEMS } from '@/utils/navConfig'
 import { dashboardPathForRole } from '@/utils/roles'
 import type { Role } from '@/types/auth'
@@ -69,6 +72,8 @@ export default function App() {
             <Route path="profile" element={<StudentProfilePage />} />
             <Route path="notifications" element={<StudentNotificationsPage />} />
             <Route path="applications" element={<StudentApplicationsPage />} />
+            <Route path="jobs" element={<StudentJobsPage />} />
+            <Route path="internships" element={<StudentInternshipsPage />} />
             {placeholderRoutesFor('STUDENT')}
           </Route>
         </Route>
@@ -97,6 +102,7 @@ export default function App() {
 
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      <ToastViewport />
     </AuthProvider>
   )
 }

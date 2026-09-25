@@ -38,8 +38,8 @@ export interface NavItem {
 export const NAV_ITEMS: Record<Role, NavItem[]> = {
   STUDENT: [
     { label: 'Dashboard', path: '/student/dashboard', icon: LayoutDashboard, implemented: true },
-    { label: 'Jobs', path: '/student/jobs', icon: Briefcase },
-    { label: 'Internships', path: '/student/internships', icon: GraduationCap },
+    { label: 'Jobs', path: '/student/jobs', icon: Briefcase, implemented: true },
+    { label: 'Internships', path: '/student/internships', icon: GraduationCap, implemented: true },
     { label: 'Applications', path: '/student/applications', icon: FileText, implemented: true },
     { label: 'My Internship', path: '/student/my-internship', icon: BookMarked },
     { label: 'Notifications', path: '/student/notifications', icon: Bell, implemented: true },

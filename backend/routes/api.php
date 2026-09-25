@@ -38,6 +38,7 @@ use App\Http\Controllers\Api\Student\ApplicationController as StudentApplication
 use App\Http\Controllers\Api\Student\AttendanceController as StudentAttendanceController;
 use App\Http\Controllers\Api\Student\CertificationController;
 use App\Http\Controllers\Api\Student\ExperienceController;
+use App\Http\Controllers\Api\Student\InternshipAssignmentController as StudentInternshipAssignmentController;
 use App\Http\Controllers\Api\Student\InternshipCompletionController as StudentInternshipCompletionController;
 use App\Http\Controllers\Api\Student\InternshipDocumentController as StudentInternshipDocumentController;
 use App\Http\Controllers\Api\Student\InterviewController as StudentInterviewController;
@@ -404,6 +405,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/', [AdminPpoRecordController::class, 'index']);
         Route::get('/{ppoRecord}', [AdminPpoRecordController::class, 'show']);
     });
+
+    // A student's own internship assignment - added during the
+    // Student role frontend build-out. Mirrors the internship-completion/
+    // ppo routes just below (singular GET, no {assignment} segment,
+    // data: null when none exists) - see
+    // Api\Student\InternshipAssignmentController's docblock for why this
+    // was missing: every assignment-scoped sub-resource route
+    // (attendance/weekly-reports/documents) needs an assignment id the
+    // student previously had no API-visible way to discover.
+    Route::get('/student/internship-assignment', [StudentInternshipAssignmentController::class, 'show'])
+        ->middleware('role:STUDENT');
 
     Route::get('/student/internship-completion', [StudentInternshipCompletionController::class, 'show'])
         ->middleware('role:STUDENT');
