@@ -1,28 +1,35 @@
 import { ChevronRight } from 'lucide-react'
 import { CompanyLogo } from './CompanyLogo'
-import { StatusBadge } from '@/components/ui/StatusBadge'
+import { StatusBadge, toneForApplicationStatus, labelForApplicationStatus } from '@/components/ui/StatusBadge'
 import { formatCompensation, formatDeadline, formatWorkMode } from '@/utils/opportunityFormatting'
 import type { OpportunityListItem } from '@/types/opportunity'
+import type { ApplicationStatus } from '@/types/application'
 
 /**
  * Dense opportunity row per the visual reference: logo left, role/
- * company/metadata center, compensation/deadline/action right - not a
- * grid of tall cards. Shared by OpportunitiesPage (Jobs/Internships)
- * and the dashboard's "recently posted" widget, replacing two
- * separate, narrower hand-rolled rows.
+ * company/metadata center, compensation/deadline-or-application-state/
+ * action right - not a grid of tall cards. Shared by OpportunitiesPage
+ * (Jobs/Internships) and the dashboard's "recently posted" widget.
  *
  * No eligibility marker on the row: OpportunityListResource (the list
  * endpoint's row shape) carries no eligibility field by design - see
  * OpportunitiesPage.tsx's docblock on the backend's "never filter/mark
  * by eligibility in the list" product rule. Eligibility only appears
- * once a row is opened (the detail modal).
+ * once a row is opened (the detail page).
+ *
+ * `appliedStatus` is optional and caller-supplied (see
+ * hooks/useAppliedOpportunities.ts) rather than derived here - this
+ * component has no opinion on where that data comes from, since the
+ * opportunity endpoints themselves don't carry it.
  */
 export function OpportunityCard({
   item,
   onSelect,
+  appliedStatus,
 }: {
   item: OpportunityListItem
   onSelect: (item: OpportunityListItem) => void
+  appliedStatus?: ApplicationStatus
 }) {
   const { label: deadlineLabel, tone: deadlineTone } = formatDeadline(item.application_deadline)
 
@@ -58,7 +65,11 @@ export function OpportunityCard({
 
       <div className="hidden shrink-0 flex-col items-end gap-1.5 text-right sm:flex">
         <span className="text-sm font-semibold text-ink">{formatCompensation(item)}</span>
-        <StatusBadge tone={deadlineTone}>{deadlineLabel}</StatusBadge>
+        {appliedStatus ? (
+          <StatusBadge tone={toneForApplicationStatus(appliedStatus)}>{labelForApplicationStatus(appliedStatus)}</StatusBadge>
+        ) : (
+          <StatusBadge tone={deadlineTone}>{deadlineLabel}</StatusBadge>
+        )}
       </div>
 
       <ChevronRight className="hidden h-4 w-4 shrink-0 text-ink-faint sm:block" aria-hidden="true" />

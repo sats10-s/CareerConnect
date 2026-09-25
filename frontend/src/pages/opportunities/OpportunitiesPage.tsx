@@ -1,22 +1,20 @@
 import { useCallback, useEffect, useState } from 'react'
-import { isAxiosError } from 'axios'
-import { AlertTriangle, Briefcase, GraduationCap, SearchX } from 'lucide-react'
-import { SectionHeader } from '@/components/ui/SectionHeader'
+import { useNavigate } from 'react-router-dom'
+import { AlertTriangle, Briefcase, GraduationCap, SlidersHorizontal, SearchX } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { SearchBar } from '@/components/ui/SearchBar'
+import { FilterChip } from '@/components/ui/FilterChip'
+import { Drawer } from '@/components/ui/Drawer'
 import { Pagination } from '@/components/ui/Pagination'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { LoadingSkeletonLines } from '@/components/ui/LoadingSkeleton'
-import { Modal } from '@/components/ui/Modal'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { StatusBadge } from '@/components/ui/StatusBadge'
-import { toast } from '@/components/ui/Toast'
 import { OpportunityList } from '@/components/opportunities/OpportunityList'
-import { formatWorkMode } from '@/utils/opportunityFormatting'
 import { opportunityService } from '@/services/opportunityService'
-import type { OpportunityDetail, OpportunityListItem, OpportunityType, WorkMode } from '@/types/opportunity'
+import { useAppliedOpportunities } from '@/hooks/useAppliedOpportunities'
+import type { OpportunityListItem, OpportunityType, WorkMode } from '@/types/opportunity'
 import type { PaginationMeta } from '@/types/common'
 
 const WORK_MODE_OPTIONS: { value: WorkMode | 'all'; label: string }[] = [
@@ -26,12 +24,13 @@ const WORK_MODE_OPTIONS: { value: WorkMode | 'all'; label: string }[] = [
   { value: 'hybrid', label: 'Hybrid' },
 ]
 
-function extractErrorMessage(error: unknown, fallback: string): string {
-  if (isAxiosError(error)) {
-    const message = (error.response?.data as { message?: string } | undefined)?.message
-    if (message) return message
-  }
-  return fallback
+/** Per-type copy from the Frontend Phase 2 spec (sections 5 and 10) - the two routes share this component but not this text. */
+const HEADER_COPY: Record<OpportunityType, { title: string; description: string }> = {
+  job: { title: 'Find Your Next Opportunity', description: 'Explore placement opportunities that match your career goals.' },
+  internship: {
+    title: 'Find an Internship That Builds Your Future',
+    description: 'Explore internship opportunities and build real-world experience.',
+  },
 }
 
 interface OpportunitiesPageProps {
@@ -45,41 +44,46 @@ interface OpportunitiesPageProps {
  * param, so this mirrors the NotificationsPage precedent (one real
  * page, thin per-route wrappers) rather than two parallel builds.
  *
+ * FILTERS ARE INTENTIONALLY LIMITED to what OpportunityController::
+ * index() actually accepts (search/type/location/work_mode/page/
+ * per_page - confirmed by reading it for Frontend Phase 2). No
+ * company/department/salary/CGPA/graduation-year/deadline filter and
+ * no sort param exist on the backend, so none are built here - the
+ * spec itself says to use only backend-supported fields.
+ *
  * DISCREPANCY FROM THE ORIGINAL SPEC, kept in favor of the real
  * backend per this build-out's ground rules: the listing endpoint has
  * an explicit "PRODUCT RULE - do not weaken this" that it never
  * filters or marks rows by eligibility - every published opportunity
  * shows to every student, full stop, and OpportunityListResource (the
  * row shape) carries no eligibility field to mark rows with even if
- * we wanted to. Eligibility (both the admin-configured criteria and
- * this student's own evaluation against it) only exists on the
- * single-opportunity detail payload. So: no eligibility filter/marker
- * in the list below, but the detail Modal below states it clearly.
+ * we wanted to. Eligibility only exists on the single-opportunity
+ * detail payload (OpportunityDetailPage), which states it clearly.
+ *
+ * Selecting a row navigates to a real detail route (OpportunityDetailPage)
+ * rather than opening a Modal, per Frontend Phase 2's dedicated detail-
+ * page requirement.
  */
 export function OpportunitiesPage({ type }: OpportunitiesPageProps) {
-  const noun = type === 'internship' ? 'internship' : 'job'
+  const navigate = useNavigate()
   const nounPlural = type === 'internship' ? 'internships' : 'jobs'
+  const header = HEADER_COPY[type]
 
   const [search, setSearch] = useState('')
   const [location, setLocation] = useState('')
   const [workMode, setWorkMode] = useState<WorkMode | 'all'>('all')
   const [page, setPage] = useState(1)
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   const [items, setItems] = useState<OpportunityListItem[]>([])
   const [meta, setMeta] = useState<PaginationMeta | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
 
-  const [selected, setSelected] = useState<OpportunityListItem | null>(null)
-  const [detail, setDetail] = useState<OpportunityDetail | null>(null)
-  const [isLoadingDetail, setIsLoadingDetail] = useState(false)
-  const [detailError, setDetailError] = useState(false)
-
-  const [confirmingApply, setConfirmingApply] = useState(false)
-  const [isApplying, setIsApplying] = useState(false)
-  const [applyError, setApplyError] = useState<string | null>(null)
+  const { statusFor: appliedStatusFor } = useAppliedOpportunities()
 
   const hasActiveFilters = search.trim() !== '' || location.trim() !== '' || workMode !== 'all'
+  const mobileFilterCount = (location.trim() ? 1 : 0) + (workMode !== 'all' ? 1 : 0)
 
   const load = useCallback(() => {
     setIsLoading(true)
@@ -110,20 +114,6 @@ export function OpportunitiesPage({ type }: OpportunitiesPageProps) {
     setPage(1)
   }, [type])
 
-  useEffect(() => {
-    if (!selected) {
-      setDetail(null)
-      return
-    }
-    setIsLoadingDetail(true)
-    setDetailError(false)
-    const request = type === 'internship' ? opportunityService.showInternship(selected.id) : opportunityService.showJob(selected.id)
-    request
-      .then(setDetail)
-      .catch(() => setDetailError(true))
-      .finally(() => setIsLoadingDetail(false))
-  }, [selected, type])
-
   function resetFilters() {
     setSearch('')
     setLocation('')
@@ -131,31 +121,17 @@ export function OpportunitiesPage({ type }: OpportunitiesPageProps) {
     setPage(1)
   }
 
-  function handleApply() {
-    if (!selected) return
-    setIsApplying(true)
-    setApplyError(null)
-    const request =
-      type === 'internship' ? opportunityService.applyToInternship(selected.id) : opportunityService.applyToJob(selected.id)
-    request
-      .then(() => {
-        toast('success', `Application submitted for ${selected.title}.`)
-        setConfirmingApply(false)
-        setSelected(null)
-      })
-      .catch((error) => {
-        setApplyError(extractErrorMessage(error, `Couldn't submit your application. Please try again.`))
-      })
-      .finally(() => setIsApplying(false))
+  function goToDetail(item: OpportunityListItem) {
+    navigate(`/student/${item.type === 'internship' ? 'internships' : 'jobs'}/${item.id}`)
   }
+
+  const workModeLabel = WORK_MODE_OPTIONS.find((option) => option.value === workMode)?.label
 
   return (
     <div className="space-y-6">
-      <SectionHeader
-        title={type === 'internship' ? 'Internships' : 'Jobs'}
-        subtitle={`Every published ${noun} opening, open to every student — eligibility criteria appear once you open one.`}
-      />
+      <PageHeader title={header.title} description={header.description} />
 
+      {/* Desktop/tablet: inline filter bar. Mobile: search stays visible, Location/Work mode move into a Drawer (per spec: "filter drawer / bottom sheet" on mobile instead of an inline bar). */}
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <SearchBar
           value={search}
@@ -166,32 +142,60 @@ export function OpportunitiesPage({ type }: OpportunitiesPageProps) {
           placeholder={`Search ${nounPlural} by title...`}
           className="sm:max-w-xs"
         />
-        <Input
-          value={location}
-          onChange={(event) => {
-            setLocation(event.target.value)
-            setPage(1)
-          }}
-          placeholder="Location"
-          className="sm:max-w-[10rem]"
-          aria-label="Filter by location"
-        />
-        <Select
-          value={workMode}
-          onChange={(event) => {
-            setWorkMode(event.target.value as WorkMode | 'all')
-            setPage(1)
-          }}
-          className="sm:max-w-[10rem]"
-          aria-label="Filter by work mode"
+
+        <div className="hidden sm:flex sm:flex-wrap sm:items-center sm:gap-3">
+          <Input
+            value={location}
+            onChange={(event) => {
+              setLocation(event.target.value)
+              setPage(1)
+            }}
+            placeholder="Location"
+            className="sm:max-w-[10rem]"
+            aria-label="Filter by location"
+          />
+          <Select
+            value={workMode}
+            onChange={(event) => {
+              setWorkMode(event.target.value as WorkMode | 'all')
+              setPage(1)
+            }}
+            className="sm:max-w-[10rem]"
+            aria-label="Filter by work mode"
+          >
+            {WORK_MODE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setFiltersOpen(true)}
+          className="btn-secondary sm:hidden"
         >
-          {WORK_MODE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </Select>
+          <SlidersHorizontal className="h-4 w-4" />
+          Filters
+          {mobileFilterCount > 0 && (
+            <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-white">
+              {mobileFilterCount}
+            </span>
+          )}
+        </button>
       </div>
+
+      {hasActiveFilters && (
+        <div className="flex flex-wrap items-center gap-2">
+          {search.trim() && <FilterChip label={`"${search.trim()}"`} onRemove={() => setSearch('')} />}
+          {location.trim() && <FilterChip label={location.trim()} onRemove={() => setLocation('')} />}
+          {workMode !== 'all' && workModeLabel && <FilterChip label={workModeLabel} onRemove={() => setWorkMode('all')} />}
+          <button type="button" onClick={resetFilters} className="text-xs font-medium text-muted hover:text-ink">
+            Clear all
+          </button>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="card p-5">
@@ -233,110 +237,66 @@ export function OpportunitiesPage({ type }: OpportunitiesPageProps) {
         </div>
       ) : (
         <>
-          <OpportunityList items={items} onSelect={setSelected} />
+          <OpportunityList
+            items={items}
+            onSelect={goToDetail}
+            appliedStatusFor={(item) => appliedStatusFor(item.type, item.id)}
+          />
 
           {meta && meta.last_page > 1 && <Pagination page={meta.current_page} totalPages={meta.last_page} onChange={setPage} />}
         </>
       )}
 
-      <Modal open={selected !== null} onClose={() => setSelected(null)} title={selected?.title ?? ''}>
-        {isLoadingDetail || !detail ? (
-          detailError ? (
-            <EmptyState icon={AlertTriangle} title="Couldn't load this opportunity" description="Something went wrong reaching the server." />
-          ) : (
-            <LoadingSkeletonLines count={5} className="h-4 w-full" />
-          )
-        ) : (
-          <div className="space-y-5">
-            <div className="flex flex-wrap items-center gap-2 text-xs text-ink-soft">
-              <span>{detail.company?.name}</span>
-              {detail.company?.industry && <span>· {detail.company.industry}</span>}
-              <span>· {detail.location ?? 'Location unspecified'}</span>
-              <span>· {formatWorkMode(detail.work_mode)}</span>
-            </div>
-
-            <p className="whitespace-pre-line text-sm text-ink">{detail.description}</p>
-
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-              <dt className="text-ink-soft">Apply by</dt>
-              <dd className="text-ink">{detail.application_deadline ?? 'No deadline'}</dd>
-              <dt className="text-ink-soft">Openings</dt>
-              <dd className="text-ink">{detail.openings ?? '—'}</dd>
-              {detail.type === 'job' ? (
-                <>
-                  <dt className="text-ink-soft">Employment type</dt>
-                  <dd className="text-ink">{detail.employment_type ?? '—'}</dd>
-                  <dt className="text-ink-soft">Salary</dt>
-                  <dd className="text-ink">{detail.salary_range ?? '—'}</dd>
-                </>
-              ) : (
-                <>
-                  <dt className="text-ink-soft">Duration</dt>
-                  <dd className="text-ink">{detail.duration_months ? `${detail.duration_months} months` : '—'}</dd>
-                  <dt className="text-ink-soft">Stipend</dt>
-                  <dd className="text-ink">{detail.stipend ? `₹${detail.stipend}/mo` : 'Unpaid'}</dd>
-                </>
-              )}
-            </dl>
-
-            <div className="rounded-lg border border-hairline p-3">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-soft">Eligibility</p>
-              {!detail.eligibility.enforced ? (
-                <p className="text-sm text-ink-soft">No eligibility criteria configured — open to every student.</p>
-              ) : (
-                <div className="space-y-2 text-sm">
-                  <ul className="list-inside list-disc text-ink-soft">
-                    {detail.eligibility.minimum_cgpa !== null && <li>Minimum CGPA {detail.eligibility.minimum_cgpa.toFixed(2)}</li>}
-                    {detail.eligibility.maximum_backlogs !== null && <li>Maximum {detail.eligibility.maximum_backlogs} backlogs</li>}
-                    {detail.eligibility.departments.length > 0 && (
-                      <li>Departments: {detail.eligibility.departments.map((d) => d.name).join(', ')}</li>
-                    )}
-                    {detail.eligibility.batches.length > 0 && <li>Batches: {detail.eligibility.batches.map((b) => b.name).join(', ')}</li>}
-                    {detail.eligibility.years.length > 0 && <li>Years: {detail.eligibility.years.join(', ')}</li>}
-                    {detail.eligibility.required_skills.length > 0 && (
-                      <li>Required skills: {detail.eligibility.required_skills.join(', ')}</li>
-                    )}
-                  </ul>
-
-                  {detail.my_eligibility.eligible ? (
-                    <StatusBadge tone="success">You're eligible</StatusBadge>
-                  ) : (
-                    <div className="space-y-1">
-                      <StatusBadge tone="error">You don't currently meet every criterion</StatusBadge>
-                      <ul className="list-inside list-disc text-ink-soft">
-                        {detail.my_eligibility.reasons.map((reason) => (
-                          <li key={reason.code}>{reason.message}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+      <Drawer open={filtersOpen} onClose={() => setFiltersOpen(false)} title="Filters" footer={<Button onClick={() => setFiltersOpen(false)}>Done</Button>}>
+        <div className="space-y-4">
+          <div>
+            <label className="label" htmlFor="mobile-location">
+              Location
+            </label>
+            <Input
+              id="mobile-location"
+              value={location}
+              onChange={(event) => {
+                setLocation(event.target.value)
+                setPage(1)
+              }}
+              placeholder="Location"
+            />
           </div>
-        )}
-
-        {detail && (
-          <div className="mt-6 flex justify-end">
-            <Button onClick={() => setConfirmingApply(true)}>Apply</Button>
+          <div>
+            <label className="label" htmlFor="mobile-work-mode">
+              Work mode
+            </label>
+            <Select
+              id="mobile-work-mode"
+              value={workMode}
+              onChange={(event) => {
+                setWorkMode(event.target.value as WorkMode | 'all')
+                setPage(1)
+              }}
+            >
+              {WORK_MODE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
           </div>
-        )}
-      </Modal>
-
-      <ConfirmDialog
-        open={confirmingApply}
-        onClose={() => {
-          setConfirmingApply(false)
-          setApplyError(null)
-        }}
-        onConfirm={handleApply}
-        title={`Apply to ${selected?.title ?? `this ${noun}`}?`}
-        description={`This submits your application to ${selected?.company?.name ?? 'the company'}. You can withdraw later from Applications if you change your mind.`}
-        confirmLabel="Submit application"
-        isConfirming={isApplying}
-      >
-        {applyError && <p className="mt-3 rounded-lg bg-error-bg p-3 text-sm text-error">{applyError}</p>}
-      </ConfirmDialog>
+          {mobileFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setLocation('')
+                setWorkMode('all')
+                setPage(1)
+              }}
+              className="text-xs font-medium text-muted hover:text-ink"
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
+      </Drawer>
     </div>
   )
 }

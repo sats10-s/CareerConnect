@@ -30,8 +30,20 @@ export function formatDeadline(dateString: string | null): { label: string; tone
   return { label: formatted, tone: 'neutral' }
 }
 
-/** Job -> salary_range (a free-text field the admin sets); Internship -> stipend/mo, or "Unpaid" when unset - mirrors how the detail modal already describes each type. */
-export function formatCompensation(item: Pick<OpportunityListItem, 'type' | 'salary_range' | 'stipend'>): string {
+/**
+ * Job -> salary_range (a free-text field the admin sets); Internship ->
+ * stipend/mo, or "Unpaid" when unset - mirrors how the detail view
+ * already describes each type. Takes salary_range/stipend as optional
+ * (not required, unlike OpportunityListItem's shape) so a
+ * JobPostingDetail/InternshipDetail - which only ever carries the ONE
+ * field that applies to its own type, not both nulled keys like the
+ * list resource sends - can be passed straight through.
+ */
+export function formatCompensation(item: {
+  type: OpportunityListItem['type']
+  salary_range?: string | null
+  stipend?: number | string | null
+}): string {
   if (item.type === 'internship') {
     return item.stipend ? `₹${item.stipend}/mo` : 'Unpaid'
   }

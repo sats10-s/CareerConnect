@@ -15,6 +15,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { dashboardService } from '@/services/dashboardService'
 import { opportunityService } from '@/services/opportunityService'
 import { interviewService } from '@/services/interviewService'
+import { useAppliedOpportunities } from '@/hooks/useAppliedOpportunities'
 import { useAuth } from '@/hooks/useAuth'
 import type { StudentDashboardData } from '@/types/dashboard'
 import type { OpportunityListItem } from '@/types/opportunity'
@@ -48,6 +49,7 @@ export function StudentDashboardPage() {
   const [data, setData] = useState<StudentDashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [opportunities, setOpportunities] = useState<OpportunityListItem[]>([])
+  const { statusFor: appliedStatusFor } = useAppliedOpportunities()
   const [interviews, setInterviews] = useState<Interview[]>([])
 
   useEffect(() => {
@@ -127,13 +129,14 @@ export function StudentDashboardPage() {
               ) : (
                 <OpportunityList
                   items={opportunities}
+                  appliedStatusFor={(item) => appliedStatusFor(item.type, item.id)}
                   // Dashboard is a "recently posted" preview, not the
-                  // full browse-and-apply flow (no detail modal or
+                  // full browse-and-apply flow (no detail page or
                   // Apply confirmation lives here) - selecting a card
-                  // takes the student to the real Jobs/Internships
-                  // page for that opportunity type, where they can
-                  // open and apply to it.
-                  onSelect={(item) => navigate(item.type === 'internship' ? '/student/internships' : '/student/jobs')}
+                  // takes the student to that opportunity's real
+                  // detail page, where they can view it in full and
+                  // apply.
+                  onSelect={(item) => navigate(`/student/${item.type === 'internship' ? 'internships' : 'jobs'}/${item.id}`)}
                 />
               )}
             </div>

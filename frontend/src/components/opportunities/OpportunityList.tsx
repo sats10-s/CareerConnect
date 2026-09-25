@@ -1,5 +1,6 @@
 import { OpportunityCard } from './OpportunityCard'
 import type { OpportunityListItem } from '@/types/opportunity'
+import type { ApplicationStatus } from '@/types/application'
 
 /**
  * Dense vertical stack of OpportunityCard rows, per spec ("dense
@@ -12,14 +13,17 @@ import type { OpportunityListItem } from '@/types/opportunity'
 export function OpportunityList({
   items,
   onSelect,
+  appliedStatusFor,
 }: {
   items: OpportunityListItem[]
   onSelect: (item: OpportunityListItem) => void
+  /** Optional - see hooks/useAppliedOpportunities.ts. Omit for contexts that don't track application state (none currently). */
+  appliedStatusFor?: (item: OpportunityListItem) => ApplicationStatus | undefined
 }) {
   return (
     <div className="space-y-3">
       {items.map((item) => (
-        <OpportunityCard key={item.id} item={item} onSelect={onSelect} />
+        <OpportunityCard key={item.id} item={item} onSelect={onSelect} appliedStatus={appliedStatusFor?.(item)} />
       ))}
     </div>
   )
