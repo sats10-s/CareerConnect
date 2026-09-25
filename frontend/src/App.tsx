@@ -16,6 +16,7 @@ import { StudentDashboardPage } from '@/pages/student/Dashboard'
 import { StudentProfilePage } from '@/pages/student/Profile'
 import { StudentNotificationsPage } from '@/pages/student/Notifications'
 import { StudentApplicationsPage } from '@/pages/student/Applications'
+import { ApplicationDetailPage } from '@/pages/student/ApplicationDetail'
 import { StudentJobsPage } from '@/pages/student/Jobs'
 import { StudentInternshipsPage } from '@/pages/student/Internships'
 import { JobDetailPage } from '@/pages/student/JobDetail'
@@ -80,6 +81,7 @@ export default function App() {
             <Route path="profile" element={<StudentProfilePage />} />
             <Route path="notifications" element={<StudentNotificationsPage />} />
             <Route path="applications" element={<StudentApplicationsPage />} />
+            <Route path="applications/:id" element={<ApplicationDetailPage />} />
             <Route path="interviews" element={<StudentInterviewsPage />} />
             <Route path="jobs" element={<StudentJobsPage />} />
             <Route path="jobs/:id" element={<JobDetailPage />} />

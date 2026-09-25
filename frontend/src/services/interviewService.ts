@@ -1,6 +1,6 @@
 import { api } from './api'
 import type { ApiEnvelope, PaginatedList } from '@/types/common'
-import type { InterviewListItem, InterviewStatus } from '@/types/interview'
+import type { InterviewDetail, InterviewListItem, InterviewStatus } from '@/types/interview'
 
 export interface InterviewListParams {
   status?: InterviewStatus
@@ -13,4 +13,7 @@ export interface InterviewListParams {
 export const interviewService = {
   list: (params: InterviewListParams = {}) =>
     api.get<ApiEnvelope<PaginatedList<InterviewListItem>>>('/student/interviews', { params }).then((r) => r.data.data),
+  /** GET /api/student/interviews/{interview} - see Api\Student\InterviewController::show. Added for the Application Detail page's Interview connection (Frontend Phase 3 section 13), which needs meeting_url/venue/interviewer_name that the list row doesn't carry. */
+  show: (id: number) =>
+    api.get<ApiEnvelope<InterviewDetail>>(`/student/interviews/${id}`).then((r) => r.data.data),
 }
