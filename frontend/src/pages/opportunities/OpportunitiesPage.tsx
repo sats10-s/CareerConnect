@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { SearchBar } from '@/components/ui/SearchBar'
-import { DataTable } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { LoadingSkeletonLines } from '@/components/ui/LoadingSkeleton'
@@ -14,6 +13,8 @@ import { Modal } from '@/components/ui/Modal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { toast } from '@/components/ui/Toast'
+import { OpportunityList } from '@/components/opportunities/OpportunityList'
+import { formatWorkMode } from '@/utils/opportunityFormatting'
 import { opportunityService } from '@/services/opportunityService'
 import type { OpportunityDetail, OpportunityListItem, OpportunityType, WorkMode } from '@/types/opportunity'
 import type { PaginationMeta } from '@/types/common'
@@ -24,29 +25,6 @@ const WORK_MODE_OPTIONS: { value: WorkMode | 'all'; label: string }[] = [
   { value: 'remote', label: 'Remote' },
   { value: 'hybrid', label: 'Hybrid' },
 ]
-
-function formatWorkMode(mode: string | null): string {
-  switch (mode) {
-    case 'on_site':
-      return 'On-site'
-    case 'remote':
-      return 'Remote'
-    case 'hybrid':
-      return 'Hybrid'
-    default:
-      return '—'
-  }
-}
-
-function formatDeadline(dateString: string | null): { label: string; tone: 'neutral' | 'warning' | 'error' } {
-  if (!dateString) return { label: 'No deadline', tone: 'neutral' }
-  const deadline = new Date(dateString)
-  const daysLeft = Math.ceil((deadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-  const formatted = deadline.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-  if (daysLeft < 0) return { label: `Closed ${formatted}`, tone: 'error' }
-  if (daysLeft <= 3) return { label: `${formatted} · ${daysLeft === 0 ? 'today' : `${daysLeft}d left`}`, tone: 'warning' }
-  return { label: formatted, tone: 'neutral' }
-}
 
 function extractErrorMessage(error: unknown, fallback: string): string {
   if (isAxiosError(error)) {
@@ -171,24 +149,6 @@ export function OpportunitiesPage({ type }: OpportunitiesPageProps) {
       .finally(() => setIsApplying(false))
   }
 
-  const typeSpecificColumn =
-    type === 'internship'
-      ? {
-          key: 'internship-terms',
-          header: 'Stipend / Duration',
-          render: (row: OpportunityListItem) => (
-            <span className="text-ink-soft">
-              {row.stipend ? `₹${row.stipend}/mo` : 'Unpaid'}
-              {row.duration_months ? ` · ${row.duration_months} mo` : ''}
-            </span>
-          ),
-        }
-      : {
-          key: 'job-terms',
-          header: 'Salary',
-          render: (row: OpportunityListItem) => <span className="text-ink-soft">{row.salary_range ?? '—'}</span>,
-        }
-
   return (
     <div className="space-y-6">
       <SectionHeader
@@ -273,58 +233,7 @@ export function OpportunitiesPage({ type }: OpportunitiesPageProps) {
         </div>
       ) : (
         <>
-          <DataTable
-            columns={[
-              {
-                key: 'opportunity',
-                header: type === 'internship' ? 'Internship' : 'Job',
-                render: (row) => (
-                  <div className="min-w-0">
-                    <p className="truncate font-medium text-ink">{row.title}</p>
-                    <p className="truncate text-xs text-ink-soft">{row.company?.name ?? '—'}</p>
-                  </div>
-                ),
-              },
-              {
-                key: 'location',
-                header: 'Location',
-                render: (row) => (
-                  <span className="text-ink-soft">
-                    {row.location ?? '—'} · {formatWorkMode(row.work_mode)}
-                  </span>
-                ),
-              },
-              typeSpecificColumn,
-              {
-                key: 'deadline',
-                header: 'Apply by',
-                render: (row) => {
-                  const { label, tone } = formatDeadline(row.application_deadline)
-                  return <StatusBadge tone={tone}>{label}</StatusBadge>
-                },
-              },
-            ]}
-            rows={items}
-            rowKey={(row) => row.id}
-            onRowClick={(row) => setSelected(row)}
-            renderMobileCard={(row) => {
-              const { label, tone } = formatDeadline(row.application_deadline)
-              return (
-                <div className="space-y-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate font-medium text-ink">{row.title}</p>
-                      <p className="truncate text-xs text-ink-soft">{row.company?.name ?? '—'}</p>
-                    </div>
-                    <StatusBadge tone={tone}>{label}</StatusBadge>
-                  </div>
-                  <p className="text-xs text-ink-faint">
-                    {row.location ?? '—'} · {formatWorkMode(row.work_mode)}
-                  </p>
-                </div>
-              )
-            }}
-          />
+          <OpportunityList items={items} onSelect={setSelected} />
 
           {meta && meta.last_page > 1 && <Pagination page={meta.current_page} totalPages={meta.last_page} onChange={setPage} />}
         </>

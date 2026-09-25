@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { WelcomeHeader } from '@/components/dashboard/WelcomeHeader'
 import { MetricBand, type Metric } from '@/components/dashboard/MetricBand'
 import { JourneyProgress, type JourneyStep } from '@/components/dashboard/JourneyProgress'
 import { ApplicationActivity } from '@/components/dashboard/ApplicationActivity'
-import { OpportunityList } from '@/components/dashboard/OpportunityList'
+import { OpportunityList } from '@/components/opportunities/OpportunityList'
+import { SectionHeader } from '@/components/ui/SectionHeader'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { Briefcase } from 'lucide-react'
 import { UpcomingInterview } from '@/components/dashboard/UpcomingInterview'
 import { ProfileStrength } from '@/components/dashboard/ProfileStrength'
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
@@ -13,7 +17,7 @@ import { opportunityService } from '@/services/opportunityService'
 import { interviewService } from '@/services/interviewService'
 import { useAuth } from '@/hooks/useAuth'
 import type { StudentDashboardData } from '@/types/dashboard'
-import type { Opportunity } from '@/components/dashboard/OpportunityList'
+import type { OpportunityListItem } from '@/types/opportunity'
 import type { Interview } from '@/components/dashboard/UpcomingInterview'
 
 /**
@@ -40,9 +44,10 @@ function deriveJourneySteps(stats: StudentDashboardData['stats']): JourneyStep[]
 
 export function StudentDashboardPage() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [data, setData] = useState<StudentDashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [opportunities, setOpportunities] = useState<Opportunity[]>([])
+  const [opportunities, setOpportunities] = useState<OpportunityListItem[]>([])
   const [interviews, setInterviews] = useState<Interview[]>([])
 
   useEffect(() => {
@@ -53,11 +58,7 @@ export function StudentDashboardPage() {
     // directly rather than left as permanent empty states.
     opportunityService
       .list({ per_page: 3 })
-      .then((result) =>
-        setOpportunities(
-          result.items.map((item) => ({ id: item.id, title: item.title, company: item.company?.name ?? 'Unknown company', type: item.type })),
-        ),
-      )
+      .then((result) => setOpportunities(result.items))
       .catch(() => setOpportunities([]))
 
     interviewService
@@ -115,7 +116,28 @@ export function StudentDashboardPage() {
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="space-y-8 lg:col-span-2">
           <ApplicationActivity applications={data.recent_applications} />
-          <OpportunityList opportunities={opportunities} />
+
+          <section>
+            <SectionHeader title="Open opportunities" subtitle="Recently posted jobs and internships" />
+            <div className="mt-3">
+              {opportunities.length === 0 ? (
+                <div className="card">
+                  <EmptyState icon={Briefcase} title="No open opportunities to show yet" />
+                </div>
+              ) : (
+                <OpportunityList
+                  items={opportunities}
+                  // Dashboard is a "recently posted" preview, not the
+                  // full browse-and-apply flow (no detail modal or
+                  // Apply confirmation lives here) - selecting a card
+                  // takes the student to the real Jobs/Internships
+                  // page for that opportunity type, where they can
+                  // open and apply to it.
+                  onSelect={(item) => navigate(item.type === 'internship' ? '/student/internships' : '/student/jobs')}
+                />
+              )}
+            </div>
+          </section>
         </div>
 
         <div className="space-y-6">
