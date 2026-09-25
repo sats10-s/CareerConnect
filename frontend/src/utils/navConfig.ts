@@ -41,7 +41,7 @@ export const NAV_ITEMS: Record<Role, NavItem[]> = {
     { label: 'Jobs', path: '/student/jobs', icon: Briefcase, implemented: true },
     { label: 'Internships', path: '/student/internships', icon: GraduationCap, implemented: true },
     { label: 'Applications', path: '/student/applications', icon: FileText, implemented: true },
-    { label: 'My Internship', path: '/student/my-internship', icon: BookMarked },
+    { label: 'My Internship', path: '/student/my-internship', icon: BookMarked, implemented: true },
     { label: 'Notifications', path: '/student/notifications', icon: Bell, implemented: true },
     { label: 'Profile', path: '/student/profile', icon: User, implemented: true },
   ],

@@ -14,17 +14,18 @@ export interface Opportunity {
  * (per the design system) these get real card borders - unlike the
  * hairline-divided list sections elsewhere on this page.
  *
- * NOTE: the current /student/dashboard API response has no opportunity
- * feed (that's a separate Jobs/Internships listing endpoint, out of
- * scope for this presentation-only pass - no backend/API changes were
- * made). This component is built and composed per spec, but renders
- * its honest empty state rather than fabricated postings until that
- * data is wired up.
+ * Fed by StudentDashboardPage from GET /student/opportunities (most
+ * recently published, `per_page=3`, no type filter) - real data as of
+ * the Jobs/Internships build-out. NOT eligibility- or department/batch-
+ * matched: Api\Student\OpportunityController::index() has an explicit
+ * product rule against filtering the listing by eligibility at all, so
+ * this is honestly labeled "recently posted" rather than "matched to
+ * you" - see the Jobs/Internships pages for the real eligibility view.
  */
 export function OpportunityList({ opportunities = [] }: { opportunities?: Opportunity[] }) {
   return (
     <section>
-      <SectionHeader title="Open opportunities" subtitle="Roles matched to your department and batch" />
+      <SectionHeader title="Open opportunities" subtitle="Recently posted jobs and internships" />
       <div className="mt-3 space-y-3">
         {opportunities.length === 0 ? (
           <Card className="flex flex-col items-center gap-2 px-5 py-8 text-center">

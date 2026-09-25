@@ -9,8 +9,12 @@ import { ProfileStrength } from '@/components/dashboard/ProfileStrength'
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
 import { Spinner } from '@/components/ui/Spinner'
 import { dashboardService } from '@/services/dashboardService'
+import { opportunityService } from '@/services/opportunityService'
+import { interviewService } from '@/services/interviewService'
 import { useAuth } from '@/hooks/useAuth'
 import type { StudentDashboardData } from '@/types/dashboard'
+import type { Opportunity } from '@/components/dashboard/OpportunityList'
+import type { Interview } from '@/components/dashboard/UpcomingInterview'
 
 /**
  * Derives journey steps from the stats the backend already returns.
@@ -38,9 +42,39 @@ export function StudentDashboardPage() {
   const { user } = useAuth()
   const [data, setData] = useState<StudentDashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([])
+  const [interviews, setInterviews] = useState<Interview[]>([])
 
   useEffect(() => {
     dashboardService.student().then(setData).finally(() => setIsLoading(false))
+
+    // Neither of these has its own dashboard field - both are real
+    // endpoints (Jobs/Internships browsing, Student interviews) fetched
+    // directly rather than left as permanent empty states.
+    opportunityService
+      .list({ per_page: 3 })
+      .then((result) =>
+        setOpportunities(
+          result.items.map((item) => ({ id: item.id, title: item.title, company: item.company?.name ?? 'Unknown company', type: item.type })),
+        ),
+      )
+      .catch(() => setOpportunities([]))
+
+    interviewService
+      .list({ when: 'upcoming', per_page: 1 })
+      .then((result) =>
+        setInterviews(
+          result.items.map((item) => ({
+            id: item.id,
+            company: item.opportunity?.company?.name ?? 'Unknown company',
+            role: item.title ?? item.opportunity?.title ?? `Round ${item.round}`,
+            scheduledFor: item.scheduled_at
+              ? new Date(item.scheduled_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+              : 'Time to be confirmed',
+          })),
+        ),
+      )
+      .catch(() => setInterviews([]))
   }, [])
 
   const metrics = useMemo<Metric[]>(() => {
@@ -81,12 +115,12 @@ export function StudentDashboardPage() {
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="space-y-8 lg:col-span-2">
           <ApplicationActivity applications={data.recent_applications} />
-          <OpportunityList />
+          <OpportunityList opportunities={opportunities} />
         </div>
 
         <div className="space-y-6">
           <ProfileStrength percentage={data.stats.profile_completion} />
-          <UpcomingInterview />
+          <UpcomingInterview interviews={interviews} />
           <ActivityFeed notifications={data.notifications} />
         </div>
       </div>
