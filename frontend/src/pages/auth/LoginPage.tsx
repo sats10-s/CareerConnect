@@ -15,6 +15,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showForgotNotice, setShowForgotNotice] = useState(false)
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -55,8 +56,8 @@ export function LoginPage() {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-ink">Sign in to your account</h2>
-      <p className="mt-1 text-sm text-muted">Use your college email and password.</p>
+      <h1 className="text-2xl font-bold text-ink">Welcome Back</h1>
+      <p className="mt-1.5 text-sm text-muted">Sign in to your account</p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         {error && (
@@ -78,7 +79,16 @@ export function LoginPage() {
         </div>
 
         <div>
-          <label htmlFor="password" className="label">Password</label>
+          <div className="mb-1.5 flex items-center justify-between">
+            <label htmlFor="password" className="label mb-0">Password</label>
+            <button
+              type="button"
+              onClick={() => setShowForgotNotice((open) => !open)}
+              className="text-xs font-medium text-primary hover:text-primary-hov"
+            >
+              Forgot password?
+            </button>
+          </div>
           <input
             id="password"
             type="password"
@@ -89,6 +99,11 @@ export function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+          {showForgotNotice && (
+            <p className="mt-1.5 text-xs text-muted">
+              Password resets aren't self-service yet - contact your placement office to reset your password.
+            </p>
+          )}
         </div>
 
         <Button type="submit" isLoading={isSubmitting} className="w-full">

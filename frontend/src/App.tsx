@@ -9,6 +9,7 @@ import { StudentLayout } from '@/layouts/StudentLayout'
 import { FacultyLayout } from '@/layouts/FacultyLayout'
 import { AdminLayout } from '@/layouts/AdminLayout'
 import { SuperAdminLayout } from '@/layouts/SuperAdminLayout'
+import { LandingPage } from '@/pages/public/LandingPage'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { RegisterPage } from '@/pages/auth/RegisterPage'
 import { StudentDashboardPage } from '@/pages/student/Dashboard'
@@ -53,7 +54,10 @@ function RootRedirect() {
     return <Navigate to={dashboardPathForRole(user.role)} replace />
   }
 
-  return <Navigate to="/login" replace />
+  // Was a hard redirect to /login - the public landing page (previously
+  // nonexistent) now owns "/" for guests; /login is still reachable
+  // from its header and from any deep link.
+  return <LandingPage />
 }
 
 export default function App() {
