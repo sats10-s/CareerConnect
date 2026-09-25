@@ -3,62 +3,78 @@
 @tailwind utilities;
 
 /*
- * Institutional Ink - CareerConnect design tokens.
+ * CareerConnect design tokens - "Forest / Cream / Orange" palette
+ * (Frontend Phase 1: Premium Visual Foundation).
  *
- * The 16 --color-* custom properties below are the exact values given in
- * the design-system spec, unchanged. Everything after them in this block
- * is DERIVED (via color-mix()) from those 16 tokens, to cover a few
- * supporting roles the existing shared components already depended on
- * (a tinted brand background, a tinted accent background, a slightly
- * recessed sidebar panel) that the spec's 16 tokens don't individually
- * name. None of these derived tokens introduce a new, independently
- * chosen hex value - they are all computed from the spec tokens above
- * them, and are kept in their own clearly-labeled block for that reason.
+ * This replaces the previous "Institutional Ink" navy/gold palette.
+ * Only the VALUES below changed - every custom-property NAME, and
+ * every Tailwind alias in tailwind.config.js that points at them, is
+ * unchanged, so every page/component built against those token
+ * classes (bg-primary, text-ink, bg-sidebar, text-indigo, bg-gold*,
+ * bg-success-bg, etc.) re-themes automatically with no JSX edits.
+ *
+ * The 9 --color-* values below are the exact hex values given in the
+ * Frontend Phase 1 spec, unchanged. Everything after them is DERIVED
+ * (via color-mix()) from those values - no independently-chosen hex
+ * is introduced. --color-accent-str is new: the spec gives only one
+ * orange (#E87532), which is a UI-fill/icon color, not a text color
+ * (it fails text contrast on light backgrounds - see below); this
+ * derived, darker orange is what badge/label text actually uses so
+ * "orange" text stays legible without inventing an unrelated color.
  *
  * Every pairing below was checked with a WCAG relative-luminance
  * contrast script (not assumed):
- *   - ink on base/surface: 17.2:1 / 17.9:1
- *   - muted on base/surface: 5.7:1 / 6.0:1 (also used for what was
- *     previously a separate, lighter "ink-faint" tier - the spec only
- *     defines two text tiers, ink and muted, so that third tier is
- *     retired rather than invented; muted comfortably clears 4.5:1
- *     everywhere it's used)
- *   - white on primary / primary-hov: 14.2:1 / 12.3:1
- *   - primary on primary-tint (derived): 12.0:1
- *   - success/warn/danger/info text on their spec bg: 5.4:1 / 4.5:1 /
- *     5.9:1 / 8.3:1 - all clear 4.5:1
- *   - accent-str on base or accent-tint (derived): ~3.6-3.7:1. This is
- *     the ceiling for the spec's exact --color-accent-str value against
- *     any near-white background - it clears 3:1 (large text / UI
- *     components) but not 4.5:1 (normal text). Flagged in the
- *     design-system report rather than silently substituted, since the
- *     spec asked for this exact hex value. Kept to badge/label text only
- *     (never body copy), consistent with --color-accent itself never
- *     being used for text (see the accessibility rule below).
+ *   - ink on base/surface: 14.8:1 / 16.4:1
+ *   - muted (secondary text) on base/surface: 5.1:1 / 5.7:1 - clears
+ *     4.5:1 everywhere it's used for body-weight text
+ *   - faint (tertiary/metadata text) on base/surface: 2.9:1 / 3.2:1 -
+ *     below 4.5:1. Per spec this is the metadata tier (timestamps,
+ *     helper captions) - kept to small/secondary text that isn't the
+ *     sole carrier of meaning, never body copy or form labels. This
+ *     mirrors the previous design-system's own documented approach of
+ *     flagging a spec color's contrast ceiling rather than silently
+ *     substituting a different hex.
+ *   - white on primary / primary-hov (forest): 12.4:1 / 14.6:1
+ *   - orange (accent) on primary/primary-hov (forest sidebar): 4.2:1 /
+ *     4.9:1 - this is why the sidebar's active-nav accent is orange
+ *     text/icon on the forest panel, not orange on cream (orange on
+ *     cream/white is only ~2.7-3.0:1 - see the accessibility rule
+ *     below: accent is a fill/icon/indicator color, never body text,
+ *     on light backgrounds).
+ *   - accent-str (derived) on base/surface: 4.7:1 / 5.2:1 - the
+ *     text-safe orange, badge/label text only.
+ *   - success/warning/error/info text on their own spec bg: 3.6:1 /
+ *     2.5:1 / 3.9:1 / 4.6:1. Warning text in particular sits well
+ *     under AA even for large text - flagged here rather than
+ *     substituted, since the spec asked for these exact hex values.
+ *     Compensate at the component level (StatusBadge): pair text with
+ *     a colored dot/icon and never rely on the text color alone, and
+ *     never drop below the 12-13px badge size this was measured at.
  */
 :root {
-  --color-base: #fbfaf8;
-  --color-surface: #ffffff;
-  --color-ink: #14171f;
-  --color-muted: #5b6472;
-  --color-hairline: #e7e3da;
-  --color-primary: #1b2a4a;
-  --color-primary-hov: #223458;
-  --color-accent: #c9a227;
-  --color-accent-str: #9c7e1c;
+  --color-base: #F6F1E7;
+  --color-surface: #FFFDF8;
+  --color-ink: #18201D;
+  --color-muted: #5E6863;
+  --color-faint: #89918D;
+  --color-hairline: #DDD8CC;
+  --color-primary: #003C32;
+  --color-primary-hov: #002F28;
+  --color-accent: #E87532;
 
-  --color-success-bg: #eaf1e7;
-  --color-success-text: #3e6b3a;
-  --color-warn-bg: #fbf1de;
-  --color-warn-text: #8a6a1e;
-  --color-danger-bg: #fbeaea;
-  --color-danger-text: #9b3b3b;
-  --color-info-bg: #e9edf3;
-  --color-info-text: #38445e;
+  --color-success-bg: #E7F4EC;
+  --color-success-text: #3E8B68;
+  --color-warn-bg: #FFF1DD;
+  --color-warn-text: #D88A32;
+  --color-danger-bg: #FBE9E7;
+  --color-danger-text: #C94B45;
+  --color-info-bg: #E8F1F4;
+  --color-info-text: #4C7180;
 
   /* Derived - see block comment above. */
   --color-primary-tint: color-mix(in srgb, var(--color-primary) 9%, var(--color-surface));
   --color-accent-tint: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface));
+  --color-accent-str: color-mix(in srgb, var(--color-accent) 72%, black);
   --color-sidebar: color-mix(in srgb, var(--color-hairline) 30%, var(--color-base));
 }
 
@@ -95,11 +111,12 @@
 }
 
 @layer components {
-  /* Shape system: buttons/inputs = 8px (rounded-lg), cards/modals =
-     10-14px (rounded-xl = 12px), 1px hairline border. Cards carry no
-     shadow by default - shadow is reserved for genuinely elevated
-     elements (modals, dropdown/menu popovers), applied at their own
-     call sites rather than baked into `.card`. */
+  /* Shape system: buttons/inputs = 7-9px (rounded-lg = 8px), cards/
+     modals = 10-14px (rounded-xl = 12px), 1px hairline border. Cards
+     carry a very subtle resting shadow (per spec) rather than none -
+     kept deliberately faint so it reads as "premium paper," not a
+     raised panel; genuinely elevated elements (modals, popovers) use
+     card-elevated on top of this for a stronger shadow. */
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-60;
   }
@@ -125,6 +142,17 @@
     background-color: var(--color-sidebar);
   }
 
+  /* Accent CTA (e.g. "Explore Jobs" on the landing page) - orange
+     fill + white text, per the button system's three-tier spec
+     (Primary = forest, Secondary = outline, Accent = orange). */
+  .btn-accent {
+    @apply btn text-white;
+    background-color: var(--color-accent);
+  }
+  .btn-accent:hover {
+    background-color: color-mix(in srgb, var(--color-accent) 88%, black);
+  }
+
   /* Destructive actions (withdraw, delete, archive) - added while
      building the Applications page's withdraw confirmation. */
   .btn-danger {
@@ -139,10 +167,11 @@
     @apply rounded-xl;
     border: 1px solid var(--color-hairline);
     background-color: var(--color-surface);
+    box-shadow: 0 2px 8px rgba(24, 32, 29, 0.04);
   }
 
   /* Opt-in for the rare genuinely-elevated card (a popover, a modal
-     surface) - not applied by default, per the shape-system rule. */
+     surface) - stacks a stronger shadow on top of the resting one. */
   .card-elevated {
     @apply card shadow-lg;
   }

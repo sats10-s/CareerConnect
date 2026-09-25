@@ -22,13 +22,13 @@ export function AdminDashboardPage() {
     )
   }
 
-  if (!data) return <p className="text-sm text-gray-500">Unable to load dashboard data right now.</p>
+  if (!data) return <p className="text-sm text-muted">Unable to load dashboard data right now.</p>
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-gray-900">Placement overview</h2>
-        <p className="mt-1 text-sm text-gray-500">College-wide placement activity at a glance.</p>
+        <h2 className="text-xl font-bold text-ink">Placement overview</h2>
+        <p className="mt-1 text-sm text-muted">College-wide placement activity at a glance.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
@@ -44,10 +44,10 @@ export function AdminDashboardPage() {
         <CardHeader title="Recent activity" subtitle="Latest applications and companies onboarded" />
         <div className="divide-y divide-gray-100">
           {data.recent_activity.length === 0 && (
-            <p className="px-5 py-8 text-center text-sm text-gray-500">No recent activity.</p>
+            <p className="px-5 py-8 text-center text-sm text-muted">No recent activity.</p>
           )}
           {data.recent_activity.map((item, idx) => (
-            <div key={idx} className="px-5 py-3.5 text-sm text-gray-700">{item.description}</div>
+            <div key={idx} className="px-5 py-3.5 text-sm text-ink-soft">{item.description}</div>
           ))}
         </div>
       </Card>

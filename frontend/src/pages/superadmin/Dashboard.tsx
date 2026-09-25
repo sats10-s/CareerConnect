@@ -23,13 +23,13 @@ export function SuperAdminDashboardPage() {
     )
   }
 
-  if (!data) return <p className="text-sm text-gray-500">Unable to load dashboard data right now.</p>
+  if (!data) return <p className="text-sm text-muted">Unable to load dashboard data right now.</p>
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-gray-900">System overview</h2>
-        <p className="mt-1 text-sm text-gray-500">Accounts, roles and platform health.</p>
+        <h2 className="text-xl font-bold text-ink">System overview</h2>
+        <p className="mt-1 text-sm text-muted">Accounts, roles and platform health.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
@@ -45,7 +45,7 @@ export function SuperAdminDashboardPage() {
         <CardHeader title="Recently created users" />
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-gray-100 text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <thead className="border-b border-hairline text-xs font-semibold uppercase tracking-wide text-muted">
               <tr>
                 <th className="px-5 py-3">Name</th>
                 <th className="px-5 py-3">Email</th>
@@ -56,9 +56,9 @@ export function SuperAdminDashboardPage() {
             <tbody className="divide-y divide-gray-100">
               {data.recent_users.map((u) => (
                 <tr key={u.id}>
-                  <td className="px-5 py-3 font-medium text-gray-900">{u.name}</td>
-                  <td className="px-5 py-3 text-gray-600">{u.email}</td>
-                  <td className="px-5 py-3 text-gray-600">{u.role}</td>
+                  <td className="px-5 py-3 font-medium text-ink">{u.name}</td>
+                  <td className="px-5 py-3 text-muted">{u.email}</td>
+                  <td className="px-5 py-3 text-muted">{u.role}</td>
                   <td className="px-5 py-3">
                     <Badge tone={u.is_active ? 'success' : 'error'}>{u.is_active ? 'Active' : 'Inactive'}</Badge>
                   </td>

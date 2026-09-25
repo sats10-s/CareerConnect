@@ -15,7 +15,7 @@ export function ProtectedRoute({ allowedRoles }: { allowedRoles: Role[] }) {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <div className="flex min-h-screen items-center justify-center bg-base">
         <Spinner className="h-8 w-8" />
       </div>
     )

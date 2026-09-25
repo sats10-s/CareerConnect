@@ -55,12 +55,12 @@ export function LoginPage() {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-gray-900">Sign in to your account</h2>
-      <p className="mt-1 text-sm text-gray-500">Use your college email and password.</p>
+      <h2 className="text-lg font-semibold text-ink">Sign in to your account</h2>
+      <p className="mt-1 text-sm text-muted">Use your college email and password.</p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-700">{error}</div>
+          <div className="rounded-lg border border-error/20 bg-error-bg px-3.5 py-2.5 text-sm text-error">{error}</div>
         )}
 
         <div>
@@ -97,9 +97,9 @@ export function LoginPage() {
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-gray-500">
+      <p className="mt-6 text-center text-sm text-muted">
         New student?{' '}
-        <Link to="/register" className="font-semibold text-navy-700 hover:text-navy-800">
+        <Link to="/register" className="font-semibold text-primary hover:text-primary-hov">
           Create an account
         </Link>
       </p>

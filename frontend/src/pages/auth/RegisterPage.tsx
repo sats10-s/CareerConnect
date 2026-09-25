@@ -85,31 +85,31 @@ export function RegisterPage() {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-gray-900">Create your student account</h2>
-      <p className="mt-1 text-sm text-gray-500">Faculty and admin accounts are provisioned by the placement office.</p>
+      <h2 className="text-lg font-semibold text-ink">Create your student account</h2>
+      <p className="mt-1 text-sm text-muted">Faculty and admin accounts are provisioned by the placement office.</p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         {formError && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-700">{formError}</div>
+          <div className="rounded-lg border border-error/20 bg-error-bg px-3.5 py-2.5 text-sm text-error">{formError}</div>
         )}
 
         <div>
           <label className="label" htmlFor="name">Full name</label>
           <input id="name" required className="input" value={form.name} onChange={(e) => update('name', e.target.value)} />
-          {fieldError('name') && <p className="mt-1 text-xs text-red-600">{fieldError('name')}</p>}
+          {fieldError('name') && <p className="mt-1 text-xs text-error">{fieldError('name')}</p>}
         </div>
 
         <div>
           <label className="label" htmlFor="email">College email</label>
           <input id="email" type="email" required className="input" value={form.email} onChange={(e) => update('email', e.target.value)} />
-          {fieldError('email') && <p className="mt-1 text-xs text-red-600">{fieldError('email')}</p>}
+          {fieldError('email') && <p className="mt-1 text-xs text-error">{fieldError('email')}</p>}
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="label" htmlFor="roll_number">Roll number</label>
             <input id="roll_number" required className="input" value={form.roll_number} onChange={(e) => update('roll_number', e.target.value)} />
-            {fieldError('roll_number') && <p className="mt-1 text-xs text-red-600">{fieldError('roll_number')}</p>}
+            {fieldError('roll_number') && <p className="mt-1 text-xs text-error">{fieldError('roll_number')}</p>}
           </div>
           <div>
             <label className="label" htmlFor="phone">Phone (optional)</label>
@@ -126,7 +126,7 @@ export function RegisterPage() {
                 <option key={d.id} value={d.id}>{d.code}</option>
               ))}
             </select>
-            {fieldError('department_id') && <p className="mt-1 text-xs text-red-600">{fieldError('department_id')}</p>}
+            {fieldError('department_id') && <p className="mt-1 text-xs text-error">{fieldError('department_id')}</p>}
           </div>
           <div>
             <label className="label" htmlFor="batch_id">Batch</label>
@@ -136,7 +136,7 @@ export function RegisterPage() {
                 <option key={b.id} value={b.id}>{b.name}</option>
               ))}
             </select>
-            {fieldError('batch_id') && <p className="mt-1 text-xs text-red-600">{fieldError('batch_id')}</p>}
+            {fieldError('batch_id') && <p className="mt-1 text-xs text-error">{fieldError('batch_id')}</p>}
           </div>
           <div>
             <label className="label" htmlFor="year">Year</label>
@@ -146,14 +146,14 @@ export function RegisterPage() {
                 <option key={y} value={y}>Year {y}</option>
               ))}
             </select>
-            {fieldError('year') && <p className="mt-1 text-xs text-red-600">{fieldError('year')}</p>}
+            {fieldError('year') && <p className="mt-1 text-xs text-error">{fieldError('year')}</p>}
           </div>
         </div>
 
         <div>
           <label className="label" htmlFor="password">Password</label>
           <input id="password" type="password" required className="input" value={form.password} onChange={(e) => update('password', e.target.value)} />
-          {fieldError('password') && <p className="mt-1 text-xs text-red-600">{fieldError('password')}</p>}
+          {fieldError('password') && <p className="mt-1 text-xs text-error">{fieldError('password')}</p>}
         </div>
 
         <div>
@@ -167,9 +167,9 @@ export function RegisterPage() {
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-gray-500">
+      <p className="mt-6 text-center text-sm text-muted">
         Already have an account?{' '}
-        <Link to="/login" className="font-semibold text-navy-700 hover:text-navy-800">Sign in</Link>
+        <Link to="/login" className="font-semibold text-primary hover:text-primary-hov">Sign in</Link>
       </p>
     </div>
   )

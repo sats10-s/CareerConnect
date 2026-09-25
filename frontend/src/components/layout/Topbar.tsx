@@ -4,6 +4,7 @@ import { Bell, ChevronDown, LogOut, Menu } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { Avatar } from '@/components/ui/Avatar'
 import { IconButton } from '@/components/ui/IconButton'
+import { SearchBar } from '@/components/ui/SearchBar'
 import { LoadingSkeletonLines } from '@/components/ui/LoadingSkeleton'
 import { notificationService } from '@/services/notificationService'
 import { formatRelativeTime } from '@/utils/formatRelativeTime'
@@ -26,6 +27,11 @@ function notificationsPathForRole(role: Role): string | null {
 export function Topbar({ title, onMenuClick }: { title: string; onMenuClick?: () => void }) {
   const { user, logout } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
+  // Visual only for this phase - no cross-entity global-search endpoint
+  // exists on the backend yet, so this deliberately doesn't call an API
+  // (per "do not invent backend endpoints"). Wire it up once a real
+  // search endpoint exists.
+  const [globalSearch, setGlobalSearch] = useState('')
 
   const [bellOpen, setBellOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
@@ -77,13 +83,21 @@ export function Topbar({ title, onMenuClick }: { title: string; onMenuClick?: ()
   const notificationsPath = role ? notificationsPathForRole(role) : null
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-border bg-surface px-4 sm:px-6">
-      <div className="flex items-center gap-3">
+    <header className="flex h-16 items-center justify-between gap-3 border-b border-border bg-surface px-4 sm:px-6">
+      <div className="flex min-w-0 items-center gap-3">
         <IconButton icon={Menu} label="Open navigation" onClick={onMenuClick} className="lg:hidden" />
-        <h1 className="text-base font-semibold text-ink sm:text-lg">{title}</h1>
+        <h1 className="truncate text-base font-semibold text-ink sm:text-lg">{title}</h1>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-3">
+      <SearchBar
+        value={globalSearch}
+        onChange={setGlobalSearch}
+        placeholder="Search jobs, internships, students..."
+        debounceMs={0}
+        className="hidden max-w-sm flex-1 md:block"
+      />
+
+      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
         <div ref={bellRef} className="relative">
           <IconButton
             icon={Bell}

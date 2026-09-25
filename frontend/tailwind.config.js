@@ -16,11 +16,12 @@ export default {
         ink: {
           DEFAULT: 'var(--color-ink)',
           soft: 'var(--color-muted)',
-          // Retired as a separate lighter tier - the spec defines only
-          // two text tiers (ink, muted). Kept as an alias, not a second
-          // value, so existing text-ink-faint call sites don't need a
-          // class-name change.
-          faint: 'var(--color-muted)',
+          // Frontend Phase 1: the new spec defines three text tiers
+          // (primary/secondary/muted) - faint now maps to its own
+          // --color-faint token instead of aliasing --color-muted. See
+          // src/index.css's token comment for its measured contrast
+          // ceiling (use for metadata/timestamps, never body copy).
+          faint: 'var(--color-faint)',
         },
         primary: {
           DEFAULT: 'var(--color-primary)',
@@ -58,19 +59,6 @@ export default {
           // Text-safe accent - see src/index.css's token comment for the
           // measured contrast ceiling of this exact spec value.
           ink: 'var(--color-accent-str)',
-        },
-        navy: {
-          50: '#eef2fb',
-          100: '#d7e0f5',
-          200: '#b3c4ea',
-          300: '#8aa3dd',
-          400: '#5f7ecd',
-          500: '#3f5fb8',
-          600: '#2f4998',
-          700: '#26397a',
-          800: '#1f2f63',
-          900: '#141d40',
-          950: '#0c1229',
         },
       },
       fontFamily: {

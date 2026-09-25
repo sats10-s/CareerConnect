@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
-import { X } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
 import { NAV_ITEMS } from '@/utils/navConfig'
@@ -20,20 +19,17 @@ export function DashboardLayout({ role }: { role: Role }) {
   const activeLabel = items.find((item) => item.path === location.pathname)?.label ?? items[0]?.label ?? 'Dashboard'
 
   return (
-    <div className="flex h-screen overflow-hidden bg-canvas">
+    <div className="flex h-screen overflow-hidden bg-base">
       <Sidebar items={items} roleLabel={ROLE_LABEL[role]} />
 
       {mobileOpen && (
         <div className="fixed inset-0 z-40 flex lg:hidden">
           <div className="fixed inset-0 bg-ink/50" onClick={() => setMobileOpen(false)} />
-          <div className="relative flex w-64 flex-col bg-sidebar shadow-xl">
-            <div className="flex h-16 items-center justify-between border-b border-border px-4">
-              <span className="text-sm font-bold text-ink">CareerConnect</span>
-              <button onClick={() => setMobileOpen(false)} className="rounded-lg p-1.5 hover:bg-surface" aria-label="Close navigation">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <Sidebar items={items} roleLabel={ROLE_LABEL[role]} variant="mobile" />
+          {/* Sidebar renders its own header (logo + role label + close
+              button via onClose) - no separate drawer chrome needed on
+              top of it, so the drawer is just the panel + shadow. */}
+          <div className="relative shadow-xl">
+            <Sidebar items={items} roleLabel={ROLE_LABEL[role]} variant="mobile" onClose={() => setMobileOpen(false)} />
           </div>
         </div>
       )}

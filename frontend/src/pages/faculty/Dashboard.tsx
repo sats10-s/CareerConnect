@@ -24,13 +24,13 @@ export function FacultyDashboardPage() {
     )
   }
 
-  if (!data) return <p className="text-sm text-gray-500">Unable to load dashboard data right now.</p>
+  if (!data) return <p className="text-sm text-muted">Unable to load dashboard data right now.</p>
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-gray-900">Welcome back, {user?.name}</h2>
-        <p className="mt-1 text-sm text-gray-500">An overview of the students you mentor.</p>
+        <h2 className="text-xl font-bold text-ink">Welcome back, {user?.name}</h2>
+        <p className="mt-1 text-sm text-muted">An overview of the students you mentor.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -44,7 +44,7 @@ export function FacultyDashboardPage() {
         <CardHeader title="My students" subtitle="Students currently mentored by you" />
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-gray-100 text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <thead className="border-b border-hairline text-xs font-semibold uppercase tracking-wide text-muted">
               <tr>
                 <th className="px-5 py-3">Name</th>
                 <th className="px-5 py-3">Roll Number</th>
@@ -55,15 +55,15 @@ export function FacultyDashboardPage() {
             <tbody className="divide-y divide-gray-100">
               {data.students.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-5 py-8 text-center text-gray-500">No students assigned yet.</td>
+                  <td colSpan={4} className="px-5 py-8 text-center text-muted">No students assigned yet.</td>
                 </tr>
               )}
               {data.students.map((s) => (
                 <tr key={s.id}>
-                  <td className="px-5 py-3 font-medium text-gray-900">{s.name}</td>
-                  <td className="px-5 py-3 text-gray-600">{s.roll_number}</td>
-                  <td className="px-5 py-3 text-gray-600">{s.department}</td>
-                  <td className="px-5 py-3 text-gray-600">{s.batch}</td>
+                  <td className="px-5 py-3 font-medium text-ink">{s.name}</td>
+                  <td className="px-5 py-3 text-muted">{s.roll_number}</td>
+                  <td className="px-5 py-3 text-muted">{s.department}</td>
+                  <td className="px-5 py-3 text-muted">{s.batch}</td>
                 </tr>
               ))}
             </tbody>
