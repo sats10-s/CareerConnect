@@ -14,6 +14,7 @@ import { Modal } from '@/components/ui/Modal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Textarea } from '@/components/ui/Textarea'
 import { StatusBadge, toneForApplicationStatus, labelForApplicationStatus } from '@/components/ui/StatusBadge'
+import { Timeline, type TimelineItem } from '@/components/ui/Timeline'
 import { applicationService } from '@/services/applicationService'
 import { formatRelativeTime } from '@/utils/formatRelativeTime'
 import type { ApplicationDetail, ApplicationListItem, ApplicationStatus } from '@/types/application'
@@ -299,27 +300,30 @@ export function StudentApplicationsPage() {
             {detail.status_history.length > 0 && (
               <div>
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-soft">Status history</p>
-                <ol className="space-y-3">
-                  {detail.status_history.map((entry, index) => (
-                    <li key={entry.id} className="relative flex gap-3 pl-1">
-                      {index !== detail.status_history.length - 1 && (
-                        <span className="absolute left-[5px] top-4 h-full w-px bg-hairline" aria-hidden="true" />
-                      )}
-                      <span className="relative mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
-                      <div className="pb-3 text-sm">
-                        <p className="text-ink">
+                <Timeline
+                  items={detail.status_history.map(
+                    (entry): TimelineItem => ({
+                      id: entry.id,
+                      // Every entry here already happened - this is an
+                      // append-only audit log, not a staged/future
+                      // workflow - so every dot renders as "completed".
+                      status: 'completed',
+                      title: (
+                        <>
                           {entry.from_status ? `${labelForApplicationStatus(entry.from_status)} → ` : ''}
                           <span className="font-medium">{labelForApplicationStatus(entry.to_status)}</span>
-                        </p>
-                        {entry.remarks && <p className="mt-0.5 text-ink-soft">{entry.remarks}</p>}
-                        <p className="mt-0.5 text-xs text-ink-faint">
+                        </>
+                      ),
+                      description: entry.remarks,
+                      timestamp: (
+                        <>
                           {formatRelativeTime(entry.created_at)}
                           {entry.changed_by ? ` · ${entry.changed_by.name}` : ''}
-                        </p>
-                      </div>
-                    </li>
-                  ))}
-                </ol>
+                        </>
+                      ),
+                    }),
+                  )}
+                />
               </div>
             )}
           </div>

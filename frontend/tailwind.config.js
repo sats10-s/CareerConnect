@@ -81,9 +81,20 @@ export default {
           '0%': { opacity: '0', transform: 'translateY(4px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
+        // Drawer.tsx's edge-anchored panels.
+        'slide-in-right': {
+          '0%': { transform: 'translateX(100%)' },
+          '100%': { transform: 'translateX(0)' },
+        },
+        'slide-in-left': {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(0)' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 0.2s ease-out',
+        'slide-in-right': 'slide-in-right 0.2s ease-out',
+        'slide-in-left': 'slide-in-left 0.2s ease-out',
       },
     },
   },
