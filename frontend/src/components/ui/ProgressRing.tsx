@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+
 type RingTone = 'primary' | 'accent' | 'success'
 
 const STROKE_CLASSES: Record<RingTone, string> = {
@@ -12,6 +14,8 @@ const STROKE_CLASSES: Record<RingTone, string> = {
  * page yet; AttendanceSection currently shows its percentage as a
  * StatCard number, which reads fine - this is available for a spot
  * that wants a ring instead (e.g. a dashboard summary tile).
+ *
+ * Fills from 0 to `value` on mount, same reasoning as ProgressBar.
  */
 export function ProgressRing({
   value,
@@ -30,9 +34,16 @@ export function ProgressRing({
   className?: string
 }) {
   const clamped = Math.max(0, Math.min(100, value))
+  const [display, setDisplay] = useState(0)
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setDisplay(clamped))
+    return () => cancelAnimationFrame(frame)
+  }, [clamped])
+
   const radius = (size - strokeWidth) / 2
   const circumference = 2 * Math.PI * radius
-  const offset = circumference * (1 - clamped / 100)
+  const offset = circumference * (1 - display / 100)
 
   return (
     <span className={`relative inline-flex items-center justify-center ${className}`} style={{ width: size, height: size }}>
@@ -55,7 +66,7 @@ export function ProgressRing({
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          className={`fill-none transition-[stroke-dashoffset] duration-300 ${STROKE_CLASSES[tone]}`}
+          className={`fill-none transition-[stroke-dashoffset] duration-slow ease-out ${STROKE_CLASSES[tone]}`}
         />
       </svg>
       {showValue && (

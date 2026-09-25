@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CalendarClock, MapPin, Video } from 'lucide-react'
+import { MapPin, Video } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Tabs } from '@/components/ui/Tabs'
 import { DataTable } from '@/components/ui/DataTable'
@@ -7,6 +7,7 @@ import { Pagination } from '@/components/ui/Pagination'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { LoadingSkeletonLines } from '@/components/ui/LoadingSkeleton'
+import { EmptyCalendarIllustration } from '@/components/illustrations/EmptyStateIllustrations'
 import { StatusBadge, toneForInterviewStatus, labelForInterviewStatus } from '@/components/ui/StatusBadge'
 import { interviewService } from '@/services/interviewService'
 import { formatDateTime } from '@/utils/formatRelativeTime'
@@ -40,7 +41,7 @@ export function StudentInterviewsPage() {
   }, [when, page, reloadKey])
 
   return (
-    <div>
+    <div className="animate-fade-in">
       <PageHeader title="Interviews" description="Rounds scheduled for your applications." />
 
       <Tabs
@@ -67,7 +68,7 @@ export function StudentInterviewsPage() {
         ) : items.length === 0 ? (
           <div className="card">
             <EmptyState
-              icon={CalendarClock}
+              illustration={<EmptyCalendarIllustration />}
               title={when === 'upcoming' ? 'No upcoming interviews' : 'No past interviews'}
               description={
                 when === 'upcoming'

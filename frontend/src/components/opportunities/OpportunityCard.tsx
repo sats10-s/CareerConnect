@@ -1,4 +1,5 @@
 import { ChevronRight } from 'lucide-react'
+import type { CSSProperties } from 'react'
 import { CompanyLogo } from './CompanyLogo'
 import { StatusBadge, toneForApplicationStatus, labelForApplicationStatus } from '@/components/ui/StatusBadge'
 import { formatCompensation, formatDeadline, formatWorkMode } from '@/utils/opportunityFormatting'
@@ -26,10 +27,13 @@ export function OpportunityCard({
   item,
   onSelect,
   appliedStatus,
+  style,
 }: {
   item: OpportunityListItem
   onSelect: (item: OpportunityListItem) => void
   appliedStatus?: ApplicationStatus
+  /** Entrance-stagger delay - see styles/motion.ts's staggerDelay(). */
+  style?: CSSProperties
 }) {
   const { label: deadlineLabel, tone: deadlineTone } = formatDeadline(item.application_deadline)
 
@@ -37,7 +41,8 @@ export function OpportunityCard({
     <button
       type="button"
       onClick={() => onSelect(item)}
-      className="card flex w-full items-center gap-4 p-4 text-left transition-shadow duration-150 hover:shadow-md"
+      style={style}
+      className="card animate-fade-in flex w-full items-center gap-4 p-4 text-left transition duration-fast ease-out hover:shadow-md active:scale-[0.99]"
     >
       <CompanyLogo name={item.company?.name} logoPath={item.company?.logo_path} />
 

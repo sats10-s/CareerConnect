@@ -24,14 +24,23 @@ export function FilterChip({ label, active = false, onClick, onRemove }: FilterC
       }`}
     >
       {onClick ? (
-        <button type="button" onClick={onClick} className="inline-flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={onClick}
+          className="inline-flex items-center gap-1.5 transition-transform duration-fast ease-out active:scale-[0.98]"
+        >
           {label}
         </button>
       ) : (
         label
       )}
       {onRemove && (
-        <button type="button" onClick={onRemove} aria-label="Remove filter" className="text-current opacity-70 hover:opacity-100">
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label="Remove filter"
+          className="text-current opacity-70 transition-transform duration-fast ease-out hover:opacity-100 active:scale-[0.98]"
+        >
           <X className="h-3 w-3" />
         </button>
       )}

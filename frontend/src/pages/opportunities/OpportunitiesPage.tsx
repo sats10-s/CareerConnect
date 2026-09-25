@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, Briefcase, GraduationCap, SlidersHorizontal, SearchX } from 'lucide-react'
+import { AlertTriangle, SlidersHorizontal } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -12,6 +12,7 @@ import { Pagination } from '@/components/ui/Pagination'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { LoadingSkeletonLines } from '@/components/ui/LoadingSkeleton'
 import { OpportunityList } from '@/components/opportunities/OpportunityList'
+import { EmptyBriefcaseIllustration, EmptySearchIllustration } from '@/components/illustrations/EmptyStateIllustrations'
 import { opportunityService } from '@/services/opportunityService'
 import { useAppliedOpportunities } from '@/hooks/useAppliedOpportunities'
 import type { OpportunityListItem, OpportunityType, WorkMode } from '@/types/opportunity'
@@ -128,7 +129,7 @@ export function OpportunitiesPage({ type }: OpportunitiesPageProps) {
   const workModeLabel = WORK_MODE_OPTIONS.find((option) => option.value === workMode)?.label
 
   return (
-    <div className="space-y-6">
+    <div className="animate-fade-in space-y-6">
       <PageHeader title={header.title} description={header.description} />
 
       {/* Desktop/tablet: inline filter bar. Mobile: search stays visible, Location/Work mode move into a Drawer (per spec: "filter drawer / bottom sheet" on mobile instead of an inline bar). */}
@@ -218,7 +219,7 @@ export function OpportunitiesPage({ type }: OpportunitiesPageProps) {
         <div className="card">
           {hasActiveFilters ? (
             <EmptyState
-              icon={SearchX}
+              illustration={<EmptySearchIllustration />}
               title={`No ${nounPlural} match your filters`}
               description="Try a different location, work mode, or search term."
               action={
@@ -229,7 +230,7 @@ export function OpportunitiesPage({ type }: OpportunitiesPageProps) {
             />
           ) : (
             <EmptyState
-              icon={type === 'internship' ? GraduationCap : Briefcase}
+              illustration={<EmptyBriefcaseIllustration />}
               title={`No ${nounPlural} published yet`}
               description="Check back soon — new opportunities are posted regularly."
             />

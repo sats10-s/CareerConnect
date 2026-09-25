@@ -13,7 +13,7 @@ export function IconButton({ icon: Icon, label, badge, className = '', ...rest }
     <button
       type="button"
       aria-label={label}
-      className={`relative rounded-lg p-2 text-ink-soft transition-colors hover:bg-sidebar hover:text-ink ${className}`}
+      className={`relative rounded-lg p-2 text-ink-soft transition duration-fast ease-out hover:bg-sidebar hover:text-ink active:scale-[0.98] ${className}`}
       {...rest}
     >
       <Icon className="h-5 w-5" />

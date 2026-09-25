@@ -1,4 +1,5 @@
 import { OpportunityCard } from './OpportunityCard'
+import { staggerDelay } from '@/styles/motion'
 import type { OpportunityListItem } from '@/types/opportunity'
 import type { ApplicationStatus } from '@/types/application'
 
@@ -22,8 +23,14 @@ export function OpportunityList({
 }) {
   return (
     <div className="space-y-3">
-      {items.map((item) => (
-        <OpportunityCard key={item.id} item={item} onSelect={onSelect} appliedStatus={appliedStatusFor?.(item)} />
+      {items.map((item, index) => (
+        <OpportunityCard
+          key={item.id}
+          item={item}
+          onSelect={onSelect}
+          appliedStatus={appliedStatusFor?.(item)}
+          style={staggerDelay(index)}
+        />
       ))}
     </div>
   )

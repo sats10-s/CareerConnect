@@ -22,7 +22,7 @@ const STATS = [
 
 export function LandingPage() {
   return (
-    <div className="min-h-screen bg-base">
+    <div className="animate-fade-in min-h-screen bg-base">
       <header className="border-b border-hairline">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <span className="flex items-center gap-2">
@@ -46,7 +46,7 @@ export function LandingPage() {
               Internship &amp; Placement Portal
             </span>
 
-            <h1 className="mt-5 text-4xl font-bold leading-[1.08] tracking-tight text-ink sm:text-5xl lg:text-6xl">
+            <h1 className="mt-5 font-serif text-4xl leading-[1.08] tracking-tight text-ink sm:text-5xl lg:text-6xl">
               Build Your Career With The <span className="text-accent">Right</span> Opportunity.
             </h1>
 

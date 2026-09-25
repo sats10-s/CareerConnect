@@ -117,8 +117,12 @@
      kept deliberately faint so it reads as "premium paper," not a
      raised panel; genuinely elevated elements (modals, popovers) use
      card-elevated on top of this for a stronger shadow. */
+  /* min-h-11 (44px) only below sm - the touch-target floor applies at
+     mobile widths; desktop keeps its tighter py-2.5 density. Every
+     interactive element gets tactile press feedback (active:scale),
+     not just primary buttons - per the motion system spec. */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition duration-fast ease-out active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100 sm:min-h-0;
   }
 
   .btn-primary {

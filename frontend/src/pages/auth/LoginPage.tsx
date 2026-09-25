@@ -56,7 +56,7 @@ export function LoginPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-ink">Welcome Back</h1>
+      <h1 className="font-serif text-3xl text-ink">Welcome Back</h1>
       <p className="mt-1.5 text-sm text-muted">Sign in to your account</p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">

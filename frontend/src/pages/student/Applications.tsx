@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Briefcase, SearchX, SlidersHorizontal } from 'lucide-react'
+import { SlidersHorizontal } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
@@ -14,6 +14,8 @@ import { ErrorState } from '@/components/ui/ErrorState'
 import { LoadingSkeletonLines } from '@/components/ui/LoadingSkeleton'
 import { MetricBand, type Metric } from '@/components/dashboard/MetricBand'
 import { ApplicationRow } from '@/components/applications/ApplicationRow'
+import { EmptyBriefcaseIllustration, EmptySearchIllustration } from '@/components/illustrations/EmptyStateIllustrations'
+import { staggerDelay } from '@/styles/motion'
 import { applicationService } from '@/services/applicationService'
 import type { ApplicationListItem, ApplicationStatus } from '@/types/application'
 import type { PaginationMeta } from '@/types/common'
@@ -150,7 +152,7 @@ export function StudentApplicationsPage() {
     : []
 
   return (
-    <div className="space-y-6">
+    <div className="animate-fade-in space-y-6">
       <PageHeader title="My Applications" description="Track your applications and see where you are in each opportunity." />
 
       {metrics && <MetricBand metrics={metricItems} />}
@@ -235,7 +237,7 @@ export function StudentApplicationsPage() {
         <div className="card">
           {hasActiveFilters ? (
             <EmptyState
-              icon={SearchX}
+              illustration={<EmptySearchIllustration />}
               title="No applications match your filters"
               description="Try a different status or search term."
               action={
@@ -246,7 +248,7 @@ export function StudentApplicationsPage() {
             />
           ) : (
             <EmptyState
-              icon={Briefcase}
+              illustration={<EmptyBriefcaseIllustration />}
               title="No applications yet"
               description="Your next opportunity could start here."
               action={
@@ -265,8 +267,13 @@ export function StudentApplicationsPage() {
       ) : (
         <>
           <div className="space-y-3">
-            {items.map((item) => (
-              <ApplicationRow key={item.id} item={item} onSelect={(row) => navigate(`/student/applications/${row.id}`)} />
+            {items.map((item, index) => (
+              <ApplicationRow
+                key={item.id}
+                item={item}
+                onSelect={(row) => navigate(`/student/applications/${row.id}`)}
+                style={staggerDelay(index)}
+              />
             ))}
           </div>
 

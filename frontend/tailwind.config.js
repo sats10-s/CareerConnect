@@ -90,11 +90,32 @@ export default {
           '0%': { transform: 'translateX(-100%)' },
           '100%': { transform: 'translateX(0)' },
         },
+        // Toast.tsx entrance only - deliberately its own keyframe
+        // rather than reusing slide-in-right, which has no opacity
+        // fade (Drawer's full-height panel doesn't need one; a toast,
+        // per the motion system spec, needs "slide+fade").
+        'toast-in': {
+          '0%': { opacity: '0', transform: 'translateX(16px)' },
+          '100%': { opacity: '1', transform: 'translateX(0)' },
+        },
       },
       animation: {
-        'fade-in': 'fade-in 0.2s ease-out',
+        'fade-in': 'fade-in 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
         'slide-in-right': 'slide-in-right 0.2s ease-out',
         'slide-in-left': 'slide-in-left 0.2s ease-out',
+        'toast-in': 'toast-in 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
+      },
+      // Motion system shared timing scale - see src/styles/motion.ts
+      // for the JS-side equivalents (stagger delays, count-up/progress
+      // durations) components should import instead of hardcoding their
+      // own numbers.
+      transitionDuration: {
+        fast: '120ms',
+        base: '180ms',
+        slow: '400ms',
+      },
+      transitionTimingFunction: {
+        out: 'cubic-bezier(0.16, 1, 0.3, 1)',
       },
     },
   },

@@ -22,7 +22,7 @@ export function Tabs({ items, active, onChange }: TabsProps) {
             role="tab"
             aria-selected={isActive}
             onClick={() => onChange(item.key)}
-            className={`border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+            className={`border-b-2 px-4 py-2.5 text-sm font-medium transition duration-fast ease-out active:scale-[0.98] ${
               isActive ? 'border-primary text-primary' : 'border-transparent text-ink-soft hover:text-ink'
             }`}
           >

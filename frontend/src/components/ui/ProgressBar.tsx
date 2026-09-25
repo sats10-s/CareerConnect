@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+
 type ProgressTone = 'primary' | 'accent' | 'success'
 
 const TONE_CLASSES: Record<ProgressTone, string> = {
@@ -11,6 +13,13 @@ const TONE_CLASSES: Record<ProgressTone, string> = {
  * inside ProfileStrength (dashboard/ProfileStrength.tsx now consumes
  * this instead of its own markup) so other progress use cases
  * (weekly-report/document review progress, etc.) don't re-implement it.
+ *
+ * Fills from 0 to `value` on mount (per the motion system spec:
+ * "Progress indicators... animate their fill from 0 to actual value
+ * on mount, 400-500ms ease-out") rather than rendering already-filled -
+ * a later change to `value` still transitions normally via the CSS
+ * `transition-[width]`, which is the expected behavior, not something
+ * this needs to special-case.
  */
 export function ProgressBar({
   value,
@@ -23,6 +32,13 @@ export function ProgressBar({
   className?: string
 }) {
   const clamped = Math.max(0, Math.min(100, value))
+  const [display, setDisplay] = useState(0)
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setDisplay(clamped))
+    return () => cancelAnimationFrame(frame)
+  }, [clamped])
+
   return (
     <div
       className={`h-2 overflow-hidden rounded-full bg-sidebar ${className}`}
@@ -32,8 +48,8 @@ export function ProgressBar({
       aria-valuemax={100}
     >
       <div
-        className={`h-full rounded-full transition-[width] duration-200 ${TONE_CLASSES[tone]}`}
-        style={{ width: `${clamped}%` }}
+        className={`h-full rounded-full transition-[width] duration-slow ease-out ${TONE_CLASSES[tone]}`}
+        style={{ width: `${display}%` }}
       />
     </div>
   )

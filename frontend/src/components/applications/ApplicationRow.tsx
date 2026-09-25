@@ -1,4 +1,5 @@
 import { ChevronRight } from 'lucide-react'
+import type { CSSProperties } from 'react'
 import { CompanyLogo } from '@/components/opportunities/CompanyLogo'
 import { StatusBadge, toneForApplicationStatus, labelForApplicationStatus } from '@/components/ui/StatusBadge'
 import { formatRelativeTime } from '@/utils/formatRelativeTime'
@@ -21,9 +22,12 @@ import type { ApplicationListItem } from '@/types/application'
 export function ApplicationRow({
   item,
   onSelect,
+  style,
 }: {
   item: ApplicationListItem
   onSelect: (item: ApplicationListItem) => void
+  /** Entrance-stagger delay - see styles/motion.ts's staggerDelay(). */
+  style?: CSSProperties
 }) {
   const opportunity = item.opportunity
   const typeLabel = opportunity?.type === 'internship' ? 'Internship' : 'Job'
@@ -32,7 +36,8 @@ export function ApplicationRow({
     <button
       type="button"
       onClick={() => onSelect(item)}
-      className="card block w-full p-4 text-left transition-shadow duration-150 hover:shadow-md"
+      style={style}
+      className="card animate-fade-in block w-full p-4 text-left transition duration-fast ease-out hover:shadow-md active:scale-[0.99]"
     >
       <div className="flex items-center gap-4">
         <CompanyLogo name={opportunity?.company?.name} logoPath={opportunity?.company?.logo_path} />

@@ -103,7 +103,7 @@ export function StudentDashboardPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="animate-fade-in space-y-8">
       <WelcomeHeader name={user?.name ?? ''} department={user?.student?.department} batch={user?.student?.batch} />
 
       <MetricBand metrics={metrics} />
