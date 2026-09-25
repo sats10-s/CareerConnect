@@ -42,7 +42,7 @@ export const NAV_ITEMS: Record<Role, NavItem[]> = {
     { label: 'Internships', path: '/student/internships', icon: GraduationCap },
     { label: 'Applications', path: '/student/applications', icon: FileText },
     { label: 'My Internship', path: '/student/my-internship', icon: BookMarked },
-    { label: 'Notifications', path: '/student/notifications', icon: Bell },
+    { label: 'Notifications', path: '/student/notifications', icon: Bell, implemented: true },
     { label: 'Profile', path: '/student/profile', icon: User, implemented: true },
   ],
   FACULTY: [
@@ -68,7 +68,7 @@ export const NAV_ITEMS: Record<Role, NavItem[]> = {
     { label: 'Interviews', path: '/admin/interviews', icon: MessagesSquare },
     { label: 'Excel Sync', path: '/admin/excel-sync', icon: Sheet },
     { label: 'Reports', path: '/admin/reports', icon: BarChart3 },
-    { label: 'Notifications', path: '/admin/notifications', icon: Bell },
+    { label: 'Notifications', path: '/admin/notifications', icon: Bell, implemented: true },
     { label: 'Audit Logs', path: '/admin/audit-logs', icon: History },
     { label: 'Settings', path: '/admin/settings', icon: Settings },
   ],

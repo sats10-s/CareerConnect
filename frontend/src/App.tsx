@@ -13,8 +13,10 @@ import { LoginPage } from '@/pages/auth/LoginPage'
 import { RegisterPage } from '@/pages/auth/RegisterPage'
 import { StudentDashboardPage } from '@/pages/student/Dashboard'
 import { StudentProfilePage } from '@/pages/student/Profile'
+import { StudentNotificationsPage } from '@/pages/student/Notifications'
 import { FacultyDashboardPage } from '@/pages/faculty/Dashboard'
 import { AdminDashboardPage } from '@/pages/admin/Dashboard'
+import { AdminNotificationsPage } from '@/pages/admin/Notifications'
 import { SuperAdminDashboardPage } from '@/pages/superadmin/Dashboard'
 import { NotFoundPage } from '@/pages/NotFound'
 import { NAV_ITEMS } from '@/utils/navConfig'
@@ -64,6 +66,7 @@ export default function App() {
           <Route path="/student" element={<StudentLayout />}>
             <Route path="dashboard" element={<StudentDashboardPage />} />
             <Route path="profile" element={<StudentProfilePage />} />
+            <Route path="notifications" element={<StudentNotificationsPage />} />
             {placeholderRoutesFor('STUDENT')}
           </Route>
         </Route>
@@ -78,6 +81,7 @@ export default function App() {
         <Route element={<ProtectedRoute allowedRoles={['PLACEMENT_ADMIN']} />}>
           <Route path="/admin" element={<AdminLayout />}>
             <Route path="dashboard" element={<AdminDashboardPage />} />
+            <Route path="notifications" element={<AdminNotificationsPage />} />
             {placeholderRoutesFor('PLACEMENT_ADMIN')}
           </Route>
         </Route>
