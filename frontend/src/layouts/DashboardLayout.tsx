@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
-import { NAV_ITEMS } from '@/utils/navConfig'
+import { MobileBottomNav } from '@/components/layout/MobileBottomNav'
+import { NAV_ITEMS, MOBILE_PRIMARY_PATHS } from '@/utils/navConfig'
 import { ROLE_LABEL } from '@/utils/roles'
 import type { Role } from '@/types/auth'
 
@@ -17,6 +18,10 @@ export function DashboardLayout({ role }: { role: Role }) {
   const location = useLocation()
   const items = NAV_ITEMS[role]
   const activeLabel = items.find((item) => item.path === location.pathname)?.label ?? items[0]?.label ?? 'Dashboard'
+  const mobilePrimaryPaths = MOBILE_PRIMARY_PATHS[role]
+  const mobilePrimaryItems = mobilePrimaryPaths
+    ? mobilePrimaryPaths.map((path) => items.find((item) => item.path === path)).filter((item): item is NonNullable<typeof item> => Boolean(item))
+    : []
 
   return (
     <div className="flex h-screen overflow-hidden bg-base">
@@ -36,10 +41,12 @@ export function DashboardLayout({ role }: { role: Role }) {
 
       <div className="flex flex-1 flex-col overflow-hidden">
         <Topbar title={activeLabel} onMenuClick={() => setMobileOpen(true)} />
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <main className={`flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 ${mobilePrimaryItems.length > 0 ? 'pb-20 lg:pb-8' : ''}`}>
           <Outlet />
         </main>
       </div>
+
+      <MobileBottomNav items={mobilePrimaryItems} />
     </div>
   )
 }

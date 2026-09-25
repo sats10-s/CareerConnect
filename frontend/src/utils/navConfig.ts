@@ -86,6 +86,20 @@ export const NAV_ITEMS: Record<Role, NavItem[]> = {
   ],
 }
 
+/**
+ * A curated subset of each role's nav for the mobile bottom bar (per
+ * spec: "Student primary nav can use bottom navigation" - a mobile
+ * shell should be intentionally designed, not a shrunk desktop rail).
+ * Only STUDENT has one for now, since it's the only role built out
+ * this phase; other roles keep the hamburger-drawer-only mobile nav
+ * until their own pages exist. Paths not listed here stay reachable
+ * through the drawer (the topbar's menu button), which still shows
+ * every item.
+ */
+export const MOBILE_PRIMARY_PATHS: Partial<Record<Role, string[]>> = {
+  STUDENT: ['/student/dashboard', '/student/jobs', '/student/applications', '/student/my-internship', '/student/notifications'],
+}
+
 export const ROLE_ICON: Record<Role, LucideIcon> = {
   STUDENT: GraduationCap,
   FACULTY: Users,

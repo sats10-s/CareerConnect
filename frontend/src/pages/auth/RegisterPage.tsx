@@ -117,7 +117,7 @@ export function RegisterPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div>
             <label className="label" htmlFor="department_id">Department</label>
             <select id="department_id" required className="input" value={form.department_id} onChange={(e) => update('department_id', e.target.value)}>
