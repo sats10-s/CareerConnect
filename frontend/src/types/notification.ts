@@ -1,3 +1,5 @@
+import type { ApiEnvelope, PaginatedList } from './common'
+
 /**
  * Mirrors App\Http\Resources\NotificationResource - the single
  * representation used by every notification endpoint (student,
@@ -16,21 +18,9 @@ export interface NotificationItem {
   created_at: string
 }
 
-export interface NotificationListMeta {
-  current_page: number
-  per_page: number
-  total: number
-  last_page: number
-}
+/** @deprecated use PaginationMeta from ./common - kept as an alias so nothing importing this name breaks. */
+export type NotificationListMeta = PaginatedList<NotificationItem>['meta']
 
-export interface NotificationListData {
-  items: NotificationItem[]
-  meta: NotificationListMeta
-}
+export type NotificationListData = PaginatedList<NotificationItem>
 
-/** The {success, message, data} envelope used by the Notification/Announcement endpoints specifically - see notificationService.ts. */
-export interface ApiEnvelope<T> {
-  success: boolean
-  message: string
-  data: T
-}
+export type { ApiEnvelope }

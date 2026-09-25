@@ -125,6 +125,16 @@
     background-color: var(--color-sidebar);
   }
 
+  /* Destructive actions (withdraw, delete, archive) - added while
+     building the Applications page's withdraw confirmation. */
+  .btn-danger {
+    @apply btn text-white;
+    background-color: var(--color-danger-text);
+  }
+  .btn-danger:hover {
+    background-color: color-mix(in srgb, var(--color-danger-text) 85%, black);
+  }
+
   .card {
     @apply rounded-xl;
     border: 1px solid var(--color-hairline);

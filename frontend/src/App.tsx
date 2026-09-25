@@ -14,6 +14,7 @@ import { RegisterPage } from '@/pages/auth/RegisterPage'
 import { StudentDashboardPage } from '@/pages/student/Dashboard'
 import { StudentProfilePage } from '@/pages/student/Profile'
 import { StudentNotificationsPage } from '@/pages/student/Notifications'
+import { StudentApplicationsPage } from '@/pages/student/Applications'
 import { FacultyDashboardPage } from '@/pages/faculty/Dashboard'
 import { AdminDashboardPage } from '@/pages/admin/Dashboard'
 import { AdminNotificationsPage } from '@/pages/admin/Notifications'
@@ -67,6 +68,7 @@ export default function App() {
             <Route path="dashboard" element={<StudentDashboardPage />} />
             <Route path="profile" element={<StudentProfilePage />} />
             <Route path="notifications" element={<StudentNotificationsPage />} />
+            <Route path="applications" element={<StudentApplicationsPage />} />
             {placeholderRoutesFor('STUDENT')}
           </Route>
         </Route>
