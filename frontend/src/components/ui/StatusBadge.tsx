@@ -79,3 +79,30 @@ const APPLICATION_STATUS_LABELS: Record<string, string> = {
 export function labelForApplicationStatus(status: string): string {
   return APPLICATION_STATUS_LABELS[status] ?? status
 }
+
+/** Maps a backend Interview status (App\Enums\InterviewStatus) to a badge tone. */
+export function toneForInterviewStatus(status: string): StatusTone {
+  switch (status) {
+    case 'COMPLETED':
+      return 'success'
+    case 'CANCELLED':
+      return 'error'
+    case 'RESCHEDULED':
+      return 'warning'
+    case 'SCHEDULED':
+    default:
+      return 'info'
+  }
+}
+
+const INTERVIEW_STATUS_LABELS: Record<string, string> = {
+  SCHEDULED: 'Scheduled',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
+  RESCHEDULED: 'Rescheduled',
+}
+
+/** Human-readable label for an InterviewStatus value. */
+export function labelForInterviewStatus(status: string): string {
+  return INTERVIEW_STATUS_LABELS[status] ?? status
+}

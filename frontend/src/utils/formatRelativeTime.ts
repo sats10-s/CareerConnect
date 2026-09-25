@@ -21,3 +21,16 @@ function formatUnit(value: number, unit: string): string {
   const plural = abs === 1 ? unit : `${unit}s`
   return value <= 0 ? `${abs} ${plural} ago` : `in ${abs} ${plural}`
 }
+
+/** Absolute date + time, for scheduling info where "in 3 days" alone isn't precise enough (e.g. an interview's scheduled_at). */
+export function formatDateTime(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}

@@ -19,6 +19,7 @@ import { StudentApplicationsPage } from '@/pages/student/Applications'
 import { StudentJobsPage } from '@/pages/student/Jobs'
 import { StudentInternshipsPage } from '@/pages/student/Internships'
 import { MyInternshipPage } from '@/pages/student/MyInternship'
+import { StudentInterviewsPage } from '@/pages/student/Interviews'
 import { FacultyDashboardPage } from '@/pages/faculty/Dashboard'
 import { AdminDashboardPage } from '@/pages/admin/Dashboard'
 import { AdminNotificationsPage } from '@/pages/admin/Notifications'
@@ -77,6 +78,7 @@ export default function App() {
             <Route path="profile" element={<StudentProfilePage />} />
             <Route path="notifications" element={<StudentNotificationsPage />} />
             <Route path="applications" element={<StudentApplicationsPage />} />
+            <Route path="interviews" element={<StudentInterviewsPage />} />
             <Route path="jobs" element={<StudentJobsPage />} />
             <Route path="internships" element={<StudentInternshipsPage />} />
             <Route path="my-internship" element={<MyInternshipPage />} />
