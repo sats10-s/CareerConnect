@@ -186,8 +186,27 @@
 
   /* Faint dot-grid texture for hero/panel backgrounds, masked to fade
      out toward the edges so it reads as atmosphere, not a pattern.
-     New this pass. */
+     Deliberately built as a ::before layer, NOT a mask-image on the
+     element itself: mask-image masks everything painted inside that
+     element - including real child content, not just a background -
+     so putting it directly on a container that also holds the actual
+     heading/logo/quote text made that text fade/vanish along with the
+     "texture" (caught after the first screenshot review: the auth
+     visual panel rendered fully blank, and the landing hero's heading
+     and floating cards faded out toward the bottom-right, exactly
+     matching the mask's coverage). The ::before pseudo is a separate
+     painted layer with negative z-index, so it sits behind the
+     element's real (non-positioned, in-flow) children regardless of
+     DOM order, and only the pseudo itself is masked. */
   .bg-grid {
+    position: relative;
+  }
+  .bg-grid::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
     background-image: radial-gradient(color-mix(in srgb, var(--color-hairline) 90%, transparent) 1px, transparent 1px);
     background-size: 22px 22px;
     -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%);
