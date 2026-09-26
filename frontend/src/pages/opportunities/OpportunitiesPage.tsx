@@ -180,7 +180,7 @@ export function OpportunitiesPage({ type }: OpportunitiesPageProps) {
           <SlidersHorizontal className="h-4 w-4" />
           Filters
           {mobileFilterCount > 0 && (
-            <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-white">
+            <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-[color:var(--color-primary-ink)]">
               {mobileFilterCount}
             </span>
           )}

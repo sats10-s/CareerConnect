@@ -43,7 +43,7 @@ export function Timeline({ items }: { items: TimelineItem[] }) {
 function TimelineDot({ status }: { status: TimelineItemStatus }) {
   if (status === 'completed') {
     return (
-      <span className="relative mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-success text-white" aria-hidden="true">
+      <span className="relative mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-success text-[color:var(--color-primary-ink)]" aria-hidden="true">
         <Check className="h-3 w-3" strokeWidth={3} />
       </span>
     )

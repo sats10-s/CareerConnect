@@ -31,7 +31,7 @@ export function StatCard({ label, value, icon: Icon, tone = 'navy', suffix }: St
           <Icon className="h-[18px] w-[18px]" />
         </span>
       </div>
-      <p className="mt-3 text-2xl font-bold tabular-nums tracking-tight text-ink">
+      <p className="mt-3 font-display text-2xl font-bold tabular-nums tracking-tight text-ink">
         {value}
         {suffix && <span className="ml-0.5 text-base font-semibold text-ink-faint">{suffix}</span>}
       </p>

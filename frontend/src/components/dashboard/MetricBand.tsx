@@ -37,7 +37,7 @@ export function MetricBand({ metrics }: { metrics: Metric[] }) {
           className={`px-5 py-5 ${index > 0 ? 'border-t sm:border-t-0 sm:border-l' : ''} border-border`}
         >
           <p className="text-xs font-medium uppercase tracking-wide text-ink-faint">{metric.label}</p>
-          <p className="mt-1.5 text-3xl font-semibold tabular-nums text-ink">
+          <p className="mt-1.5 font-display text-3xl font-semibold tabular-nums text-ink">
             <MetricNumber value={metric.value} />
             {metric.suffix && <span className="ml-0.5 text-lg font-medium text-ink-faint">{metric.suffix}</span>}
           </p>

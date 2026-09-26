@@ -24,7 +24,7 @@ export function Tooltip({ label, children, side = 'top' }: { label: string; chil
         <span
           id={id}
           role="tooltip"
-          className={`pointer-events-none absolute left-1/2 z-50 w-max max-w-[14rem] -translate-x-1/2 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-medium text-white shadow-lg transition-opacity duration-150 ${
+          className={`pointer-events-none absolute left-1/2 z-50 w-max max-w-[14rem] -translate-x-1/2 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-medium text-[color:var(--color-primary-ink)] shadow-lg transition-opacity duration-150 ${
             side === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'
           }`}
         >

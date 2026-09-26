@@ -48,7 +48,7 @@ export function JourneyProgress({ steps }: { steps: JourneyStep[] }) {
 function StepDot({ state }: { state: JourneyStep['state'] }) {
   if (state === 'complete') {
     return (
-      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo text-white">
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo text-[color:var(--color-primary-ink)]">
         <Check className="h-3.5 w-3.5" strokeWidth={3} />
       </span>
     )

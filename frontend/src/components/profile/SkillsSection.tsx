@@ -77,7 +77,7 @@ export function SkillsSection({
                   aria-label={`Remove ${skill.skill_name}`}
                   disabled={removingId === skill.id}
                   onClick={() => handleRemove(skill.id)}
-                  className="rounded-full p-0.5 text-indigo/70 transition-colors hover:bg-indigo hover:text-white disabled:opacity-50"
+                  className="rounded-full p-0.5 text-indigo/70 transition-colors hover:bg-indigo hover:text-[color:var(--color-primary-ink)] disabled:opacity-50"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>

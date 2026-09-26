@@ -10,7 +10,13 @@ export default {
         // these names (base/surface/ink/muted/hairline/primary/accent/
         // success/warning/error/info) for new work.
         base: 'var(--color-base)',
-        surface: 'var(--color-surface)',
+        surface: {
+          DEFAULT: 'var(--color-surface)',
+          // Sidebar/dropdown hover states on dark surfaces (e.g.
+          // Sidebar.tsx's nav-item hover) - a hair lighter than
+          // --color-surface itself, same value as --color-surface-raised.
+          raised: 'var(--color-surface-raised)',
+        },
         muted: 'var(--color-muted)',
         hairline: 'var(--color-hairline)',
         ink: {

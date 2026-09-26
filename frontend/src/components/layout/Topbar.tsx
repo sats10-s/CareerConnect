@@ -86,7 +86,7 @@ export function Topbar({ title, onMenuClick }: { title: string; onMenuClick?: ()
     <header className="flex h-16 items-center justify-between gap-3 border-b border-border bg-surface px-4 sm:px-6">
       <div className="flex min-w-0 items-center gap-3">
         <IconButton icon={Menu} label="Open navigation" onClick={onMenuClick} className="lg:hidden" />
-        <h1 className="truncate text-base font-semibold text-ink sm:text-lg">{title}</h1>
+        <h1 className="truncate font-display text-base font-semibold text-ink sm:text-lg">{title}</h1>
       </div>
 
       <SearchBar

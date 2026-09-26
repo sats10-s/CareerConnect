@@ -29,7 +29,7 @@ export function DashboardLayout({ role }: { role: Role }) {
 
       {mobileOpen && (
         <div className="fixed inset-0 z-40 flex lg:hidden">
-          <div className="fixed inset-0 bg-ink/50" onClick={() => setMobileOpen(false)} />
+          <div className="fixed inset-0 bg-black/60" onClick={() => setMobileOpen(false)} />
           {/* Sidebar renders its own header (logo + role label + close
               button via onClose) - no separate drawer chrome needed on
               top of it, so the drawer is just the panel + shadow. */}
