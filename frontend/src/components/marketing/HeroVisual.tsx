@@ -1,4 +1,5 @@
 import { Briefcase, GraduationCap, Sparkles } from 'lucide-react'
+import { CornerFrame } from '@/components/ui/CornerFrame'
 
 interface FloatingCard {
   role: string
@@ -24,34 +25,42 @@ const FLOATING_CARDS: FloatingCard[] = [
 export function HeroVisual() {
   return (
     <div className="relative mx-auto aspect-square w-full max-w-md sm:max-w-lg">
-      <div
-        className="bg-grid absolute inset-4 overflow-hidden rounded-[28px] sm:inset-8"
-        style={{
-          background: 'linear-gradient(155deg, var(--color-surface-raised) 0%, var(--color-base) 100%)',
-          boxShadow: 'var(--shadow-glow-lg)',
-          border: '1px solid var(--color-hairline)',
-        }}
-      >
-        <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
-          <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-tint text-primary">
-            <GraduationCap className="h-8 w-8" strokeWidth={1.75} />
-          </span>
-          <p className="max-w-[16rem] text-sm font-medium leading-relaxed text-muted">
-            Your placement journey, tracked end to end - applications,
-            interviews, offers.
-          </p>
-          <span className="badge-eyebrow">
-            <Sparkles className="h-3.5 w-3.5" />
-            Verified opportunities only
-          </span>
+      <CornerFrame className="absolute inset-4 sm:inset-8">
+        <div
+          className="bg-grid h-full overflow-hidden rounded-[28px]"
+          style={{
+            background: 'linear-gradient(155deg, var(--color-surface-raised) 0%, var(--color-base) 100%)',
+            boxShadow: 'var(--shadow-glow-lg)',
+            border: '1px solid var(--color-hairline)',
+          }}
+        >
+          <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
+            <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-tint text-primary">
+              <GraduationCap className="h-8 w-8" strokeWidth={1.75} />
+            </span>
+            <p className="max-w-[16rem] text-sm font-medium leading-relaxed text-muted">
+              Your placement journey, tracked end to end - applications,
+              interviews, offers.
+            </p>
+            <span className="badge-eyebrow">
+              <Sparkles className="h-3.5 w-3.5" />
+              Verified opportunities only
+            </span>
+            <span className="mt-1 inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-faint">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" aria-hidden="true" />
+              Portal status: live
+            </span>
+          </div>
         </div>
-      </div>
+      </CornerFrame>
 
       {FLOATING_CARDS.map((card, index) => (
         <div
           key={card.role}
-          className={`card absolute w-48 animate-fade-in p-3 ${FLOATING_POSITION[index]}`}
-          style={{ animationDelay: `${index * 120}ms` }}
+          className={`card card-interactive absolute w-48 p-3 ${FLOATING_POSITION[index]}`}
+          style={{
+            animation: `fade-in 0.18s cubic-bezier(0.16, 1, 0.3, 1) ${index * 120}ms, float ${4.5 + index * 0.6}s ease-in-out ${index * 120}ms infinite`,
+          }}
         >
           <div className="flex items-start gap-2.5">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-tint text-primary">

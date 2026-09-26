@@ -85,10 +85,10 @@ export function RegisterPage() {
 
   return (
     <div>
-      <h1 className="font-extrabold tracking-tight text-3xl text-ink">Create your student account</h1>
+      <h1 className="font-display font-bold tracking-tight text-3xl text-ink">Create your student account</h1>
       <p className="mt-1 text-sm text-muted">Faculty and admin accounts are provisioned by the placement office.</p>
 
-      <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+      <form onSubmit={handleSubmit} className="mt-8 space-y-5">
         {formError && (
           <div className="rounded-lg border border-error/20 bg-error-bg px-3.5 py-2.5 text-sm text-error">{formError}</div>
         )}
@@ -105,7 +105,7 @@ export function RegisterPage() {
           {fieldError('email') && <p className="mt-1 text-xs text-error">{fieldError('email')}</p>}
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-5">
           <div>
             <label className="label" htmlFor="roll_number">Roll number</label>
             <input id="roll_number" required className="input" value={form.roll_number} onChange={(e) => update('roll_number', e.target.value)} />
@@ -117,7 +117,7 @@ export function RegisterPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
           <div>
             <label className="label" htmlFor="department_id">Department</label>
             <select id="department_id" required className="input" value={form.department_id} onChange={(e) => update('department_id', e.target.value)}>

@@ -56,10 +56,10 @@ export function LoginPage() {
 
   return (
     <div>
-      <h1 className="font-extrabold tracking-tight text-3xl text-ink">Welcome Back</h1>
+      <h1 className="font-display font-bold tracking-tight text-3xl text-ink">Welcome Back</h1>
       <p className="mt-1.5 text-sm text-muted">Sign in to your account</p>
 
-      <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+      <form onSubmit={handleSubmit} className="mt-8 space-y-5">
         {error && (
           <div className="rounded-lg border border-error/20 bg-error-bg px-3.5 py-2.5 text-sm text-error">{error}</div>
         )}

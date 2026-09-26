@@ -25,7 +25,7 @@ export function PageHeader({ title, description, breadcrumbs, action }: PageHead
       </div>}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="font-extrabold text-3xl tracking-tight text-ink md:text-4xl">{title}</h1>
+          <h1 className="font-display font-bold text-3xl tracking-tight text-ink md:text-4xl">{title}</h1>
           {description && <p className="mt-1 text-sm text-muted">{description}</p>}
         </div>
         {action}

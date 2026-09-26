@@ -102,19 +102,20 @@
      min-h-11 mobile touch-target floor and active:scale press
      feedback from the motion-system pass. */
   .btn {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition duration-fast ease-out active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100 sm:min-h-0;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition duration-fast ease-out hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:active:scale-100 sm:min-h-0;
   }
 
   /* Primary CTA - filled mint pill with the reference's signature
      glow, near-black text (see the contrast note above). */
   .btn-primary {
-    @apply btn;
+    @apply btn animate-pulse-glow;
     background-color: var(--color-primary);
     color: var(--color-primary-ink);
-    box-shadow: var(--shadow-glow);
   }
   .btn-primary:hover {
     background-color: var(--color-primary-hov);
+    box-shadow: var(--shadow-glow-lg);
+    animation-play-state: paused;
   }
   .btn-primary:active {
     background-color: color-mix(in srgb, var(--color-primary-hov) 85%, black);
@@ -156,7 +157,7 @@
   }
 
   .card {
-    @apply rounded-2xl;
+    @apply rounded-2xl transition duration-base ease-out;
     border: 1px solid var(--color-hairline);
     background-color: var(--color-surface);
     box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.03) inset, 0 4px 20px rgba(0, 0, 0, 0.35);
@@ -166,12 +167,42 @@
     @apply card shadow-2xl;
   }
 
+  /* Opt-in hover lift + mint-glow border for clickable cards (the
+     reference's service/opportunity cards visibly react to hover, a
+     plain .card never did). Stack onto .card, e.g.
+     className="card card-hover". New this pass - not yet wired into
+     OpportunityCard/ApplicationRow (those have their own inline hover
+     classes from the motion-system pass); available for this pass's
+     screens and the next one. */
+  .card-hover:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-hairline));
+    box-shadow: var(--shadow-glow), 0 1px 0 0 rgba(255, 255, 255, 0.03) inset;
+  }
+
   /* "Featured" card treatment - the reference's numbered-service-card
      set where one card gets a distinct mint-glow border + mint title.
      Opt-in: stack onto .card, e.g. className="card card-featured". */
   .card-featured {
     border-color: color-mix(in srgb, var(--color-primary) 55%, var(--color-hairline));
     box-shadow: var(--shadow-glow);
+  }
+
+  /* Like .card-hover, but for a card that ALSO carries its own
+     continuous ambient animation (e.g. HeroVisual's floating cards'
+     inline float keyframe) - animation-play-state: paused stops that
+     loop from fighting the hover lift's transform (a running
+     animation keeps overwriting `transform` every frame, so a plain
+     :hover transform would never visibly show). Use .card-hover
+     instead for a card with no ambient motion to pause. */
+  .card-interactive {
+    transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 180ms cubic-bezier(0.16, 1, 0.3, 1), border-color 180ms ease-out;
+  }
+  .card-interactive:hover {
+    animation-play-state: paused;
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-glow);
+    border-color: color-mix(in srgb, var(--color-primary) 40%, var(--color-hairline));
   }
 
   /* Dashed-border pill "eyebrow" badge - the reference's small
