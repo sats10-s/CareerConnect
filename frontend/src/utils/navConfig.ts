@@ -69,7 +69,7 @@ export const NAV_ITEMS: Record<Role, NavItem[]> = {
     { label: 'Placement Drives', path: '/admin/placement-drives', icon: Handshake, implemented: true },
     { label: 'Interviews', path: '/admin/interviews', icon: MessagesSquare, implemented: true },
     { label: 'Excel Sync', path: '/admin/excel-sync', icon: Sheet, implemented: true },
-    { label: 'Reports', path: '/admin/reports', icon: BarChart3 },
+    { label: 'Reports', path: '/admin/reports', icon: BarChart3, implemented: true },
     { label: 'Notifications', path: '/admin/notifications', icon: Bell, implemented: true },
     { label: 'Audit Logs', path: '/admin/audit-logs', icon: History },
     { label: 'Settings', path: '/admin/settings', icon: Settings },
