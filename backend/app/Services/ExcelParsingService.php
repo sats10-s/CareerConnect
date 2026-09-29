@@ -270,6 +270,12 @@ class ExcelParsingService
     {
         $collapsed = preg_replace('/\s+/', ' ', trim($header)) ?? '';
 
+        // The downloadable templates mark required columns with a
+        // trailing " *" (ExcelTemplateService::REQUIRED_MARK). Strip it
+        // here so a file that keeps the template's own headers - i.e.
+        // the official template itself - matches the column map.
+        $collapsed = trim(preg_replace('/\s*\*+$/', '', $collapsed) ?? $collapsed);
+
         return mb_strtolower($collapsed);
     }
 }

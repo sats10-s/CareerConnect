@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Avatar } from '@/components/ui/Avatar'
 import { CompanyLogo } from '@/components/opportunities/CompanyLogo'
-import { StatusBadge } from '@/components/ui/StatusBadge'
+import { StatusBadge, labelForApplicationStatus, toneForApplicationStatus } from '@/components/ui/StatusBadge'
 import { metaFor, type StatusMeta } from '@/utils/statusMeta'
 import type { OpportunitySummary } from '@/types/application'
 import type { StudentBrief } from '@/types/coordination'
@@ -45,4 +45,9 @@ export function DetailItem({ label, children }: { label: string; children: React
       <dd className="mt-1 break-words text-sm text-ink">{children || <span className="text-ink-faint">—</span>}</dd>
     </div>
   )
+}
+
+/** An application status pill using the shared tone/label helpers (the backend's 8 ApplicationStatus values). */
+export function ApplicationBadge({ status }: { status: string }) {
+  return <StatusBadge tone={toneForApplicationStatus(status)}>{labelForApplicationStatus(status)}</StatusBadge>
 }

@@ -79,6 +79,31 @@ class ExcelImportApplicationStatusTest extends TestCase
         $this->assertSame('SHORTLISTED', $preview['items'][0]['changes'][0]['new_value']);
     }
 
+    public function test_the_official_templates_starred_required_headers_are_accepted(): void
+    {
+        // ExcelTemplateService marks required columns with a trailing " *"
+        // ("Roll Number *"). A file that keeps those headers - i.e. the
+        // downloaded template itself - must import, not fail with
+        // "missing required column(s)".
+        $studentUser = $this->makeStudentUser(['name' => 'Asha Rao']);
+        $studentUser->student->update(['roll_number' => 'CC24003']);
+        $job = $this->makeJobPosting();
+        $this->applyAndAdvance($this->admin, $studentUser, $job, ['UNDER_REVIEW']);
+
+        Sanctum::actingAs($this->admin, ['*']);
+        $file = $this->makeXlsxUpload(
+            ['Student Name', 'Roll Number *', 'Branch', 'Batch', 'Company *', 'Job Role *', 'Status *', 'Remarks'],
+            [['Asha Rao', 'CC24003', null, null, $this->excelCompany->name, $job->title, 'SHORTLISTED', null]],
+        );
+
+        $batch = $this->postJson('/api/admin/excel/import', ['type' => 'PLACEMENT_STATUS', 'file' => $file])
+            ->assertCreated()
+            ->json('data');
+
+        $this->assertSame('READY_FOR_CONFIRMATION', $batch['status']);
+        $this->assertSame(1, $batch['counts']['valid_rows']);
+    }
+
     public function test_confirm_writes_through_application_service_with_full_history(): void
     {
         $studentUser = $this->makeStudentUser(['name' => 'Asha Rao']);

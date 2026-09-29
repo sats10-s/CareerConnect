@@ -33,6 +33,11 @@ import { FacultyEvaluationsPage } from '@/pages/faculty/Evaluations'
 import { FacultyReportsPage } from '@/pages/faculty/Reports'
 import { AdminDashboardPage } from '@/pages/admin/Dashboard'
 import { AdminNotificationsPage } from '@/pages/admin/Notifications'
+import { AdminJobsPage } from '@/pages/admin/Jobs'
+import { AdminInternshipsPage } from '@/pages/admin/Internships'
+import { AdminApplicationsPage } from '@/pages/admin/Applications'
+import { AdminInterviewsPage } from '@/pages/admin/Interviews'
+import { AdminPlacementDrivesPage } from '@/pages/admin/PlacementDrives'
 import { SuperAdminDashboardPage } from '@/pages/superadmin/Dashboard'
 import { NotFoundPage } from '@/pages/NotFound'
 import { ToastViewport } from '@/components/ui/Toast'
@@ -117,6 +122,11 @@ export default function App() {
           <Route path="/admin" element={<AdminLayout />}>
             <Route path="dashboard" element={<AdminDashboardPage />} />
             <Route path="notifications" element={<AdminNotificationsPage />} />
+            <Route path="jobs" element={<AdminJobsPage />} />
+            <Route path="internships" element={<AdminInternshipsPage />} />
+            <Route path="applications" element={<AdminApplicationsPage />} />
+            <Route path="interviews" element={<AdminInterviewsPage />} />
+            <Route path="placement-drives" element={<AdminPlacementDrivesPage />} />
             {placeholderRoutesFor('PLACEMENT_ADMIN')}
           </Route>
         </Route>

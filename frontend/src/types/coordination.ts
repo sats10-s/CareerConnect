@@ -89,6 +89,8 @@ export interface AssignmentDetail extends AssignmentListItem {
   faculty_history: FacultyHistoryItem[]
   notes?: string | null
   assigned_by?: { id: number; name: string } | null
+  created_at?: string
+  updated_at?: string
 }
 
 export interface AttendanceRecord extends CoordinationContext {

@@ -15,7 +15,7 @@ interface AssignmentDrawerProps {
   /** Role-specific fetcher (faculty and admin read the same shape from different routes). */
   loader: (id: number) => Promise<AssignmentDetail>
   /** Role-specific shortcuts shown under the details (e.g. "View attendance"). */
-  footer?: (assignment: AssignmentDetail) => ReactNode
+  footer?: (assignment: AssignmentDetail, reload: () => void) => ReactNode
   /** Role-specific extra sections (admin adds notes/assigned-by/faculty history). */
   extra?: (assignment: AssignmentDetail) => ReactNode
 }
@@ -37,7 +37,7 @@ export function AssignmentDrawer({ assignmentId, onClose, loader, footer, extra 
       onClose={onClose}
       title="Internship assignment"
       width="md"
-      footer={data && footer ? footer(data) : undefined}
+      footer={data && footer ? footer(data, reload) : undefined}
     >
       {isLoading ? (
         <div className="space-y-4" aria-busy="true">
