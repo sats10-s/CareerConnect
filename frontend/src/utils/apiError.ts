@@ -59,3 +59,20 @@ export function parseApiError(err: unknown, fallback = 'Something went wrong. Pl
 export function formBanner(parsed: ParsedApiError): string {
   return Object.keys(parsed.fieldErrors).length > 0 ? 'Please fix the highlighted fields.' : parsed.message
 }
+
+/**
+ * Like parseApiError, for requests made with `responseType: 'blob'`: on
+ * failure axios hands back the JSON error body as a Blob, which has to
+ * be read asynchronously before its validation message is available.
+ */
+export async function parseBlobApiError(err: unknown, fallback = 'Something went wrong. Please try again.'): Promise<ParsedApiError> {
+  if (isAxiosError(err) && err.response && err.response.data instanceof Blob) {
+    try {
+      const body = JSON.parse(await err.response.data.text()) as LaravelErrorBody
+      return parseApiError({ ...err, response: { ...err.response, data: body }, isAxiosError: true }, fallback)
+    } catch {
+      /* not JSON - fall through to the status-based copy */
+    }
+  }
+  return parseApiError(err, fallback)
+}

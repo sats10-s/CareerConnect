@@ -195,7 +195,8 @@ export const adminService = {
     show: (id: number) => unwrap(api.get<ApiEnvelope<ExcelBatch>>(`/admin/excel/imports/${id}`)),
     preview: (id: number, params: { page?: number; per_page?: number } = {}) =>
       unwrap(api.get<ApiEnvelope<{ batch: ExcelBatch; items: ExcelPreviewRow[]; meta: PaginatedList<never>['meta'] }>>(`/admin/excel/imports/${id}/preview`, { params })),
-    confirm: (id: number) => unwrap(api.post<ApiEnvelope<ExcelConfirmResult>>(`/admin/excel/imports/${id}/confirm`, {})),
+    /** Omit rowIds to apply every VALID/WARNING row; pass a subset to apply only those preview rows (ExcelPreviewRow.id). */
+    confirm: (id: number, rowIds?: number[]) => unwrap(api.post<ApiEnvelope<ExcelConfirmResult>>(`/admin/excel/imports/${id}/confirm`, rowIds ? { row_ids: rowIds } : {})),
     rollback: (id: number) => unwrap(api.post<ApiEnvelope<ExcelRollbackResult>>(`/admin/excel/imports/${id}/rollback`, {})),
     template: (type: ExcelImportType) => api.get<Blob>(`/admin/excel/templates/${type}`, { responseType: 'blob' }).then((r) => r.data),
     export: (type: ExcelExportType, params: ExportFilters = {}) =>

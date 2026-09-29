@@ -35,6 +35,7 @@ import { AdminDashboardPage } from '@/pages/admin/Dashboard'
 import { AdminNotificationsPage } from '@/pages/admin/Notifications'
 import { AdminJobsPage } from '@/pages/admin/Jobs'
 import { AdminInternshipsPage } from '@/pages/admin/Internships'
+import { AdminExcelSyncPage } from '@/pages/admin/ExcelSync'
 import { AdminApplicationsPage } from '@/pages/admin/Applications'
 import { AdminInterviewsPage } from '@/pages/admin/Interviews'
 import { AdminPlacementDrivesPage } from '@/pages/admin/PlacementDrives'
@@ -124,6 +125,7 @@ export default function App() {
             <Route path="notifications" element={<AdminNotificationsPage />} />
             <Route path="jobs" element={<AdminJobsPage />} />
             <Route path="internships" element={<AdminInternshipsPage />} />
+            <Route path="excel-sync" element={<AdminExcelSyncPage />} />
             <Route path="applications" element={<AdminApplicationsPage />} />
             <Route path="interviews" element={<AdminInterviewsPage />} />
             <Route path="placement-drives" element={<AdminPlacementDrivesPage />} />

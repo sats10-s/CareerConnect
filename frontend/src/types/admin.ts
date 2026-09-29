@@ -251,7 +251,7 @@ export interface ExcelConfirmResult {
 
 export interface ExcelRollbackResult {
   batch: ExcelBatch
-  result: { reverted: number; conflicts: number; not_rollbackable: number; details: { change_id: number; entity_type: string; entity_id: number; field: string; outcome?: string; message?: string }[] }
+  result: { reverted: number; conflicts: number; not_rollbackable: number; details: { change_id: number; entity_type: string; entity_id: number; field: string; result: string; message: string | null }[] }
 }
 
 export interface ReportFilters {
