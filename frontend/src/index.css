@@ -264,3 +264,9 @@
     color: var(--color-muted);
   }
 }
+
+@layer components {
+  .input:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+}

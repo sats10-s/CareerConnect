@@ -24,6 +24,13 @@ import { InternshipDetailPage } from '@/pages/student/InternshipDetail'
 import { MyInternshipPage } from '@/pages/student/MyInternship'
 import { StudentInterviewsPage } from '@/pages/student/Interviews'
 import { FacultyDashboardPage } from '@/pages/faculty/Dashboard'
+import { FacultyStudentsPage } from '@/pages/faculty/Students'
+import { FacultyInternshipsPage } from '@/pages/faculty/Internships'
+import { FacultyAttendancePage } from '@/pages/faculty/Attendance'
+import { FacultyProgressPage } from '@/pages/faculty/Progress'
+import { FacultyDocumentsPage } from '@/pages/faculty/Documents'
+import { FacultyEvaluationsPage } from '@/pages/faculty/Evaluations'
+import { FacultyReportsPage } from '@/pages/faculty/Reports'
 import { AdminDashboardPage } from '@/pages/admin/Dashboard'
 import { AdminNotificationsPage } from '@/pages/admin/Notifications'
 import { SuperAdminDashboardPage } from '@/pages/superadmin/Dashboard'
@@ -95,6 +102,13 @@ export default function App() {
         <Route element={<ProtectedRoute allowedRoles={['FACULTY']} />}>
           <Route path="/faculty" element={<FacultyLayout />}>
             <Route path="dashboard" element={<FacultyDashboardPage />} />
+            <Route path="students" element={<FacultyStudentsPage />} />
+            <Route path="internships" element={<FacultyInternshipsPage />} />
+            <Route path="attendance" element={<FacultyAttendancePage />} />
+            <Route path="progress" element={<FacultyProgressPage />} />
+            <Route path="documents" element={<FacultyDocumentsPage />} />
+            <Route path="evaluations" element={<FacultyEvaluationsPage />} />
+            <Route path="reports" element={<FacultyReportsPage />} />
             {placeholderRoutesFor('FACULTY')}
           </Route>
         </Route>

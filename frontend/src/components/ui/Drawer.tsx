@@ -9,7 +9,11 @@ interface DrawerProps {
   children: ReactNode
   footer?: ReactNode
   side?: 'left' | 'right'
+  /** Panel width: sm (24rem, default), md (28rem) or lg (36rem, for record detail with long text). Full-width on phones either way. */
+  width?: 'sm' | 'md' | 'lg'
 }
+
+const WIDTH_CLASS = { sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-xl' } as const
 
 /**
  * New shared primitive - slide-in panel anchored to a screen edge
@@ -18,7 +22,7 @@ interface DrawerProps {
  * edge-anchored and full-height rather than centered. Not wired into
  * any page yet.
  */
-export function Drawer({ open, onClose, title, children, footer, side = 'right' }: DrawerProps) {
+export function Drawer({ open, onClose, title, children, footer, side = 'right', width = 'sm' }: DrawerProps) {
   useEffect(() => {
     if (!open) return
     const onKey = (event: KeyboardEvent) => {
@@ -39,7 +43,7 @@ export function Drawer({ open, onClose, title, children, footer, side = 'right' 
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`card-elevated relative flex h-full w-full max-w-sm flex-col rounded-none border-y-0 ${side === 'right' ? 'border-r-0' : 'border-l-0'} ${sideClasses}`}
+        className={`card-elevated relative flex h-full w-full ${WIDTH_CLASS[width]} flex-col rounded-none border-y-0 ${side === 'right' ? 'border-r-0' : 'border-l-0'} ${sideClasses}`}
       >
         <div className="flex items-start justify-between gap-4 border-b border-hairline px-5 py-4">
           <h2 className="text-lg font-semibold text-ink">{title}</h2>
