@@ -25,11 +25,14 @@ export function ProgressBar({
   value,
   tone = 'primary',
   className = '',
+  label = 'Progress',
 }: {
   /** 0-100. Values outside that range are clamped. */
   value: number
   tone?: ProgressTone
   className?: string
+  /** Accessible name announced with the value, e.g. "Attendance". */
+  label?: string
 }) {
   const clamped = Math.max(0, Math.min(100, value))
   const [display, setDisplay] = useState(0)
@@ -43,6 +46,7 @@ export function ProgressBar({
     <div
       className={`h-2 overflow-hidden rounded-full bg-sidebar ${className}`}
       role="progressbar"
+      aria-label={label}
       aria-valuenow={clamped}
       aria-valuemin={0}
       aria-valuemax={100}

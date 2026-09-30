@@ -66,7 +66,7 @@ export function OpportunityList({ kind }: { kind: 'job' | 'internship' }) {
   return (
     <div>
       <FilterBar>
-        <SearchBar value={search} onChange={setSearch} placeholder={`Search ${noun}s by title or company`} className="w-full sm:w-72" />
+        <SearchBar value={search} onChange={setSearch} placeholder={`Search ${noun}s by title or company`} className="w-full sm:w-80" />
         <FilterSelect label="Status" value={status} onChange={setStatus} options={optionsFor(OPPORTUNITY_STATUS)} allLabel="All statuses" />
         <FilterSelect label="Company" value={companyId} onChange={setCompanyId} options={(companies.data ?? []).map((c) => ({ value: c.id, label: c.name }))} allLabel="All companies" />
         {hasFilters && <Button variant="secondary" onClick={clearFilters}>Clear filters</Button>}
@@ -119,7 +119,7 @@ export function OpportunityList({ kind }: { kind: 'job' | 'internship' }) {
                 </div>
                 <MetaBadge map={OPPORTUNITY_STATUS} value={row.status} />
               </div>
-              <p className="text-xs text-ink-faint">Deadline {formatDate(row.application_deadline)} · {row.openings ?? '—'} openings</p>
+              <p className="text-xs text-ink-faint">{row.application_deadline ? `Deadline ${formatDate(row.application_deadline)}` : 'No deadline'} · {row.openings ? `${row.openings} opening${row.openings === 1 ? '' : 's'}` : 'Openings not set'}</p>
             </div>
           )}
         />

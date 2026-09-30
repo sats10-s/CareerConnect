@@ -78,7 +78,7 @@ export function AdminPlacementDrivesPage() {
       />
 
       <FilterBar>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search by title or company" className="w-full sm:w-72" />
+        <SearchBar value={search} onChange={setSearch} placeholder="Search by title or company" className="w-full sm:w-80" />
         <FilterSelect label="Drive status" value={status} onChange={setStatus} options={optionsFor(DRIVE_STATUS)} allLabel="All statuses" />
         <FilterSelect label="Drive type" value={type} onChange={setType} options={Object.entries(DRIVE_TYPE_LABEL).map(([value, label]) => ({ value, label }))} allLabel="All types" />
         <FilterSelect label="Company" value={companyId} onChange={setCompanyId} options={(companies.data ?? []).map((c) => ({ value: c.id, label: c.name }))} allLabel="All companies" />
@@ -122,7 +122,7 @@ export function AdminPlacementDrivesPage() {
                 </div>
                 <MetaBadge map={DRIVE_STATUS} value={row.status} />
               </div>
-              <p className="text-xs text-ink-faint">{formatDateTime(row.scheduled_at)} · {row.opportunity_count} openings · {row.application_count} applications</p>
+              <p className="text-xs text-ink-faint">{row.scheduled_at ? formatDateTime(row.scheduled_at) : 'Date not set'} · {row.opportunity_count} opening{row.opportunity_count === 1 ? '' : 's'} · {row.application_count} application{row.application_count === 1 ? '' : 's'}</p>
             </div>
           )}
         />

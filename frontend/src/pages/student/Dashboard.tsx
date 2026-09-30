@@ -11,10 +11,13 @@ import { Briefcase } from 'lucide-react'
 import { UpcomingInterview } from '@/components/dashboard/UpcomingInterview'
 import { ProfileStrength } from '@/components/dashboard/ProfileStrength'
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
-import { Spinner } from '@/components/ui/Spinner'
+import { DashboardError, DashboardLoading } from '@/components/dashboard/DashboardStatus'
+import { parseApiError } from '@/utils/apiError'
 import { dashboardService } from '@/services/dashboardService'
 import { opportunityService } from '@/services/opportunityService'
 import { interviewService } from '@/services/interviewService'
+import { notificationService } from '@/services/notificationService'
+import type { NotificationItem } from '@/types/notification'
 import { useAppliedOpportunities } from '@/hooks/useAppliedOpportunities'
 import { useAuth } from '@/hooks/useAuth'
 import type { StudentDashboardData } from '@/types/dashboard'
@@ -48,12 +51,21 @@ export function StudentDashboardPage() {
   const navigate = useNavigate()
   const [data, setData] = useState<StudentDashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [attempt, setAttempt] = useState(0)
   const [opportunities, setOpportunities] = useState<OpportunityListItem[]>([])
   const { statusFor: appliedStatusFor } = useAppliedOpportunities()
   const [interviews, setInterviews] = useState<Interview[]>([])
+  const [activity, setActivity] = useState<NotificationItem[] | null>([])
 
   useEffect(() => {
-    dashboardService.student().then(setData).finally(() => setIsLoading(false))
+    setIsLoading(true)
+    setLoadError(null)
+    dashboardService
+      .student()
+      .then(setData)
+      .catch((err: unknown) => setLoadError(parseApiError(err, 'Unable to load your dashboard.').message))
+      .finally(() => setIsLoading(false))
 
     // Neither of these has its own dashboard field - both are real
     // endpoints (Jobs/Internships browsing, Student interviews) fetched
@@ -78,7 +90,12 @@ export function StudentDashboardPage() {
         ),
       )
       .catch(() => setInterviews([]))
-  }, [])
+
+    notificationService
+      .list('STUDENT', { per_page: 4 })
+      .then((result) => setActivity(result.items))
+      .catch(() => setActivity(null))
+  }, [attempt])
 
   const metrics = useMemo<Metric[]>(() => {
     if (!data) return []
@@ -90,17 +107,8 @@ export function StudentDashboardPage() {
     ]
   }, [data])
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <Spinner className="h-8 w-8" />
-      </div>
-    )
-  }
-
-  if (!data) {
-    return <p className="text-sm text-ink-faint">Unable to load dashboard data right now.</p>
-  }
+  if (isLoading && !data) return <DashboardLoading />
+  if (loadError || !data) return <DashboardError message={loadError} onRetry={() => setAttempt((n) => n + 1)} />
 
   return (
     <div className="animate-fade-in space-y-8">
@@ -146,7 +154,7 @@ export function StudentDashboardPage() {
         <div className="space-y-6">
           <ProfileStrength percentage={data.stats.profile_completion} />
           <UpcomingInterview interviews={interviews} />
-          <ActivityFeed notifications={data.notifications} />
+          <ActivityFeed notifications={activity} />
         </div>
       </div>
     </div>

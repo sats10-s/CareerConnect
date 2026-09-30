@@ -18,8 +18,9 @@
  * Contrast checked with a WCAG relative-luminance script, not assumed:
  *   - ink on base/surface: 17.9:1 / 16.5:1
  *   - muted (secondary text) on base/surface: 7.5:1 / 6.9:1
- *   - faint (tertiary/metadata text) on base: 4.0:1 - kept, as before,
- *     to the metadata tier only (timestamps/captions), never body copy
+ *   - faint (tertiary/metadata text) on base/surface/raised: 5.6:1 /
+ *     5.2:1 / 4.7:1 - raised from #6B746B (4.0 / 3.7:1) in the V1 QA pass,
+ *     because it carries 12px labels and captions and must meet AA
  *   - dark ink-on-mint (primary-filled buttons/badges): 9.6:1. White
  *     text on the mint fill only measures 2.0:1, which is why filled
  *     buttons use --color-primary-ink, not white, as their text color
@@ -28,12 +29,14 @@
  *   - warning/danger/info text on base: 10.9:1 / 6.4:1 / 10.3:1
  */
 :root {
+  /* Native controls (date pickers, select popups, scrollbars) render in their dark variants to match. */
+  color-scheme: dark;
   --color-base: #0A0D0B;
   --color-surface: #141813;
   --color-surface-raised: #1B211A;
   --color-ink: #F3F6F2;
   --color-muted: #9AA39B;
-  --color-faint: #6B746B;
+  --color-faint: #838C83;
   --color-hairline: #262C24;
   --color-primary: #3ECF8E;
   --color-primary-hov: #34B87C;
@@ -149,7 +152,9 @@
   }
 
   .btn-danger {
-    @apply btn text-white;
+    /* Near-black on the coral fill: white measured ~2.9:1 (fails AA), primary-ink passes. */
+    @apply btn;
+    color: var(--color-primary-ink);
     background-color: var(--color-danger-text);
   }
   .btn-danger:hover {

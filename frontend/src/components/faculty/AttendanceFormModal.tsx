@@ -132,7 +132,7 @@ function AttendanceFormInner({ open, mode, onClose, onSaved }: AttendanceFormMod
     >
       <form id="attendance-form" onSubmit={handleSubmit} className="space-y-4" noValidate>
         {formError && (
-          <div role="alert" className="rounded-lg border border-error/20 bg-error-bg px-3.5 py-2.5 text-sm text-error">
+          <div role="alert" className="rounded-lg border border-error-line bg-error-bg px-3.5 py-2.5 text-sm text-error">
             {formError}
           </div>
         )}

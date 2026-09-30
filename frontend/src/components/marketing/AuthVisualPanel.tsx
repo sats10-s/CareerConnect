@@ -16,12 +16,12 @@ export function AuthVisualPanel() {
       style={{ background: 'linear-gradient(160deg, var(--color-surface) 0%, var(--color-base) 100%)' }}
     >
       <div
-        className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 animate-pulse rounded-full bg-primary/10 blur-3xl"
+        className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 animate-pulse rounded-full bg-primary-tint blur-3xl"
         style={{ animationDuration: '6s' }}
         aria-hidden="true"
       />
       <div
-        className="pointer-events-none absolute -bottom-32 -left-16 h-80 w-80 animate-pulse rounded-full bg-primary/10 blur-3xl"
+        className="pointer-events-none absolute -bottom-32 -left-16 h-80 w-80 animate-pulse rounded-full bg-primary-tint blur-3xl"
         style={{ animationDuration: '7.5s', animationDelay: '1s' }}
         aria-hidden="true"
       />

@@ -20,12 +20,12 @@ export function FunnelChart({ funnel }: { funnel: FunnelData }) {
       {rows.map((status) => {
         const { applications, students } = funnel[status]
         return (
-          <li key={status} className="grid grid-cols-[7.5rem_1fr_auto] items-center gap-3 px-4 py-3 sm:grid-cols-[9rem_1fr_9rem]">
+          <li key={status} className="grid grid-cols-[7.5rem_1fr_auto] items-center gap-3 px-4 py-3 sm:grid-cols-[9rem_1fr_13rem]">
             <span className="text-sm text-ink">{labelForApplicationStatus(status)}</span>
             <span className="h-2 overflow-hidden rounded-full bg-sidebar" aria-hidden>
               <span className={`block h-full rounded-full ${BAR_TONE[status] ?? 'bg-primary'} transition-[width] duration-slow ease-out`} style={{ width: `${(applications / max) * 100}%` }} />
             </span>
-            <span className="text-right text-sm tabular-nums text-ink-soft">
+            <span className="whitespace-nowrap text-right text-sm tabular-nums text-ink-soft">
               <span className="font-medium text-ink">{applications}</span> <span className="hidden sm:inline">applications · {students} students</span>
               <span className="sm:hidden">/ {students}</span>
             </span>

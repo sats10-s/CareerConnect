@@ -36,6 +36,7 @@ export function ProfileHeader({ profile }: { profile: StudentProfileData }) {
             <div
               className="h-2 flex-1 overflow-hidden rounded-full bg-sidebar"
               role="progressbar"
+              aria-label="Profile completion"
               aria-valuenow={completion}
               aria-valuemin={0}
               aria-valuemax={100}

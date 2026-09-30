@@ -24,7 +24,7 @@ export function AdminFacultyPage() {
   const { data, isLoading, error, reload } = useApiResource(() => adminService.reports.faculty(), 'faculty-directory')
   const [search, setSearch] = useState('')
 
-  const all = data ?? []
+  const all = useMemo(() => data ?? [], [data])
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase()
     return q ? all.filter((r) => r.faculty_name.toLowerCase().includes(q) || (r.department ?? '').toLowerCase().includes(q)) : all
@@ -55,7 +55,7 @@ export function AdminFacultyPage() {
 
       <div>
         <FilterBar>
-          <SearchBar value={search} onChange={setSearch} placeholder="Search by name or department" className="w-full sm:w-72" />
+          <SearchBar value={search} onChange={setSearch} placeholder="Search by name or department" className="w-full sm:w-80" />
         </FilterBar>
         <ListState
           isLoading={isLoading}
@@ -81,7 +81,7 @@ export function AdminFacultyPage() {
                   <p className="text-sm font-medium text-ink">{r.faculty_name}</p>
                   <p className="text-xs text-ink-faint">{r.department ?? 'No department'}</p>
                 </div>
-                <p className="text-xs text-ink-soft">{r.assigned_students} students · {r.active_students} active · {r.pending_weekly_reports} reports · {r.pending_documents} documents waiting</p>
+                <p className="text-xs text-ink-soft">{r.assigned_students} student{r.assigned_students === 1 ? '' : 's'} · {r.active_students} active · {r.pending_weekly_reports} report{r.pending_weekly_reports === 1 ? '' : 's'} · {r.pending_documents} document{r.pending_documents === 1 ? '' : 's'} waiting</p>
                 <Link to={`/admin/internships?tab=assignments&faculty=${r.faculty_id}`} className="text-sm font-medium text-primary hover:underline">View assignments</Link>
               </div>
             )}

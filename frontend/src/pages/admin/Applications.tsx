@@ -62,9 +62,9 @@ export function AdminApplicationsPage() {
       <PageHeader title="Applications" description="Every student application across jobs and internships. Open one to review it, change its status or schedule an interview." />
 
       <FilterBar>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search by student, roll number or role" className="w-full sm:w-72" />
+        <SearchBar value={search} onChange={setSearch} placeholder="Search by student, roll number or role" className="w-full sm:w-80" />
         <FilterSelect label="Application status" value={status} onChange={setStatus} options={STATUSES.map((s) => ({ value: s, label: labelForApplicationStatus(s) }))} allLabel="All statuses" />
-        <FilterSelect label="Type" value={type} onChange={setType} options={[{ value: 'job', label: 'Jobs' }, { value: 'internship', label: 'Internships' }]} allLabel="Jobs and internships" />
+        <FilterSelect label="Type" value={type} onChange={setType} options={[{ value: 'job', label: 'Jobs' }, { value: 'internship', label: 'Internships' }]} allLabel="All types" />
         <FilterSelect label="Company" value={companyId} onChange={setCompanyId} options={(companies.data ?? []).map((c) => ({ value: c.id, label: c.name }))} allLabel="All companies" />
         {hasFilters && <Button variant="secondary" onClick={clearFilters}>Clear filters</Button>}
       </FilterBar>

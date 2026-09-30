@@ -54,7 +54,7 @@ export function AssignmentList() {
   return (
     <div>
       <FilterBar>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search by student, faculty or company" className="w-full sm:w-72" />
+        <SearchBar value={search} onChange={setSearch} placeholder="Search by student, faculty or company" className="w-full sm:w-80" />
         <FilterSelect label="Assignment status" value={status} onChange={setStatus} options={optionsFor(ASSIGNMENT_STATUS)} allLabel="All statuses" />
         <FilterSelect label="Coordinator" value={facultyId} onChange={setFacultyId} options={(faculty.data ?? []).map((f) => ({ value: f.faculty_id, label: f.faculty_name }))} allLabel="All faculty" />
         {hasFilters && <Button variant="secondary" onClick={clearFilters}>Clear filters</Button>}

@@ -1,4 +1,5 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+import { useDialogFocus } from '@/hooks/useDialogFocus'
 import { X } from 'lucide-react'
 import type { ReactNode } from 'react'
 
@@ -23,6 +24,9 @@ const WIDTH_CLASS = { sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-xl' } as const
  * any page yet.
  */
 export function Drawer({ open, onClose, title, children, footer, side = 'right', width = 'sm' }: DrawerProps) {
+  const panelRef = useRef<HTMLDivElement>(null)
+  useDialogFocus(open, panelRef)
+
   useEffect(() => {
     if (!open) return
     const onKey = (event: KeyboardEvent) => {
@@ -43,7 +47,9 @@ export function Drawer({ open, onClose, title, children, footer, side = 'right',
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`card-elevated relative flex h-full w-full ${WIDTH_CLASS[width]} flex-col rounded-none border-y-0 ${side === 'right' ? 'border-r-0' : 'border-l-0'} ${sideClasses}`}
+        ref={panelRef}
+        tabIndex={-1}
+        className={`card-elevated relative flex h-full w-full focus:outline-none ${WIDTH_CLASS[width]} flex-col rounded-none border-y-0 ${side === 'right' ? 'border-r-0' : 'border-l-0'} ${sideClasses}`}
       >
         <div className="flex items-start justify-between gap-4 border-b border-hairline px-5 py-4">
           <h2 className="text-lg font-semibold text-ink">{title}</h2>

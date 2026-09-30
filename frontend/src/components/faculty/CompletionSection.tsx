@@ -69,7 +69,7 @@ export function CompletionSection() {
   return (
     <div>
       <FilterBar>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search by student name or roll number" className="w-full sm:w-72" />
+        <SearchBar value={search} onChange={setSearch} placeholder="Search by student name or roll number" className="w-full sm:w-80" />
         <FilterSelect label="Record status" value={status} onChange={setStatus} options={optionsFor(COMPLETION_STATUS)} allLabel="All records" />
         <FilterSelect label="Outcome" value={outcome} onChange={setOutcome} options={optionsFor(COMPLETION_OUTCOME)} allLabel="Any outcome" />
         {hasFilters && <Button variant="secondary" onClick={clearFilters}>Clear filters</Button>}
@@ -179,7 +179,7 @@ function CreateCompletionModal({ eligible, onClose, onSaved }: { eligible: { id:
       }
     >
       <form id="completion-create" onSubmit={submit} className="space-y-4" noValidate>
-        {formError && <div role="alert" className="rounded-lg border border-error/20 bg-error-bg px-3.5 py-2.5 text-sm text-error">{formError}</div>}
+        {formError && <div role="alert" className="rounded-lg border border-error-line bg-error-bg px-3.5 py-2.5 text-sm text-error">{formError}</div>}
         <div>
           <label className="label" htmlFor="cmp-assignment">Internship</label>
           <Select id="cmp-assignment" value={assignmentId} onChange={(e) => setAssignmentId(e.target.value)} error={fieldErrors.assignment}>
@@ -286,7 +286,7 @@ function CompletionDetail({ data, onSaved }: { data: CompletionFull; onSaved: ()
       {isDraft ? (
         <form onSubmit={save} className="space-y-4" noValidate>
           <p className="text-sm text-ink-soft">This is a draft. Edit it freely, then finalize once you are sure - a finalized record can no longer be changed.</p>
-          {error && <div role="alert" className="rounded-lg border border-error/20 bg-error-bg px-3.5 py-2.5 text-sm text-error">{error}</div>}
+          {error && <div role="alert" className="rounded-lg border border-error-line bg-error-bg px-3.5 py-2.5 text-sm text-error">{error}</div>}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label" htmlFor="cd-date">Completion date</label>

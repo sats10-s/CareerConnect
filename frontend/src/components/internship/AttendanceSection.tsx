@@ -7,6 +7,8 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { LoadingSkeletonLines } from '@/components/ui/LoadingSkeleton'
 import { Button } from '@/components/ui/Button'
 import { attendanceService } from '@/services/attendanceService'
+import { formatDate, formatTimeOfDay } from '@/utils/dateFormat'
+import { ATTENDANCE_STATUS } from '@/utils/statusMeta'
 import type { AttendanceListItem, AttendanceSummary } from '@/types/attendance'
 
 function toneFor(status: string): 'success' | 'error' | 'warning' | 'neutral' {
@@ -83,15 +85,15 @@ export function AttendanceSection({ assignmentId }: { assignmentId: number }) {
           <div className="card divide-y divide-hairline">
             {records.slice(0, 10).map((record) => (
               <div key={record.id} className="flex items-center justify-between gap-4 px-5 py-3">
-                <span className="text-sm text-ink">{record.attendance_date}</span>
+                <span className="text-sm text-ink">{formatDate(record.attendance_date)}</span>
                 <div className="flex items-center gap-3">
                   {record.check_in_time && (
                     <span className="text-xs text-ink-faint">
-                      {record.check_in_time}
-                      {record.check_out_time ? ` – ${record.check_out_time}` : ''}
+                      {formatTimeOfDay(record.check_in_time)}
+                      {record.check_out_time ? ` – ${formatTimeOfDay(record.check_out_time)}` : ''}
                     </span>
                   )}
-                  <StatusBadge tone={toneFor(record.status)}>{record.status}</StatusBadge>
+                  <StatusBadge tone={toneFor(record.status)}>{ATTENDANCE_STATUS[record.status as keyof typeof ATTENDANCE_STATUS]?.label ?? record.status}</StatusBadge>
                 </div>
               </div>
             ))}

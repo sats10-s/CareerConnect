@@ -1,4 +1,5 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+import { useDialogFocus } from '@/hooks/useDialogFocus'
 import { X } from 'lucide-react'
 import type { ReactNode } from 'react'
 
@@ -18,6 +19,9 @@ interface ModalProps {
  * any page yet.
  */
 export function Modal({ open, onClose, title, children, footer }: ModalProps) {
+  const panelRef = useRef<HTMLDivElement>(null)
+  useDialogFocus(open, panelRef)
+
   useEffect(() => {
     if (!open) return
     const onKey = (event: KeyboardEvent) => {
@@ -36,7 +40,9 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="card-elevated relative w-full max-w-lg animate-fade-in p-6"
+        ref={panelRef}
+        tabIndex={-1}
+        className="card-elevated relative max-h-[calc(100dvh-2rem)] w-full max-w-lg animate-fade-in overflow-y-auto p-6 focus:outline-none"
       >
         <div className="mb-4 flex items-start justify-between gap-4">
           <h2 className="text-lg font-semibold text-ink">{title}</h2>

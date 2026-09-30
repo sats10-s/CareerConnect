@@ -90,15 +90,15 @@ export function LandingPage() {
         </section>
 
         <section className="border-t border-hairline bg-surface">
-          <div className="mx-auto grid max-w-6xl grid-cols-3 gap-6 px-4 py-14 sm:px-6">
+          <div className="mx-auto grid max-w-6xl grid-cols-3 gap-3 px-4 py-14 sm:gap-6 sm:px-6">
             {STATS.map((stat, index) => (
               <div
                 key={stat.label}
-                className="card card-hover animate-fade-in px-4 py-6 text-center sm:py-8"
+                className="card card-hover animate-fade-in min-w-0 px-2 py-6 text-center sm:px-4 sm:py-8"
                 style={{ animationDelay: `${index * HERO_STEP_MS}ms` }}
               >
-                <p className="font-display text-3xl font-semibold tabular-nums tracking-tight text-primary sm:text-4xl">{stat.value}</p>
-                <p className="mt-1.5 text-xs font-medium uppercase tracking-wide text-muted sm:text-sm">{stat.label}</p>
+                <p className="font-display text-2xl font-semibold tabular-nums tracking-tight text-primary sm:text-4xl">{stat.value}</p>
+                <p className="mt-1.5 text-[10px] font-medium uppercase text-muted sm:text-sm sm:tracking-wide">{stat.label}</p>
               </div>
             ))}
           </div>

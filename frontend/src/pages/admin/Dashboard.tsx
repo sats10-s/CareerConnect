@@ -1,56 +1,50 @@
-import { useEffect, useState } from 'react'
-import { Briefcase, Building2, CheckCircle2, FileText, GraduationCap, Users } from 'lucide-react'
+import { Briefcase, Building2, CheckCircle2, FileText, GraduationCap, History, Users } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { StatCard } from '@/components/ui/StatCard'
-import { Card, CardHeader } from '@/components/ui/Card'
-import { Spinner } from '@/components/ui/Spinner'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { SectionHeader } from '@/components/ui/SectionHeader'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { DashboardError, DashboardLoading } from '@/components/dashboard/DashboardStatus'
+import { useApiResource } from '@/hooks/useApiResource'
 import { dashboardService } from '@/services/dashboardService'
-import type { AdminDashboardData } from '@/types/dashboard'
+import { formatRelativeTime } from '@/utils/formatRelativeTime'
 
 export function AdminDashboardPage() {
-  const [data, setData] = useState<AdminDashboardData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const { data, isLoading, error, reload } = useApiResource(() => dashboardService.admin(), 'admin-dashboard')
 
-  useEffect(() => {
-    dashboardService.admin().then(setData).finally(() => setIsLoading(false))
-  }, [])
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <Spinner className="h-8 w-8" />
-      </div>
-    )
-  }
-
-  if (!data) return <p className="text-sm text-muted">Unable to load dashboard data right now.</p>
+  if (isLoading && !data) return <DashboardLoading stats={6} />
+  if (error || !data) return <DashboardError message={error} onRetry={reload} />
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-ink">Placement overview</h2>
-        <p className="mt-1 text-sm text-muted">College-wide placement activity at a glance.</p>
-      </div>
+    <div className="animate-fade-in space-y-8">
+      <PageHeader title="Placement overview" description="College-wide placement activity at a glance." />
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatCard label="Students" value={data.stats.total_students} icon={Users} tone="navy" />
         <StatCard label="Companies" value={data.stats.companies} icon={Building2} tone="blue" />
-        <StatCard label="Active Jobs" value={data.stats.active_jobs} icon={Briefcase} tone="amber" />
-        <StatCard label="Active Internships" value={data.stats.active_internships} icon={GraduationCap} tone="blue" />
+        <StatCard label="Active jobs" value={data.stats.active_jobs} icon={Briefcase} tone="amber" />
+        <StatCard label="Active internships" value={data.stats.active_internships} icon={GraduationCap} tone="blue" />
         <StatCard label="Applications" value={data.stats.applications} icon={FileText} tone="navy" />
         <StatCard label="Selected" value={data.stats.selected_students} icon={CheckCircle2} tone="green" />
       </div>
 
-      <Card>
-        <CardHeader title="Recent activity" subtitle="Latest applications and companies onboarded" />
-        <div className="divide-y divide-gray-100">
-          {data.recent_activity.length === 0 && (
-            <p className="px-5 py-8 text-center text-sm text-muted">No recent activity.</p>
+      <section>
+        <SectionHeader title="Recent activity" subtitle="Latest applications and companies onboarded" action={<Link to="/admin/reports" className="text-sm font-medium text-primary hover:underline">Open reports</Link>} />
+        <div className="mt-4">
+          {data.recent_activity.length === 0 ? (
+            <div className="card"><EmptyState icon={History} title="No recent activity" description="New applications and companies will show up here." /></div>
+          ) : (
+            <ul className="card divide-y divide-hairline">
+              {data.recent_activity.map((item, idx) => (
+                <li key={`${item.type}-${item.at}-${idx}`} className="flex items-start justify-between gap-4 px-5 py-3.5 text-sm">
+                  <span className="min-w-0 text-ink-soft">{item.description}</span>
+                  {item.at && <span className="shrink-0 text-xs text-ink-faint">{formatRelativeTime(item.at)}</span>}
+                </li>
+              ))}
+            </ul>
           )}
-          {data.recent_activity.map((item, idx) => (
-            <div key={idx} className="px-5 py-3.5 text-sm text-ink-soft">{item.description}</div>
-          ))}
         </div>
-      </Card>
+      </section>
     </div>
   )
 }

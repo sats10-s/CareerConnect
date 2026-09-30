@@ -82,7 +82,7 @@ export function OpportunityDrawer({ kind, id, onClose, onChanged }: OpportunityD
               <MetaBadge map={OPPORTUNITY_STATUS} value={data.status} />
             </div>
 
-            {actionError && <div role="alert" className="rounded-lg border border-error/20 bg-error-bg px-3.5 py-2.5 text-sm text-error">{actionError}</div>}
+            {actionError && <div role="alert" className="rounded-lg border border-error-line bg-error-bg px-3.5 py-2.5 text-sm text-error">{actionError}</div>}
 
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" onClick={() => setEditing(true)}>

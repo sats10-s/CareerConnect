@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AlertTriangle, Briefcase } from 'lucide-react'
-import { SectionHeader } from '@/components/ui/SectionHeader'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { LoadingSkeletonLines } from '@/components/ui/LoadingSkeleton'
@@ -10,6 +10,8 @@ import { WeeklyReportsSection } from '@/components/internship/WeeklyReportsSecti
 import { DocumentsSection } from '@/components/internship/DocumentsSection'
 import { CompletionSection } from '@/components/internship/CompletionSection'
 import { internshipAssignmentService } from '@/services/internshipAssignmentService'
+import { formatDate } from '@/utils/dateFormat'
+import { ASSIGNMENT_STATUS } from '@/utils/statusMeta'
 import type { InternshipAssignmentDetail, InternshipAssignmentStatus } from '@/types/internshipAssignment'
 
 const ASSIGNMENT_STATUS_TONE: Record<InternshipAssignmentStatus, 'neutral' | 'info' | 'success' | 'error'> = {
@@ -39,7 +41,7 @@ export function MyInternshipPage() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <SectionHeader title="My Internship" />
+        <PageHeader title="My Internship" description="Your internship, attendance, weekly reports and documents in one place." />
         <LoadingSkeletonLines count={5} className="h-16 w-full" />
       </div>
     )
@@ -48,7 +50,7 @@ export function MyInternshipPage() {
   if (loadError) {
     return (
       <div className="space-y-6">
-        <SectionHeader title="My Internship" />
+        <PageHeader title="My Internship" description="Your internship, attendance, weekly reports and documents in one place." />
         <div className="card">
           <EmptyState
             icon={AlertTriangle}
@@ -68,7 +70,7 @@ export function MyInternshipPage() {
   if (!assignment) {
     return (
       <div className="space-y-6">
-        <SectionHeader title="My Internship" />
+        <PageHeader title="My Internship" description="Your internship, attendance, weekly reports and documents in one place." />
         <div className="card">
           <EmptyState
             icon={Briefcase}
@@ -82,7 +84,7 @@ export function MyInternshipPage() {
 
   return (
     <div className="space-y-8">
-      <SectionHeader title="My Internship" />
+      <PageHeader title="My Internship" description="Your internship, attendance, weekly reports and documents in one place." />
 
       <div className="card p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -90,7 +92,7 @@ export function MyInternshipPage() {
             <p className="text-lg font-semibold text-ink">{assignment.internship?.title ?? 'Internship'}</p>
             <p className="text-sm text-ink-soft">{assignment.internship?.company?.name ?? 'Unknown company'}</p>
           </div>
-          <StatusBadge tone={ASSIGNMENT_STATUS_TONE[assignment.status]}>{assignment.status}</StatusBadge>
+          <StatusBadge tone={ASSIGNMENT_STATUS_TONE[assignment.status]}>{ASSIGNMENT_STATUS[assignment.status]?.label ?? assignment.status}</StatusBadge>
         </div>
 
         <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-4">
@@ -100,15 +102,15 @@ export function MyInternshipPage() {
           </div>
           <div>
             <dt className="text-xs text-ink-faint">Assigned</dt>
-            <dd className="text-ink">{assignment.assigned_at ? assignment.assigned_at.slice(0, 10) : '—'}</dd>
+            <dd className="text-ink">{formatDate(assignment.assigned_at)}</dd>
           </div>
           <div>
             <dt className="text-xs text-ink-faint">Started</dt>
-            <dd className="text-ink">{assignment.started_at ? assignment.started_at.slice(0, 10) : 'Not started yet'}</dd>
+            <dd className="text-ink">{assignment.started_at ? formatDate(assignment.started_at) : 'Not started yet'}</dd>
           </div>
           <div>
             <dt className="text-xs text-ink-faint">Ended</dt>
-            <dd className="text-ink">{assignment.ended_at ? assignment.ended_at.slice(0, 10) : '—'}</dd>
+            <dd className="text-ink">{formatDate(assignment.ended_at)}</dd>
           </div>
         </dl>
       </div>

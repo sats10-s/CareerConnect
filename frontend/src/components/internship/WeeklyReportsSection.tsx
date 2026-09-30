@@ -195,7 +195,7 @@ export function WeeklyReportsSection({ assignmentId }: { assignmentId: number })
         </div>
       ) : reports.length === 0 ? (
         <div className="card">
-          <EmptyState icon={FileText} title="No weekly reports yet" description="Submit your first weekly report once your internship starts." />
+          <EmptyState icon={FileText} title="No weekly reports yet" description="Submit a report for each week of your internship - your coordinator reviews it here." />
         </div>
       ) : (
         <div className="card divide-y divide-hairline">

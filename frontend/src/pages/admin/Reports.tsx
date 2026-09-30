@@ -25,7 +25,7 @@ import type { AttendanceReportRow, BreakdownRow, FacultyWorkloadRow, ReportFilte
 /** A select that always has a value (no "all" option) - for sort order, granularity and threshold. */
 function ChoiceSelect({ label, value, onChange, options }: { label: string; value: string | number; onChange: (value: string) => void; options: { value: string | number; label: string }[] }) {
   return (
-    <div className="w-44">
+    <div className="w-44 shrink-0">
       <Select aria-label={label} value={String(value)} onChange={(event) => onChange(event.target.value)}>
         {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </Select>
@@ -120,7 +120,7 @@ export function AdminReportsPage() {
       key: 'pct', header: 'Attendance', className: 'min-w-40',
       render: (r: AttendanceReportRow) => (
         <div className="flex items-center gap-3">
-          <ProgressBar value={r.attendance_percentage} tone="accent" className="w-24" />
+          <ProgressBar label="Attendance" value={r.attendance_percentage} tone="accent" className="w-24" />
           <span className="text-sm font-medium tabular-nums text-ink">{formatPercent(r.attendance_percentage)}</span>
         </div>
       ),
@@ -272,7 +272,7 @@ export function AdminReportsPage() {
                   <div><p className="text-sm font-medium text-ink">{r.student_name}</p><p className="text-xs text-ink-faint">{r.roll_number} · {r.faculty_name ?? 'Unassigned'}</p></div>
                   <span className="text-sm font-medium tabular-nums text-ink">{formatPercent(r.attendance_percentage)}</span>
                 </div>
-                <ProgressBar value={r.attendance_percentage} tone="accent" className="w-full" />
+                <ProgressBar label="Attendance" value={r.attendance_percentage} tone="accent" className="w-full" />
               </div>
             )}
           />
@@ -298,7 +298,7 @@ export function AdminReportsPage() {
             renderMobileCard={(r) => (
               <div className="space-y-1">
                 <p className="text-sm font-medium text-ink">{r.faculty_name}</p>
-                <p className="text-xs text-ink-faint">{r.assigned_students} students · {r.active_students} active · {r.pending_weekly_reports} reports · {r.pending_documents} documents waiting</p>
+                <p className="text-xs text-ink-faint">{r.assigned_students} student{r.assigned_students === 1 ? '' : 's'} · {r.active_students} active · {r.pending_weekly_reports} report{r.pending_weekly_reports === 1 ? '' : 's'} · {r.pending_documents} document{r.pending_documents === 1 ? '' : 's'} waiting</p>
               </div>
             )}
           />

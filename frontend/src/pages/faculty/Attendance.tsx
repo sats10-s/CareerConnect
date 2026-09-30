@@ -182,7 +182,7 @@ export function FacultyAttendancePage() {
               </div>
               <div className="flex items-center justify-between gap-3">
                 <p className="text-xs text-ink-faint">
-                  {row.status === 'PRESENT' ? `${formatTimeOfDay(row.check_in_time)} – ${formatTimeOfDay(row.check_out_time)}` : row.internship?.company?.name}
+                  {row.status === 'PRESENT' && row.check_in_time ? `${formatTimeOfDay(row.check_in_time)} – ${formatTimeOfDay(row.check_out_time)}` : row.internship?.company?.name}
                 </p>
                 <Button variant="secondary" onClick={() => setFormMode(row)}>
                   <Pencil className="h-4 w-4" />

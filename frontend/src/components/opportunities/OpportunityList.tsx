@@ -25,7 +25,7 @@ export function OpportunityList({
     <div className="space-y-3">
       {items.map((item, index) => (
         <OpportunityCard
-          key={item.id}
+          key={`${item.type}-${item.id}`}
           item={item}
           onSelect={onSelect}
           appliedStatus={appliedStatusFor?.(item)}

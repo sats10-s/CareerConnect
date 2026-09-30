@@ -2,7 +2,7 @@ import { ChevronRight } from 'lucide-react'
 import type { CSSProperties } from 'react'
 import { CompanyLogo } from './CompanyLogo'
 import { StatusBadge, toneForApplicationStatus, labelForApplicationStatus } from '@/components/ui/StatusBadge'
-import { formatCompensation, formatDeadline, formatWorkMode } from '@/utils/opportunityFormatting'
+import { formatCompensation, formatDeadline, formatEmploymentType, formatWorkMode } from '@/utils/opportunityFormatting'
 import type { OpportunityListItem } from '@/types/opportunity'
 import type { ApplicationStatus } from '@/types/application'
 
@@ -51,8 +51,12 @@ export function OpportunityCard({
         <p className="mt-0.5 truncate text-xs text-muted">{item.company?.name ?? 'Company not listed'}</p>
         <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted">
           <span>{item.location ?? 'Location unspecified'}</span>
-          <span aria-hidden="true">·</span>
-          <span>{formatWorkMode(item.work_mode)}</span>
+          {item.work_mode && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span>{formatWorkMode(item.work_mode)}</span>
+            </>
+          )}
           {item.type === 'internship' && item.duration_months && (
             <>
               <span aria-hidden="true">·</span>
@@ -62,8 +66,17 @@ export function OpportunityCard({
           {item.type === 'job' && item.employment_type && (
             <>
               <span aria-hidden="true">·</span>
-              <span>{item.employment_type}</span>
+              <span>{formatEmploymentType(item.employment_type)}</span>
             </>
+          )}
+        </div>
+        {/* Below sm the right-hand column is hidden, so pay and state move under the metadata instead of disappearing. */}
+        <div className="mt-2 flex flex-wrap items-center gap-2 sm:hidden">
+          <span className="text-xs font-semibold text-ink">{formatCompensation(item)}</span>
+          {appliedStatus ? (
+            <StatusBadge tone={toneForApplicationStatus(appliedStatus)}>{labelForApplicationStatus(appliedStatus)}</StatusBadge>
+          ) : (
+            <StatusBadge tone={deadlineTone}>{deadlineLabel}</StatusBadge>
           )}
         </div>
       </div>

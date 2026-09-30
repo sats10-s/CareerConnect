@@ -63,7 +63,7 @@ export function PpoSection() {
   return (
     <div>
       <FilterBar>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search by student name or roll number" className="w-full sm:w-72" />
+        <SearchBar value={search} onChange={setSearch} placeholder="Search by student name or roll number" className="w-full sm:w-80" />
         <FilterSelect label="Offer status" value={status} onChange={setStatus} options={optionsFor(PPO_STATUS)} allLabel="All offers" />
         {hasFilters && <Button variant="secondary" onClick={clearFilters}>Clear filters</Button>}
         <div className="w-full sm:ml-auto sm:w-auto">
@@ -224,7 +224,7 @@ function CreatePpoModal({ eligible, onClose, onSaved }: { eligible: { id: number
       }
     >
       <form id="ppo-create" onSubmit={submit} className="space-y-4" noValidate>
-        {formError && <div role="alert" className="rounded-lg border border-error/20 bg-error-bg px-3.5 py-2.5 text-sm text-error">{formError}</div>}
+        {formError && <div role="alert" className="rounded-lg border border-error-line bg-error-bg px-3.5 py-2.5 text-sm text-error">{formError}</div>}
         <div>
           <label className="label" htmlFor="ppo-assignment">Internship</label>
           <Select id="ppo-assignment" value={assignmentId} onChange={(e) => setAssignmentId(e.target.value)} error={errors.assignment}>
@@ -328,7 +328,7 @@ function PpoDetail({ data, onSaved }: { data: PpoFull; onSaved: () => void }) {
       {open ? (
         <form onSubmit={save} className="space-y-4" noValidate>
           <p className="text-sm text-ink-soft">Update the offer while it is still open. Once you record the student's decision, it can't be changed.</p>
-          {error && <div role="alert" className="rounded-lg border border-error/20 bg-error-bg px-3.5 py-2.5 text-sm text-error">{error}</div>}
+          {error && <div role="alert" className="rounded-lg border border-error-line bg-error-bg px-3.5 py-2.5 text-sm text-error">{error}</div>}
           <PpoFormFields idPrefix="ppd" offeredAt={offeredAt} setOfferedAt={setOfferedAt} designation={designation} setDesignation={setDesignation} pkg={pkg} setPkg={setPkg} joining={joining} setJoining={setJoining} remarks={remarks} setRemarks={setRemarks} errors={errors} />
           <div className="flex flex-wrap gap-2">
             <Button type="submit" isLoading={saving}>Save changes</Button>

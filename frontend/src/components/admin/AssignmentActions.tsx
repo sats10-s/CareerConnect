@@ -94,7 +94,7 @@ function ActionModal({ action, assignment, onClose, onDone }: { action: Action; 
       }
     >
       <form id="assignment-action" onSubmit={submit} className="space-y-4" noValidate>
-        {error && <div role="alert" className="rounded-lg border border-error/20 bg-error-bg px-3.5 py-2.5 text-sm text-error">{error}</div>}
+        {error && <div role="alert" className="rounded-lg border border-error-line bg-error-bg px-3.5 py-2.5 text-sm text-error">{error}</div>}
         <p className="text-sm text-ink-soft">{assignment.student?.name} · {assignment.internship?.title}</p>
 
         {action === 'reassign' && (

@@ -1,5 +1,5 @@
 import { SectionHeader } from '@/components/ui/SectionHeader'
-import { StatusBadge, toneForApplicationStatus } from '@/components/ui/StatusBadge'
+import { StatusBadge, labelForApplicationStatus, toneForApplicationStatus } from '@/components/ui/StatusBadge'
 import type { StudentDashboardData } from '@/types/dashboard'
 
 /**
@@ -24,7 +24,7 @@ export function ApplicationActivity({ applications }: { applications: StudentDas
                 {app.company} · {app.type === 'internship' ? 'Internship' : 'Job'}
               </p>
             </div>
-            <StatusBadge tone={toneForApplicationStatus(app.status)}>{app.status}</StatusBadge>
+            <StatusBadge tone={toneForApplicationStatus(app.status)}>{labelForApplicationStatus(app.status)}</StatusBadge>
           </div>
         ))}
       </div>

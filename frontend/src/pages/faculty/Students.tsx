@@ -81,7 +81,7 @@ export function FacultyStudentsPage() {
       <PageHeader title="My Students" description="Students the placement office has assigned to you as their internship coordinator." />
 
       <FilterBar>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search by name or roll number" className="w-full sm:w-72" />
+        <SearchBar value={search} onChange={setSearch} placeholder="Search by name or roll number" className="w-full sm:w-80" />
         <FilterSelect label="Internship status" value={status} onChange={setStatus} options={optionsFor(ASSIGNMENT_STATUS)} allLabel="All statuses" />
         <FilterSelect label="Year" value={year} onChange={setYear} options={YEAR_OPTIONS} allLabel="All years" />
         <FilterSelect

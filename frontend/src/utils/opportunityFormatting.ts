@@ -1,4 +1,5 @@
 import type { OpportunityListItem, WorkMode } from '@/types/opportunity'
+import { EMPLOYMENT_TYPE_LABEL } from '@/utils/statusMeta'
 
 /**
  * Shared formatting for anywhere an OpportunityListItem is rendered
@@ -45,7 +46,16 @@ export function formatCompensation(item: {
   stipend?: number | string | null
 }): string {
   if (item.type === 'internship') {
-    return item.stipend ? `₹${item.stipend}/mo` : 'Unpaid'
+    if (item.stipend === null || item.stipend === undefined || item.stipend === '') return 'Unpaid'
+    // `stipend` is free text on the backend (e.g. "₹25,000/month"); only a bare number gets the currency and period added.
+    const raw = String(item.stipend).trim()
+    return /^\d+(\.\d+)?$/.test(raw) ? `₹${Number(raw).toLocaleString('en-IN')}/mo` : raw
   }
   return item.salary_range ?? 'Not disclosed'
+}
+
+/** "full_time" -> "Full-time"; unknown values fall back to a readable version of the raw value. */
+export function formatEmploymentType(value: string | null | undefined): string {
+  if (!value) return '—'
+  return EMPLOYMENT_TYPE_LABEL[value] ?? value.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase())
 }

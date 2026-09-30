@@ -63,7 +63,7 @@ export function FacultyInternshipsPage() {
       <PageHeader title="Internships" description="The internship placements you coordinate, one row per student." />
 
       <FilterBar>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search by student or company" className="w-full sm:w-72" />
+        <SearchBar value={search} onChange={setSearch} placeholder="Search by student or company" className="w-full sm:w-80" />
         <FilterSelect label="Status" value={status} onChange={setStatus} options={optionsFor(ASSIGNMENT_STATUS)} allLabel="All statuses" />
         <FilterSelect label="Timing" value={when} onChange={setWhen} options={WHEN_OPTIONS} allLabel="Any timing" />
         {hasFilters && <Button variant="secondary" onClick={clearFilters}>Clear filters</Button>}

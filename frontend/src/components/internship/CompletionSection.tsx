@@ -3,6 +3,9 @@ import { SectionHeader } from '@/components/ui/SectionHeader'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { LoadingSkeletonLines } from '@/components/ui/LoadingSkeleton'
 import { internshipCompletionService } from '@/services/internshipCompletionService'
+import { formatDate } from '@/utils/dateFormat'
+import { formatInr } from '@/utils/numberFormat'
+import { PPO_STATUS } from '@/utils/statusMeta'
 import type { InternshipCompletionDetail, PpoRecordDetail } from '@/types/internshipCompletion'
 
 /**
@@ -52,7 +55,7 @@ export function CompletionSection({ assignmentStatus }: { assignmentStatus: stri
               {completion.outcome === 'COMPLETED' ? 'Completed' : 'Not completed'}
             </StatusBadge>
           </div>
-          {completion.completion_date && <p className="mt-1 text-xs text-ink-faint">{completion.completion_date}</p>}
+          {completion.completion_date && <p className="mt-1 text-xs text-ink-faint">{formatDate(completion.completion_date)}</p>}
           {completion.final_remarks && <p className="mt-3 text-sm text-ink-soft">{completion.final_remarks}</p>}
         </div>
       )}
@@ -61,12 +64,12 @@ export function CompletionSection({ assignmentStatus }: { assignmentStatus: stri
         <div className="card p-5">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-ink">Pre-Placement Offer</p>
-            <StatusBadge tone={ppo.status === 'ACCEPTED' ? 'gold' : ppo.status === 'DECLINED' ? 'neutral' : 'info'}>{ppo.status}</StatusBadge>
+            <StatusBadge tone={ppo.status === 'ACCEPTED' ? 'gold' : ppo.status === 'DECLINED' ? 'neutral' : 'info'}>{PPO_STATUS[ppo.status as keyof typeof PPO_STATUS]?.label ?? ppo.status}</StatusBadge>
           </div>
           <p className="mt-1 text-sm text-ink">
             {ppo.designation ?? 'Offer'} · {ppo.company?.name ?? 'Unknown company'}
           </p>
-          {ppo.package && <p className="text-xs text-ink-faint">Package: ₹{ppo.package}</p>}
+          {ppo.package && <p className="text-xs text-ink-faint">Package: {formatInr(ppo.package)}</p>}
           {ppo.remarks && <p className="mt-2 text-sm text-ink-soft">{ppo.remarks}</p>}
         </div>
       )}

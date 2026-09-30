@@ -53,6 +53,7 @@ export function ProgressRing({
         viewBox={`0 0 ${size} ${size}`}
         className="-rotate-90"
         role="progressbar"
+        aria-label="Progress"
         aria-valuenow={clamped}
         aria-valuemin={0}
         aria-valuemax={100}

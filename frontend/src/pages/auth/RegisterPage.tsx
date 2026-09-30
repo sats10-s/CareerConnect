@@ -4,6 +4,7 @@ import { isAxiosError } from 'axios'
 import { UserPlus } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/Button'
+import { Select } from '@/components/ui/Select'
 import { metaService } from '@/services/metaService'
 import { dashboardPathForRole } from '@/utils/roles'
 import type { ApiValidationError } from '@/types/auth'
@@ -90,7 +91,7 @@ export function RegisterPage() {
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-5">
         {formError && (
-          <div className="rounded-lg border border-error/20 bg-error-bg px-3.5 py-2.5 text-sm text-error">{formError}</div>
+          <div className="rounded-lg border border-error-line bg-error-bg px-3.5 py-2.5 text-sm text-error">{formError}</div>
         )}
 
         <div>
@@ -120,32 +121,32 @@ export function RegisterPage() {
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
           <div>
             <label className="label" htmlFor="department_id">Department</label>
-            <select id="department_id" required className="input" value={form.department_id} onChange={(e) => update('department_id', e.target.value)}>
+            <Select id="department_id" required value={form.department_id} onChange={(e) => update('department_id', e.target.value)}>
               <option value="">Select…</option>
               {departments.map((d) => (
                 <option key={d.id} value={d.id}>{d.code}</option>
               ))}
-            </select>
+            </Select>
             {fieldError('department_id') && <p className="mt-1 text-xs text-error">{fieldError('department_id')}</p>}
           </div>
           <div>
             <label className="label" htmlFor="batch_id">Batch</label>
-            <select id="batch_id" required className="input" value={form.batch_id} onChange={(e) => update('batch_id', e.target.value)}>
+            <Select id="batch_id" required value={form.batch_id} onChange={(e) => update('batch_id', e.target.value)}>
               <option value="">Select…</option>
               {batches.map((b) => (
                 <option key={b.id} value={b.id}>{b.name}</option>
               ))}
-            </select>
+            </Select>
             {fieldError('batch_id') && <p className="mt-1 text-xs text-error">{fieldError('batch_id')}</p>}
           </div>
           <div>
             <label className="label" htmlFor="year">Year</label>
-            <select id="year" required className="input" value={form.year} onChange={(e) => update('year', e.target.value)}>
+            <Select id="year" required value={form.year} onChange={(e) => update('year', e.target.value)}>
               <option value="">Select…</option>
               {YEAR_OPTIONS.map((y) => (
                 <option key={y} value={y}>Year {y}</option>
               ))}
-            </select>
+            </Select>
             {fieldError('year') && <p className="mt-1 text-xs text-error">{fieldError('year')}</p>}
           </div>
         </div>

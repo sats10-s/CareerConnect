@@ -38,7 +38,7 @@ export function HeroVisual() {
             <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-tint text-primary">
               <GraduationCap className="h-8 w-8" strokeWidth={1.75} />
             </span>
-            <p className="max-w-[16rem] text-sm font-medium leading-relaxed text-muted">
+            <p className="hidden max-w-[16rem] text-sm font-medium leading-relaxed text-muted sm:block">
               Your placement journey, tracked end to end - applications,
               interviews, offers.
             </p>
@@ -46,7 +46,7 @@ export function HeroVisual() {
               <Sparkles className="h-3.5 w-3.5" />
               Verified opportunities only
             </span>
-            <span className="mt-1 inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-faint">
+            <span className="mt-1 hidden items-center gap-1.5 font-mono sm:inline-flex text-[10px] uppercase tracking-wider text-faint">
               <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" aria-hidden="true" />
               Portal status: live
             </span>
@@ -82,6 +82,7 @@ export function HeroVisual() {
 
 const FLOATING_POSITION = [
   '-left-2 top-6 sm:-left-6 sm:top-10',
-  '-right-2 top-1/2 -translate-y-1/2 sm:-right-8',
+  // Hidden on phones: at that size it lands on top of the panel's badge.
+  'hidden sm:block -right-2 top-1/2 -translate-y-1/2 sm:-right-8',
   '-bottom-2 left-1/3 sm:-bottom-6',
 ]

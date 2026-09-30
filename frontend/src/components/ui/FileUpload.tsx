@@ -78,7 +78,7 @@ export function FileUpload({ accept, helperText, selectedFile, onFileSelected, d
             handleFiles(event.dataTransfer.files)
           }}
           className={`flex w-full flex-col items-center gap-2 rounded-lg border-2 border-dashed px-4 py-6 text-center transition-colors ${
-            isDragOver ? 'border-primary bg-primary/5' : 'border-hairline hover:border-primary/50'
+            isDragOver ? 'border-primary bg-primary-tint' : 'border-hairline hover:border-primary'
           } ${error ? 'border-error' : ''}`}
         >
           <UploadCloud className="h-5 w-5 text-ink-faint" aria-hidden="true" />

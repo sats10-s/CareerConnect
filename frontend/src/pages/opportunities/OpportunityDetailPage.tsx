@@ -11,7 +11,7 @@ import { LoadingSkeletonLines } from '@/components/ui/LoadingSkeleton'
 import { toast } from '@/components/ui/Toast'
 import { opportunityService } from '@/services/opportunityService'
 import { useAppliedOpportunities } from '@/hooks/useAppliedOpportunities'
-import { formatCompensation, formatDeadline, formatWorkMode } from '@/utils/opportunityFormatting'
+import { formatCompensation, formatDeadline, formatEmploymentType, formatWorkMode } from '@/utils/opportunityFormatting'
 import type { OpportunityDetail, OpportunityType } from '@/types/opportunity'
 
 function extractErrorMessage(error: unknown, fallback: string): string {
@@ -75,7 +75,6 @@ export function OpportunityDetailPage({ type }: OpportunityDetailPageProps) {
       .finally(() => setIsLoading(false))
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(load, [type, numericId])
 
   function handleApply() {
@@ -143,7 +142,7 @@ export function OpportunityDetailPage({ type }: OpportunityDetailPageProps) {
         </div>
       </div>
 
-      <div className="flex flex-col lg:grid lg:grid-cols-[1fr,340px] lg:items-start lg:gap-8">
+      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[1fr,340px] lg:items-start lg:gap-8">
         {/* Main content - Overview, Required Skills, Company. Source order 2 on mobile (per spec: after the CTA/key-info/eligibility aside), first column on desktop. */}
         <div className="order-2 space-y-6 lg:order-1">
           <section className="card p-5">
@@ -203,7 +202,7 @@ export function OpportunityDetailPage({ type }: OpportunityDetailPageProps) {
               {detail.type === 'job' && detail.employment_type && (
                 <div className="flex items-center justify-between gap-3">
                   <dt className="text-muted">Employment type</dt>
-                  <dd className="text-ink">{detail.employment_type}</dd>
+                  <dd className="text-ink">{formatEmploymentType(detail.employment_type)}</dd>
                 </div>
               )}
               <div className="flex items-center justify-between gap-3">

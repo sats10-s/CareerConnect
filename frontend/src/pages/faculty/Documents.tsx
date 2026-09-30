@@ -84,7 +84,7 @@ export function FacultyDocumentsPage() {
       <PageHeader title="Documents" description="Offer letters, reports and certificates your students upload. Open one to download and review it." />
 
       <FilterBar>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search by student name or roll number" className="w-full sm:w-72" />
+        <SearchBar value={search} onChange={setSearch} placeholder="Search by student name or roll number" className="w-full sm:w-80" />
         <FilterSelect
           label="Student"
           value={assignmentParam}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Spinner } from '@/components/ui/Spinner'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { ProfileHeader } from '@/components/profile/ProfileHeader'
 import { PersonalSection } from '@/components/profile/PersonalSection'
 import { AcademicSection } from '@/components/profile/AcademicSection'
@@ -59,10 +60,7 @@ export function StudentProfilePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-ink">Your profile</h2>
-        <p className="mt-1 text-sm text-ink-faint">Keep this up to date so recruiters see your full picture.</p>
-      </div>
+      <PageHeader title="Your profile" description="Keep this up to date so recruiters see your full picture." />
 
       <ProfileHeader profile={profile} />
       <PersonalSection profile={profile} onProfileChange={setProfile} />

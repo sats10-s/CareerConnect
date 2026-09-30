@@ -4,7 +4,6 @@ import { Bell, ChevronDown, LogOut, Menu } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { Avatar } from '@/components/ui/Avatar'
 import { IconButton } from '@/components/ui/IconButton'
-import { SearchBar } from '@/components/ui/SearchBar'
 import { LoadingSkeletonLines } from '@/components/ui/LoadingSkeleton'
 import { notificationService } from '@/services/notificationService'
 import { formatRelativeTime } from '@/utils/formatRelativeTime'
@@ -27,11 +26,8 @@ function notificationsPathForRole(role: Role): string | null {
 export function Topbar({ title, onMenuClick }: { title: string; onMenuClick?: () => void }) {
   const { user, logout } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
-  // Visual only for this phase - no cross-entity global-search endpoint
-  // exists on the backend yet, so this deliberately doesn't call an API
-  // (per "do not invent backend endpoints"). Wire it up once a real
-  // search endpoint exists.
-  const [globalSearch, setGlobalSearch] = useState('')
+  // No global search box: the backend has no cross-entity search endpoint, and an input that silently
+  // ignores what you type is worse than none. Each list page has its own server-side search.
 
   const [bellOpen, setBellOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
@@ -43,7 +39,7 @@ export function Topbar({ title, onMenuClick }: { title: string; onMenuClick?: ()
 
   useEffect(() => {
     if (!role) return
-    notificationService.unreadCount(role).then(setUnreadCount)
+    notificationService.unreadCount(role).then(setUnreadCount).catch(() => setUnreadCount(0))
   }, [role])
 
   useEffect(() => {
@@ -52,6 +48,7 @@ export function Topbar({ title, onMenuClick }: { title: string; onMenuClick?: ()
     notificationService
       .list(role, { per_page: 5 })
       .then((data) => setRecentItems(data.items))
+      .catch(() => setRecentItems([]))
       .finally(() => setIsLoadingRecent(false))
   }, [bellOpen, role])
 
@@ -66,18 +63,24 @@ export function Topbar({ title, onMenuClick }: { title: string; onMenuClick?: ()
 
   function handleItemClick(item: NotificationItem) {
     if (!role || item.read_at) return
-    notificationService.markRead(role, item.id).then((updated) => {
-      setRecentItems((prev) => prev.map((n) => (n.id === updated.id ? updated : n)))
-      setUnreadCount((count) => Math.max(0, count - 1))
-    })
+    notificationService
+      .markRead(role, item.id)
+      .then((updated) => {
+        setRecentItems((prev) => prev.map((n) => (n.id === updated.id ? updated : n)))
+        setUnreadCount((count) => Math.max(0, count - 1))
+      })
+      .catch(() => undefined)
   }
 
   function handleMarkAllRead() {
     if (!role) return
-    notificationService.markAllRead(role).then(() => {
-      setUnreadCount(0)
-      setRecentItems((prev) => prev.map((n) => ({ ...n, read_at: n.read_at ?? new Date().toISOString() })))
-    })
+    notificationService
+      .markAllRead(role)
+      .then(() => {
+        setUnreadCount(0)
+        setRecentItems((prev) => prev.map((n) => ({ ...n, read_at: n.read_at ?? new Date().toISOString() })))
+      })
+      .catch(() => undefined)
   }
 
   const notificationsPath = role ? notificationsPathForRole(role) : null
@@ -89,14 +92,6 @@ export function Topbar({ title, onMenuClick }: { title: string; onMenuClick?: ()
         <h1 className="truncate font-display text-base font-semibold text-ink sm:text-lg">{title}</h1>
       </div>
 
-      <SearchBar
-        value={globalSearch}
-        onChange={setGlobalSearch}
-        placeholder="Search jobs, internships, students..."
-        debounceMs={0}
-        className="hidden max-w-sm flex-1 md:block"
-      />
-
       <div className="flex shrink-0 items-center gap-2 sm:gap-3">
         <div ref={bellRef} className="relative">
           <IconButton
@@ -107,7 +102,7 @@ export function Topbar({ title, onMenuClick }: { title: string; onMenuClick?: ()
           />
 
           {bellOpen && (
-            <div className="absolute right-0 top-full z-20 mt-2 w-80 rounded-lg border border-border bg-surface py-1 shadow-lg">
+            <div className="absolute right-0 top-full z-20 mt-2 w-[min(20rem,calc(100vw-2rem))] rounded-lg border border-border bg-surface py-1 shadow-lg">
               <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
                 <p className="text-sm font-semibold text-ink">Notifications</p>
                 {unreadCount > 0 && (

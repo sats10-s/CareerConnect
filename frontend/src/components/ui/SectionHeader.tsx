@@ -18,7 +18,7 @@ export function SectionHeader({
   action?: ReactNode
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-border pb-3">
+    <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b border-border pb-3">
       <div>
         <h3 className="text-sm font-semibold text-ink">{title}</h3>
         {subtitle && <p className="mt-0.5 text-xs text-ink-faint">{subtitle}</p>}

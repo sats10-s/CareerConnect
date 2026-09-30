@@ -16,7 +16,7 @@ interface PlaceholderPageProps {
 export function PlaceholderPage({ title, icon: Icon = Construction, note }: PlaceholderPageProps) {
   return (
     <div className="card flex min-h-[50vh] flex-col items-center justify-center border-dashed p-8 text-center sm:p-12">
-      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-tint text-primary">
         <Icon className="h-6 w-6" />
       </span>
       <p className="badge-eyebrow mt-5">Not available yet</p>

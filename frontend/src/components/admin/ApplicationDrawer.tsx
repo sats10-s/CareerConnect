@@ -196,7 +196,7 @@ function StatusChangeModal({ applicationId, who, target, onClose, onDone }: { ap
       }
     >
       <form id="status-form" onSubmit={submit} noValidate className="space-y-4">
-        {error && <div role="alert" className="rounded-lg border border-error/20 bg-error-bg px-3.5 py-2.5 text-sm text-error">{error}</div>}
+        {error && <div role="alert" className="rounded-lg border border-error-line bg-error-bg px-3.5 py-2.5 text-sm text-error">{error}</div>}
         <p className="text-sm text-ink-soft">{who}</p>
         {(target === 'SELECTED' || isReject) && <p className="text-sm text-ink-soft">{isReject ? 'Rejection is final.' : 'Selection is final.'} The student is notified.</p>}
         <div>

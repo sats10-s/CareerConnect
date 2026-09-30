@@ -66,7 +66,7 @@ export function ExcelExportTab() {
           <div className="flex flex-wrap items-center gap-3">
             <div className="w-full sm:w-44">
               <Select aria-label="Job or internship" value={applicableType} onChange={(e) => setApplicableType(e.target.value)}>
-                <option value="">Jobs and internships</option>
+                <option value="">Jobs &amp; internships</option>
                 <option value="job">Jobs only</option>
                 <option value="internship">Internships only</option>
               </Select>

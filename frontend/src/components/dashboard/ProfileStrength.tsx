@@ -14,7 +14,7 @@ export function ProfileStrength({ percentage }: { percentage: number }) {
           <span className="text-3xl font-semibold tabular-nums text-ink">{clamped}%</span>
           {isComplete && <span className="text-xs font-medium text-accent-str">Complete</span>}
         </div>
-        <ProgressBar value={clamped} tone={isComplete ? 'accent' : 'primary'} className="mt-3" />
+        <ProgressBar value={clamped} tone={isComplete ? 'accent' : 'primary'} className="mt-3" label="Profile strength" />
       </div>
     </Card>
   )

@@ -81,7 +81,7 @@ export function FacultyReportsPage() {
           <span className="text-sm text-ink-faint">Nothing marked yet</span>
         ) : (
           <div className="flex items-center gap-3">
-            <ProgressBar value={r.summary.attendance_percentage} tone={r.summary.attendance_percentage >= 75 ? 'success' : 'accent'} className="w-24" />
+            <ProgressBar label="Attendance" value={r.summary.attendance_percentage} tone={r.summary.attendance_percentage >= 75 ? 'success' : 'accent'} className="w-24" />
             <span className="text-sm font-medium tabular-nums text-ink">{Math.round(r.summary.attendance_percentage)}%</span>
           </div>
         ),
@@ -155,7 +155,7 @@ export function FacultyReportsPage() {
                     <p className="text-sm text-ink-faint">Nothing marked yet</p>
                   ) : (
                     <div className="flex items-center gap-3">
-                      <ProgressBar value={r.summary.attendance_percentage} tone={r.summary.attendance_percentage >= 75 ? 'success' : 'accent'} className="flex-1" />
+                      <ProgressBar label="Attendance" value={r.summary.attendance_percentage} tone={r.summary.attendance_percentage >= 75 ? 'success' : 'accent'} className="flex-1" />
                       <span className="text-sm font-medium tabular-nums text-ink">{Math.round(r.summary.attendance_percentage)}%</span>
                     </div>
                   )}

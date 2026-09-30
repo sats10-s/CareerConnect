@@ -16,6 +16,12 @@ import { formatDateTime } from '@/utils/dateFormat'
 import { EXCEL_BATCH_STATUS, EXCEL_OUTCOME } from '@/utils/statusMeta'
 import type { ExcelConfirmResult, ExcelPreviewRow, ExcelRollbackResult } from '@/types/admin'
 
+/** Enum values in the change log ("UNDER_REVIEW") read as words ("Under review"); anything else is shown as-is. */
+function readable(value: string | null): string {
+  if (value === null || value === '') return '—'
+  return /^[A-Z][A-Z_]+$/.test(value) ? value.charAt(0) + value.slice(1).toLowerCase().replace(/_/g, ' ') : value
+}
+
 /** The few raw cells that identify a row, whatever the import type (the columns differ per type). */
 function rowSummary(raw: Record<string, string | null>): string {
   return Object.values(raw).filter((v): v is string => Boolean(v && v.trim())).slice(0, 4).join(' · ')
@@ -36,7 +42,13 @@ interface ExcelBatchDrawerProps {
  */
 export function ExcelBatchDrawer({ batchId, onClose, onChanged }: ExcelBatchDrawerProps) {
   const [page, setPage] = useState(1)
-  const { data, isLoading, error, reload } = useApiResource(() => adminService.excel.preview(batchId as number, { page, per_page: 25 }), batchId === null ? null : `${batchId}:${page}`)
+  // The preview endpoint returns the batch without its uploader/confirmer relations, so the batch itself comes
+  // from GET /admin/excel/imports/{id} (which loads them) alongside the preview rows.
+  const { data, isLoading, error, reload } = useApiResource(
+    () =>
+      Promise.all([adminService.excel.preview(batchId as number, { page, per_page: 25 }), adminService.excel.show(batchId as number)]).then(([preview, batch]) => ({ ...preview, batch })),
+    batchId === null ? null : `${batchId}:${page}`,
+  )
   const [selected, setSelected] = useState<Set<number> | null>(null)
   const [dialog, setDialog] = useState<'confirm' | 'rollback' | null>(null)
   const [busy, setBusy] = useState(false)
@@ -106,16 +118,16 @@ export function ExcelBatchDrawer({ batchId, onClose, onChanged }: ExcelBatchDraw
               <MetaBadge map={EXCEL_BATCH_STATUS} value={batch.status} />
             </div>
 
-            {actionError && <div role="alert" className="rounded-lg border border-error/20 bg-error-bg px-3.5 py-2.5 text-sm text-error">{actionError}</div>}
+            {actionError && <div role="alert" className="rounded-lg border border-error-line bg-error-bg px-3.5 py-2.5 text-sm text-error">{actionError}</div>}
             {batch.status === 'FAILED' && batch.error_message && (
-              <div role="alert" className="rounded-xl border border-error/20 bg-error-bg p-4">
+              <div role="alert" className="rounded-xl border border-error-line bg-error-bg p-4">
                 <h4 className="mb-1 text-sm font-semibold text-error">This file couldn't be imported</h4>
                 <p className="text-sm text-ink">{batch.error_message}</p>
               </div>
             )}
 
             {c && (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+              <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
                 {[['Rows', c.total_rows], ['Matched', c.matched_rows], ['Valid', c.valid_rows], ['Warnings', c.warning_rows], ['Errors', c.error_rows]].map(([label, value]) => (
                   <div key={label as string} className="rounded-xl border border-hairline p-3 text-center">
                     <p className="font-display text-xl font-semibold tabular-nums text-ink">{value}</p>
@@ -245,7 +257,7 @@ function PreviewRow({ row, selectable, checked, onToggle }: { row: ExcelPreviewR
         </div>
         {row.messages.map((m) => <p key={m} className="mt-1 text-xs text-ink-soft">{m}</p>)}
         {row.changes.map((ch, i) => (
-          <p key={i} className="mt-1 text-xs text-ink-soft">{ch.field}: <span className="text-ink-faint">{ch.old_value ?? '—'}</span> → <span className="text-ink">{ch.new_value ?? '—'}</span></p>
+          <p key={i} className="mt-1 text-xs text-ink-soft">{ch.field}: <span className="text-ink-faint">{readable(ch.old_value)}</span> → <span className="text-ink">{readable(ch.new_value)}</span></p>
         ))}
         {row.apply_error && <p className="mt-1 text-xs text-error">{row.apply_error}</p>}
       </td>

@@ -83,7 +83,7 @@ export function DriveFormModal({ existing, onClose, onSaved }: { existing?: Driv
       }
     >
       <form id="drive-form" onSubmit={submit} noValidate className="max-h-[65vh] space-y-4 overflow-y-auto pr-1">
-        {error && <div role="alert" className="rounded-lg border border-error/20 bg-error-bg px-3.5 py-2.5 text-sm text-error">{error}</div>}
+        {error && <div role="alert" className="rounded-lg border border-error-line bg-error-bg px-3.5 py-2.5 text-sm text-error">{error}</div>}
         <div>
           <label className="label" htmlFor="dr-company">Company</label>
           <Select id="dr-company" value={companyId} disabled={companyLocked} onChange={(e) => setCompanyId(e.target.value)} error={errors.company_id}>

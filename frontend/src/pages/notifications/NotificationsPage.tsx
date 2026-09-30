@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Bell, CheckCheck } from 'lucide-react'
-import { SectionHeader } from '@/components/ui/SectionHeader'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Tabs } from '@/components/ui/Tabs'
 import { Pagination } from '@/components/ui/Pagination'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { ErrorState } from '@/components/ui/ErrorState'
+import { toast } from '@/components/ui/Toast'
+import { parseApiError } from '@/utils/apiError'
 import { LoadingSkeletonLines } from '@/components/ui/LoadingSkeleton'
 import { useAuth } from '@/hooks/useAuth'
 import { notificationService } from '@/services/notificationService'
@@ -29,18 +32,21 @@ export function NotificationsPage() {
   const [items, setItems] = useState<NotificationItem[]>([])
   const [meta, setMeta] = useState<NotificationListMeta | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [markingId, setMarkingId] = useState<number | null>(null)
   const [isMarkingAll, setIsMarkingAll] = useState(false)
 
   const load = useCallback(() => {
     if (!role) return
     setIsLoading(true)
+    setLoadError(null)
     notificationService
       .list(role, { status: filter === 'unread' ? 'unread' : undefined, page, per_page: 15 })
       .then((data) => {
         setItems(data.items)
         setMeta(data.meta)
       })
+      .catch((err: unknown) => setLoadError(parseApiError(err, 'Unable to load your notifications.').message))
       .finally(() => setIsLoading(false))
   }, [role, filter, page])
 
@@ -61,6 +67,7 @@ export function NotificationsPage() {
       .then((updated) => {
         setItems((prev) => prev.map((n) => (n.id === updated.id ? updated : n)))
       })
+      .catch((err: unknown) => toast('error', parseApiError(err, 'Unable to mark that notification as read.').message))
       .finally(() => setMarkingId(null))
   }
 
@@ -70,6 +77,7 @@ export function NotificationsPage() {
     notificationService
       .markAllRead(role)
       .then(() => load())
+      .catch((err: unknown) => toast('error', parseApiError(err, 'Unable to mark notifications as read.').message))
       .finally(() => setIsMarkingAll(false))
   }
 
@@ -77,9 +85,9 @@ export function NotificationsPage() {
 
   return (
     <div className="space-y-6">
-      <SectionHeader
+      <PageHeader
         title="Notifications"
-        subtitle="Everything that's happened on your account."
+        description="Everything that's happened on your account."
         action={
           <Button variant="secondary" onClick={handleMarkAllRead} disabled={isMarkingAll || !hasUnread}>
             <CheckCheck className="h-4 w-4" />
@@ -98,7 +106,9 @@ export function NotificationsPage() {
       />
 
       <div className="card">
-        {isLoading ? (
+        {loadError ? (
+          <div role="alert"><ErrorState description={loadError} onRetry={load} /></div>
+        ) : isLoading ? (
           <div className="p-5">
             <LoadingSkeletonLines count={5} className="h-14 w-full" />
           </div>
@@ -109,7 +119,9 @@ export function NotificationsPage() {
             description={
               filter === 'unread'
                 ? 'Nothing unread right now.'
-                : "You'll see updates about your applications, interviews, and more here."
+                : role === 'STUDENT'
+                  ? "You'll see updates about your applications, interviews, and more here."
+                  : 'Updates meant for you - such as announcements and activity that needs your attention - will show up here.'
             }
           />
         ) : (

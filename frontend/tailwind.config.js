@@ -4,6 +4,11 @@ export default {
   darkMode: 'media',
   theme: {
     extend: {
+      // A bare `border` / `divide-y` (no color class) must follow the theme's hairline, not Tailwind's
+      // default gray-200, which renders as bright white lines on the dark surfaces.
+      borderColor: {
+        DEFAULT: 'var(--color-hairline)',
+      },
       colors: {
         // Institutional Ink design-system tokens - each backed by the
         // --color-* CSS custom properties defined in src/index.css. Use
@@ -41,7 +46,9 @@ export default {
         },
         success: { DEFAULT: 'var(--color-success-text)', bg: 'var(--color-success-bg)' },
         warning: { DEFAULT: 'var(--color-warn-text)', bg: 'var(--color-warn-bg)' },
-        error: { DEFAULT: 'var(--color-danger-text)', bg: 'var(--color-danger-bg)' },
+        // `line` is the subtle border for error banners. Opacity modifiers (border-error/20) do nothing on
+        // var()-based colors, so the mix is spelled out here instead.
+        error: { DEFAULT: 'var(--color-danger-text)', bg: 'var(--color-danger-bg)', line: 'color-mix(in srgb, var(--color-danger-text) 30%, transparent)' },
         info: { DEFAULT: 'var(--color-info-text)', bg: 'var(--color-info-bg)' },
 
         // Legacy alias names, kept so every existing component/page

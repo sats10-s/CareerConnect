@@ -17,7 +17,11 @@ export function DashboardLayout({ role }: { role: Role }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const location = useLocation()
   const items = NAV_ITEMS[role]
-  const activeLabel = items.find((item) => item.path === location.pathname)?.label ?? items[0]?.label ?? 'Dashboard'
+  // Longest nav path that prefixes the URL, so detail pages (/student/jobs/12) keep their section's title instead of falling back to "Dashboard".
+  const activeLabel =
+    items
+      .filter((item) => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`))
+      .sort((a, b) => b.path.length - a.path.length)[0]?.label ?? items[0]?.label ?? 'Dashboard'
   const mobilePrimaryPaths = MOBILE_PRIMARY_PATHS[role]
   const mobilePrimaryItems = mobilePrimaryPaths
     ? mobilePrimaryPaths.map((path) => items.find((item) => item.path === path)).filter((item): item is NonNullable<typeof item> => Boolean(item))

@@ -85,7 +85,7 @@ export function DriveDrawer({ id, onClose, onChanged }: { id: number | null; onC
               <MetaBadge map={DRIVE_STATUS} value={data.status} />
             </div>
 
-            {actionError && <div role="alert" className="rounded-lg border border-error/20 bg-error-bg px-3.5 py-2.5 text-sm text-error">{actionError}</div>}
+            {actionError && <div role="alert" className="rounded-lg border border-error-line bg-error-bg px-3.5 py-2.5 text-sm text-error">{actionError}</div>}
 
             <div className="flex flex-wrap gap-2">
               {status === 'DRAFT' && <Button onClick={() => setDialog('publish')}>Publish</Button>}
@@ -228,7 +228,7 @@ function CancelModal({ driveId, onClose, onDone }: { driveId: number; onClose: (
       }
     >
       <form id="drive-cancel" onSubmit={submit} noValidate className="space-y-4">
-        {error && <div role="alert" className="rounded-lg border border-error/20 bg-error-bg px-3.5 py-2.5 text-sm text-error">{error}</div>}
+        {error && <div role="alert" className="rounded-lg border border-error-line bg-error-bg px-3.5 py-2.5 text-sm text-error">{error}</div>}
         <p className="text-sm text-ink-soft">A cancelled drive is final.</p>
         <div>
           <label className="label" htmlFor="dc-reason">Reason</label>
@@ -288,7 +288,7 @@ function AttachModal({ drive, onClose, onDone }: { drive: DriveDetail; onClose: 
       }
     >
       <form id="drive-attach" onSubmit={submit} noValidate className="space-y-4">
-        {error && <div role="alert" className="rounded-lg border border-error/20 bg-error-bg px-3.5 py-2.5 text-sm text-error">{error}</div>}
+        {error && <div role="alert" className="rounded-lg border border-error-line bg-error-bg px-3.5 py-2.5 text-sm text-error">{error}</div>}
         <div>
           <label className="label" htmlFor="da-choice">Job or internship at {drive.company?.name}</label>
           <Select id="da-choice" value={choice} onChange={(e) => setChoice(e.target.value)}>
