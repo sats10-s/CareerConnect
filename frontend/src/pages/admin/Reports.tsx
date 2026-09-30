@@ -17,6 +17,7 @@ import { TrendChart } from '@/components/admin/reports/TrendChart'
 import { useApiResource } from '@/hooks/useApiResource'
 import { useCompanyOptions } from '@/hooks/useAdminOptions'
 import { adminService } from '@/services/adminService'
+import { metaService } from '@/services/metaService'
 import { formatPercent } from '@/utils/numberFormat'
 import { ASSIGNMENT_STATUS } from '@/utils/statusMeta'
 import type { AttendanceReportRow, BreakdownRow, FacultyWorkloadRow, ReportFilters } from '@/types/admin'
@@ -55,10 +56,9 @@ const THRESHOLDS = [50, 60, 70, 75, 80, 90].map((n) => ({ value: n, label: `Belo
  * /admin/reports/* (dashboard, placements breakdown, trends, attendance,
  * faculty). The numbers are all computed by the backend - nothing is
  * derived or filtered here. Each section loads independently, so one
- * failing report doesn't hide the rest. Department / batch / company
- * options come from the placement breakdown rows (there is no list
- * endpoint for them), so a department with no applications yet can't be
- * chosen as a filter - that gap is on the API.
+ * failing report doesn't hide the rest. Department and batch options come
+ * from /meta; company options from useCompanyOptions (there is no
+ * companies list endpoint - see that hook).
  */
 export function AdminReportsPage() {
   const [department, setDepartment] = useState('')
@@ -85,9 +85,8 @@ export function AdminReportsPage() {
   const hasFilters = Boolean(department || batch || company || from || to)
 
   const companies = useCompanyOptions()
-  const departments = useApiResource(() => adminService.reports.placements({ dimension: 'department' }).then((d) => d.breakdown.rows), 'dept-options')
-  const batches = useApiResource(() => adminService.reports.placements({ dimension: 'batch' }).then((d) => d.breakdown.rows), 'batch-options')
-  const toOptions = (rows: BreakdownRow[] | null) => (rows ?? []).filter((r) => r.id !== null).map((r) => ({ value: r.id as number, label: r.label }))
+  const departments = useApiResource(() => metaService.departments(), 'dept-options')
+  const batches = useApiResource(() => metaService.batches(), 'batch-options')
 
   const dashboard = useApiResource(() => adminService.reports.dashboard(filters), `dash:${fkey}`)
   const breakdown = useApiResource(() => adminService.reports.placements({ ...filters, dimension, sort, direction: 'desc' }), `bd:${dimension}:${sort}:${fkey}`)
@@ -152,8 +151,8 @@ export function AdminReportsPage() {
 
       <div>
         <FilterBar>
-          <FilterSelect label="Department" value={department} onChange={setDepartment} options={toOptions(departments.data)} allLabel="All departments" />
-          <FilterSelect label="Batch" value={batch} onChange={setBatch} options={toOptions(batches.data)} allLabel="All batches" />
+          <FilterSelect label="Department" value={department} onChange={setDepartment} options={(departments.data ?? []).map((d) => ({ value: d.id, label: d.name }))} allLabel="All departments" />
+          <FilterSelect label="Batch" value={batch} onChange={setBatch} options={(batches.data ?? []).map((b) => ({ value: b.id, label: b.name }))} allLabel="All batches" />
           <FilterSelect label="Company" value={company} onChange={setCompany} options={(companies.data ?? []).map((c) => ({ value: c.id, label: c.name }))} allLabel="All companies" />
           <FilterDate label="From" value={from} onChange={setFrom} />
           <FilterDate label="To" value={to} onChange={setTo} />

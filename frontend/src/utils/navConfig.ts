@@ -32,8 +32,10 @@ export interface NavItem {
   label: string
   path: string
   icon: LucideIcon
-  /** Placeholder nav items render a generic "coming soon" page. */
+  /** Placeholder nav items render a "not built yet" page. */
   implemented?: boolean
+  /** Why a placeholder is still a placeholder (what the backend does or doesn't offer) - shown on the page. */
+  note?: string
 }
 
 export const NAV_ITEMS: Record<Role, NavItem[]> = {
@@ -55,14 +57,14 @@ export const NAV_ITEMS: Record<Role, NavItem[]> = {
     { label: 'Progress', path: '/faculty/progress', icon: TrendingUp, implemented: true },
     { label: 'Evaluations', path: '/faculty/evaluations', icon: ClipboardCheck, implemented: true },
     { label: 'Documents', path: '/faculty/documents', icon: FolderOpen, implemented: true },
-    { label: 'Excel Sync', path: '/faculty/excel-sync', icon: Sheet },
+    { label: 'Excel Sync', path: '/faculty/excel-sync', icon: Sheet, note: "The server only offers Excel import and export to Placement Admins, so there is nothing for faculty to connect to yet." },
     { label: 'Reports', path: '/faculty/reports', icon: BarChart3, implemented: true },
   ],
   PLACEMENT_ADMIN: [
     { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard, implemented: true },
-    { label: 'Students', path: '/admin/students', icon: Users },
-    { label: 'Faculty', path: '/admin/faculty', icon: GraduationCap },
-    { label: 'Companies', path: '/admin/companies', icon: Building2 },
+    { label: 'Students', path: '/admin/students', icon: Users, note: "The server has no student directory endpoint - students can't be listed or edited on their own yet. Student records can be bulk-updated from Excel Sync, and each student appears in Applications, Internships and Reports." },
+    { label: 'Faculty', path: '/admin/faculty', icon: GraduationCap, implemented: true },
+    { label: 'Companies', path: '/admin/companies', icon: Building2, note: "The server has no companies endpoint - companies are created inside job and internship postings. Company-wise numbers are in Reports." },
     { label: 'Jobs', path: '/admin/jobs', icon: Briefcase, implemented: true },
     { label: 'Internships', path: '/admin/internships', icon: BookMarked, implemented: true },
     { label: 'Applications', path: '/admin/applications', icon: FileText, implemented: true },
@@ -71,18 +73,18 @@ export const NAV_ITEMS: Record<Role, NavItem[]> = {
     { label: 'Excel Sync', path: '/admin/excel-sync', icon: Sheet, implemented: true },
     { label: 'Reports', path: '/admin/reports', icon: BarChart3, implemented: true },
     { label: 'Notifications', path: '/admin/notifications', icon: Bell, implemented: true },
-    { label: 'Audit Logs', path: '/admin/audit-logs', icon: History },
-    { label: 'Settings', path: '/admin/settings', icon: Settings },
+    { label: 'Audit Logs', path: '/admin/audit-logs', icon: History, note: "The server doesn't record or expose an audit log yet." },
+    { label: 'Settings', path: '/admin/settings', icon: Settings, note: "The server has no settings endpoints yet." },
   ],
   SUPER_ADMIN: [
     { label: 'Dashboard', path: '/super-admin/dashboard', icon: LayoutDashboard, implemented: true },
-    { label: 'Users', path: '/super-admin/users', icon: Users },
-    { label: 'Roles', path: '/super-admin/roles', icon: Network },
-    { label: 'Departments', path: '/super-admin/departments', icon: Landmark },
-    { label: 'Batches', path: '/super-admin/batches', icon: Layers },
-    { label: 'Security', path: '/super-admin/security', icon: Lock },
-    { label: 'Audit Logs', path: '/super-admin/audit-logs', icon: History },
-    { label: 'Settings', path: '/super-admin/settings', icon: Settings },
+    { label: 'Users', path: '/super-admin/users', icon: Users, note: "The server has no user-management endpoints yet, so accounts can't be listed or changed from here." },
+    { label: 'Roles', path: '/super-admin/roles', icon: Network, note: "The server has no role-management endpoints - roles are fixed in the backend." },
+    { label: 'Departments', path: '/super-admin/departments', icon: Landmark, implemented: true },
+    { label: 'Batches', path: '/super-admin/batches', icon: Layers, implemented: true },
+    { label: 'Security', path: '/super-admin/security', icon: Lock, note: "The server has no security-settings endpoints yet." },
+    { label: 'Audit Logs', path: '/super-admin/audit-logs', icon: History, note: "The server doesn't record or expose an audit log yet." },
+    { label: 'Settings', path: '/super-admin/settings', icon: Settings, note: "The server has no settings endpoints yet." },
   ],
 }
 

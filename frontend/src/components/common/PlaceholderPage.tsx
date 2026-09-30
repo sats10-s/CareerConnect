@@ -4,24 +4,24 @@ import { Construction } from 'lucide-react'
 interface PlaceholderPageProps {
   title: string
   icon?: LucideIcon
+  /** Why this section isn't built - what the backend does or doesn't offer. */
+  note?: string
 }
 
 /**
- * Renders every nav item that doesn't have real functionality yet
- * (see the project README - Excel sync, attendance, evaluations,
- * placement drives, etc. are intentionally out of scope for this
- * foundation and will be built in a later prompt).
+ * Marks a nav item whose backend doesn't exist yet. It is deliberately
+ * honest: it says the section isn't built and, where known, why, rather
+ * than pretending to be a working page.
  */
-export function PlaceholderPage({ title, icon: Icon = Construction }: PlaceholderPageProps) {
+export function PlaceholderPage({ title, icon: Icon = Construction, note }: PlaceholderPageProps) {
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center rounded-xl border border-dashed border-hairline bg-surface p-12 text-center">
-      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-navy-50 text-navy-700">
+    <div className="card flex min-h-[50vh] flex-col items-center justify-center border-dashed p-8 text-center sm:p-12">
+      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
         <Icon className="h-6 w-6" />
       </span>
-      <h2 className="mt-4 text-lg font-semibold text-ink">{title}</h2>
-      <p className="mt-1.5 max-w-sm text-sm text-muted">
-        This section is scaffolded but not built out yet. It will be implemented in an upcoming update.
-      </p>
+      <p className="badge-eyebrow mt-5">Not available yet</p>
+      <h2 className="mt-3 font-display text-lg font-semibold text-ink">{title}</h2>
+      <p className="mt-2 max-w-md text-sm text-ink-soft">{note ?? "This section hasn't been built yet."}</p>
     </div>
   )
 }

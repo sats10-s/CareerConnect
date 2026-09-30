@@ -37,6 +37,8 @@ import { AdminJobsPage } from '@/pages/admin/Jobs'
 import { AdminInternshipsPage } from '@/pages/admin/Internships'
 import { AdminExcelSyncPage } from '@/pages/admin/ExcelSync'
 import { AdminReportsPage } from '@/pages/admin/Reports'
+import { AdminFacultyPage } from '@/pages/admin/Faculty'
+import { SuperAdminDepartmentsPage, SuperAdminBatchesPage } from '@/pages/superadmin/MetaLists'
 import { AdminApplicationsPage } from '@/pages/admin/Applications'
 import { AdminInterviewsPage } from '@/pages/admin/Interviews'
 import { AdminPlacementDrivesPage } from '@/pages/admin/PlacementDrives'
@@ -53,7 +55,7 @@ function placeholderRoutesFor(role: Role) {
     .filter((item) => !item.implemented)
     .map((item) => {
       const relativePath = item.path.split('/').slice(2).join('/')
-      return <Route key={item.path} path={relativePath} element={<PlaceholderPage title={item.label} icon={item.icon} />} />
+      return <Route key={item.path} path={relativePath} element={<PlaceholderPage title={item.label} icon={item.icon} note={item.note} />} />
     })
 }
 
@@ -128,6 +130,7 @@ export default function App() {
             <Route path="internships" element={<AdminInternshipsPage />} />
             <Route path="excel-sync" element={<AdminExcelSyncPage />} />
             <Route path="reports" element={<AdminReportsPage />} />
+            <Route path="faculty" element={<AdminFacultyPage />} />
             <Route path="applications" element={<AdminApplicationsPage />} />
             <Route path="interviews" element={<AdminInterviewsPage />} />
             <Route path="placement-drives" element={<AdminPlacementDrivesPage />} />
@@ -138,6 +141,8 @@ export default function App() {
         <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>
           <Route path="/super-admin" element={<SuperAdminLayout />}>
             <Route path="dashboard" element={<SuperAdminDashboardPage />} />
+            <Route path="departments" element={<SuperAdminDepartmentsPage />} />
+            <Route path="batches" element={<SuperAdminBatchesPage />} />
             {placeholderRoutesFor('SUPER_ADMIN')}
           </Route>
         </Route>

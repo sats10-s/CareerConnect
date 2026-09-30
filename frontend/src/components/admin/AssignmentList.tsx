@@ -24,7 +24,8 @@ import type { InternshipAssignmentStatus } from '@/types/internshipAssignment'
 export function AssignmentList() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
-  const [facultyId, setFacultyId] = useState('')
+  // ?faculty=ID (from Admin > Faculty) pre-selects the coordinator filter.
+  const [facultyId, setFacultyId] = useState(() => new URLSearchParams(window.location.search).get('faculty') ?? '')
   const [openId, setOpenId] = useState<number | null>(null)
   const [creating, setCreating] = useState(false)
   const faculty = useFacultyOptions()
