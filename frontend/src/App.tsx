@@ -38,6 +38,8 @@ import { AdminInternshipsPage } from '@/pages/admin/Internships'
 import { AdminExcelSyncPage } from '@/pages/admin/ExcelSync'
 import { AdminReportsPage } from '@/pages/admin/Reports'
 import { AdminFacultyPage } from '@/pages/admin/Faculty'
+import { AdminStudentsPage } from '@/pages/admin/Students'
+import { AdminCompaniesPage } from '@/pages/admin/Companies'
 import { SuperAdminDepartmentsPage, SuperAdminBatchesPage } from '@/pages/superadmin/MetaLists'
 import { AdminApplicationsPage } from '@/pages/admin/Applications'
 import { AdminInterviewsPage } from '@/pages/admin/Interviews'
@@ -131,6 +133,8 @@ export default function App() {
             <Route path="excel-sync" element={<AdminExcelSyncPage />} />
             <Route path="reports" element={<AdminReportsPage />} />
             <Route path="faculty" element={<AdminFacultyPage />} />
+            <Route path="students" element={<AdminStudentsPage />} />
+            <Route path="companies" element={<AdminCompaniesPage />} />
             <Route path="applications" element={<AdminApplicationsPage />} />
             <Route path="interviews" element={<AdminInterviewsPage />} />
             <Route path="placement-drives" element={<AdminPlacementDrivesPage />} />

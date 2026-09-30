@@ -26,7 +26,8 @@ export function OpportunityList({ kind }: { kind: 'job' | 'internship' }) {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
   const [companyId, setCompanyId] = useState('')
-  const [openId, setOpenId] = useState<number | null>(null)
+  // ?open=ID (e.g. from a company's postings list) opens that posting's drawer on arrival.
+  const [openId, setOpenId] = useState<number | null>(() => Number(new URLSearchParams(window.location.search).get('open')) || null)
   const [creating, setCreating] = useState(false)
   const companies = useCompanyOptions()
 

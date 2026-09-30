@@ -156,7 +156,7 @@ export function OpportunityFormModal({ kind, existing, onClose, onSaved }: Oppor
           </Select>
           {companies.error && <p className="mt-1 text-xs text-error">Couldn't load companies: {companies.error}</p>}
           {!companies.isLoading && !companies.error && (companies.data ?? []).length === 0 && (
-            <p className="mt-1 text-xs text-ink-faint">No companies are available yet - the API only surfaces companies that already have a posting or an application.</p>
+            <p className="mt-1 text-xs text-ink-faint">No companies yet - add one under Companies first.</p>
           )}
         </div>
         <div>

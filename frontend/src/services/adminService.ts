@@ -7,6 +7,10 @@ import type {
   AdminApplicationDetail,
   AdminApplicationRow,
   AdminOpportunity,
+  AdminStudentDetail,
+  AdminStudentRow,
+  CompanyPayload,
+  CompanyRecord,
   AttendanceReportRow,
   BreakdownRow,
   DriveDetail,
@@ -32,6 +36,7 @@ import type {
   OpportunityPayload,
   PlacementSummary,
   ReportFilters,
+  StudentDirectoryParams,
 } from '@/types/admin'
 
 /**
@@ -201,6 +206,21 @@ export const adminService = {
     template: (type: ExcelImportType) => api.get<Blob>(`/admin/excel/templates/${type}`, { responseType: 'blob' }).then((r) => r.data),
     export: (type: ExcelExportType, params: ExportFilters = {}) =>
       api.get<Blob>(`/admin/excel/exports/${type}`, { params, responseType: 'blob' }).then((r) => r.data),
+  },
+
+  students: {
+    list: (params: StudentDirectoryParams = {}): List<AdminStudentRow> =>
+      unwrap(api.get<ApiEnvelope<PaginatedList<AdminStudentRow>>>('/admin/students', { params })),
+    show: (id: number) => unwrap(api.get<ApiEnvelope<AdminStudentDetail>>(`/admin/students/${id}`)),
+    resume: (id: number) => api.get<Blob>(`/admin/students/${id}/resume`, { responseType: 'blob' }).then((r) => r.data),
+  },
+
+  companies: {
+    list: (params: { search?: string; industry?: string; page?: number; per_page?: number } = {}) =>
+      unwrap(api.get<ApiEnvelope<PaginatedList<CompanyRecord> & { industries: string[] }>>('/admin/companies', { params })),
+    show: (id: number) => unwrap(api.get<ApiEnvelope<CompanyRecord>>(`/admin/companies/${id}`)),
+    create: (payload: CompanyPayload) => unwrap(api.post<ApiEnvelope<CompanyRecord>>('/admin/companies', payload)),
+    update: (id: number, payload: Partial<CompanyPayload>) => unwrap(api.patch<ApiEnvelope<CompanyRecord>>(`/admin/companies/${id}`, payload)),
   },
 
   reports: {

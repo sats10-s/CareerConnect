@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Admin\AnnouncementController as AdminAnnouncementController;
 use App\Http\Controllers\Api\Admin\ApplicationController as AdminApplicationController;
 use App\Http\Controllers\Api\Admin\AttendanceController as AdminAttendanceController;
+use App\Http\Controllers\Api\Admin\CompanyController as AdminCompanyController;
 use App\Http\Controllers\Api\Admin\ExcelExportController as AdminExcelExportController;
 use App\Http\Controllers\Api\Admin\ExcelImportController as AdminExcelImportController;
 use App\Http\Controllers\Api\Admin\ExcelTemplateController as AdminExcelTemplateController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\Api\Admin\NotificationController as AdminNotificationCo
 use App\Http\Controllers\Api\Admin\PlacementDriveController as AdminPlacementDriveController;
 use App\Http\Controllers\Api\Admin\PpoRecordController as AdminPpoRecordController;
 use App\Http\Controllers\Api\Admin\ReportController as AdminReportController;
+use App\Http\Controllers\Api\Admin\StudentController as AdminStudentController;
 use App\Http\Controllers\Api\Admin\WeeklyProgressReportController as AdminWeeklyProgressReportController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\Dashboard\AdminDashboardController;
@@ -213,6 +215,23 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::post('/{placementDrive}/opportunities', [AdminPlacementDriveController::class, 'attachOpportunity']);
         Route::delete('/{placementDrive}/opportunities/{opportunity}', [AdminPlacementDriveController::class, 'detachOpportunity']);
+    });
+
+    // Placement Admin > Students (read-only directory + resume download)
+    // and Companies (list/add/edit, no delete - see the controllers'
+    // docblocks). CompanyPolicy / StudentPolicy::viewAny|viewAsAdmin add
+    // the object-level check on top of this role gate.
+    Route::prefix('admin/students')->middleware('role:PLACEMENT_ADMIN,SUPER_ADMIN')->group(function () {
+        Route::get('/', [AdminStudentController::class, 'index']);
+        Route::get('/{student}', [AdminStudentController::class, 'show']);
+        Route::get('/{student}/resume', [AdminStudentController::class, 'resume']);
+    });
+
+    Route::prefix('admin/companies')->middleware('role:PLACEMENT_ADMIN,SUPER_ADMIN')->group(function () {
+        Route::get('/', [AdminCompanyController::class, 'index']);
+        Route::post('/', [AdminCompanyController::class, 'store']);
+        Route::get('/{company}', [AdminCompanyController::class, 'show']);
+        Route::patch('/{company}', [AdminCompanyController::class, 'update']);
     });
 
     // Internship Assignment + Faculty Coordination - the faculty-

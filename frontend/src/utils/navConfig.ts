@@ -62,9 +62,9 @@ export const NAV_ITEMS: Record<Role, NavItem[]> = {
   ],
   PLACEMENT_ADMIN: [
     { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard, implemented: true },
-    { label: 'Students', path: '/admin/students', icon: Users, note: "The server has no student directory endpoint - students can't be listed or edited on their own yet. Student records can be bulk-updated from Excel Sync, and each student appears in Applications, Internships and Reports." },
+    { label: 'Students', path: '/admin/students', icon: Users, implemented: true },
     { label: 'Faculty', path: '/admin/faculty', icon: GraduationCap, implemented: true },
-    { label: 'Companies', path: '/admin/companies', icon: Building2, note: "The server has no companies endpoint - companies are created inside job and internship postings. Company-wise numbers are in Reports." },
+    { label: 'Companies', path: '/admin/companies', icon: Building2, implemented: true },
     { label: 'Jobs', path: '/admin/jobs', icon: Briefcase, implemented: true },
     { label: 'Internships', path: '/admin/internships', icon: BookMarked, implemented: true },
     { label: 'Applications', path: '/admin/applications', icon: FileText, implemented: true },

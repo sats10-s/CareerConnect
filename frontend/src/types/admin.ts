@@ -1,6 +1,7 @@
 import type { ApplicationStatus, OpportunitySummary } from './application'
 import type { InternshipAssignmentStatus } from './internshipAssignment'
 import type { StatusChange } from './coordination'
+import type { StudentProfileData } from './studentProfile'
 
 /** Mirrors the Laravel resources behind the /api/admin/* endpoints the Placement Admin screens use. */
 
@@ -329,4 +330,73 @@ export interface FacultyWorkloadRow {
   active_students: number
   pending_weekly_reports: number
   pending_documents: number
+}
+
+// --- Students directory (GET /admin/students[...]) -----------------------
+
+export interface AdminStudentRow {
+  id: number
+  name: string | null
+  email: string | null
+  is_active: boolean
+  roll_number: string
+  department: string | null
+  batch: string | null
+  year: number | null
+  cgpa: number | null
+  backlogs: number | null
+  applications_count: number
+  selected_count: number
+  /** "SELECTED" when the student has at least one selected application, otherwise null. */
+  placement_status: 'SELECTED' | null
+}
+
+export interface AdminStudentDetail {
+  profile: StudentProfileData
+  is_active: boolean
+  applications: { id: number; status: ApplicationStatus; applied_at: string | null; opportunity: OpportunitySummary | null }[]
+  internship_assignments: {
+    id: number
+    status: InternshipAssignmentStatus
+    assigned_at: string | null
+    started_at: string | null
+    ended_at: string | null
+    faculty: { id: number; name: string | null } | null
+    internship: OpportunitySummary | null
+  }[]
+}
+
+export interface StudentDirectoryParams {
+  search?: string
+  department_id?: number
+  batch_id?: number
+  year?: number
+  placement?: 'placed' | 'unplaced'
+  sort?: 'name' | 'roll_number' | 'cgpa'
+  direction?: 'asc' | 'desc'
+  page?: number
+  per_page?: number
+}
+
+// --- Companies (GET/POST/PATCH /admin/companies[...]) --------------------
+
+export interface CompanyRecord {
+  id: number
+  name: string
+  industry: string | null
+  website: string | null
+  description: string | null
+  logo_path: string | null
+  job_postings_count?: number
+  internships_count?: number
+  postings?: { id: number; type: 'job' | 'internship'; title: string; status: string | null; created_at: string | null }[]
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface CompanyPayload {
+  name: string
+  industry?: string | null
+  website?: string | null
+  description?: string | null
 }

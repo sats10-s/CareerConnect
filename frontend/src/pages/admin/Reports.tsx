@@ -57,8 +57,7 @@ const THRESHOLDS = [50, 60, 70, 75, 80, 90].map((n) => ({ value: n, label: `Belo
  * faculty). The numbers are all computed by the backend - nothing is
  * derived or filtered here. Each section loads independently, so one
  * failing report doesn't hide the rest. Department and batch options come
- * from /meta; company options from useCompanyOptions (there is no
- * companies list endpoint - see that hook).
+ * from /meta; company options from GET /admin/companies.
  */
 export function AdminReportsPage() {
   const [department, setDepartment] = useState('')
