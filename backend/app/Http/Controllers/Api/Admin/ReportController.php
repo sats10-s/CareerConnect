@@ -14,6 +14,7 @@ use App\Services\Reporting\DashboardAnalyticsService;
 use App\Services\Reporting\FacultyReportService;
 use App\Services\Reporting\InternshipReportService;
 use App\Services\Reporting\PlacementReportService;
+use App\Services\SettingsService;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -141,7 +142,8 @@ class ReportController extends Controller
     {
         $filters = $request->filters();
         $summary = $this->attendanceReportService->perAssignmentSummary($filters);
-        $threshold = $request->threshold();
+        // No ?threshold= -> the institution default from Super Admin > Settings.
+        $threshold = $request->threshold((float) app(SettingsService::class)->get('attendance_threshold'));
 
         return $this->success([
             'items' => $summary,

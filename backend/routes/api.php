@@ -54,6 +54,13 @@ use App\Http\Controllers\Api\Student\ResumeController;
 use App\Http\Controllers\Api\Student\SkillController;
 use App\Http\Controllers\Api\Student\WeeklyProgressReportController as StudentWeeklyProgressReportController;
 use App\Http\Controllers\Api\StudentProfileController;
+use App\Http\Controllers\Api\SuperAdmin\AuditLogController as SuperAdminAuditLogController;
+use App\Http\Controllers\Api\SuperAdmin\BatchController as SuperAdminBatchController;
+use App\Http\Controllers\Api\SuperAdmin\DepartmentController as SuperAdminDepartmentController;
+use App\Http\Controllers\Api\SuperAdmin\RoleController as SuperAdminRoleController;
+use App\Http\Controllers\Api\SuperAdmin\SecurityController as SuperAdminSecurityController;
+use App\Http\Controllers\Api\SuperAdmin\SettingController as SuperAdminSettingController;
+use App\Http\Controllers\Api\SuperAdmin\UserController as SuperAdminUserController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -80,6 +87,7 @@ Route::prefix('auth')->group(function () {
 
 Route::get('/meta/departments', [MetaController::class, 'departments']);
 Route::get('/meta/batches', [MetaController::class, 'batches']);
+Route::get('/meta/settings', [MetaController::class, 'settings']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/student/dashboard', [StudentDashboardController::class, 'index'])
@@ -441,6 +449,36 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/student/ppo', [StudentPpoRecordController::class, 'show'])
         ->middleware('role:STUDENT');
+
+    // Super Admin console (role:SUPER_ADMIN only): accounts, roles,
+    // departments, batches, audit log, security overview and settings.
+    // Every write is recorded through App\Services\AuditLogger.
+    Route::prefix('super-admin')->middleware('role:SUPER_ADMIN')->group(function () {
+        Route::get('/users', [SuperAdminUserController::class, 'index']);
+        Route::post('/users', [SuperAdminUserController::class, 'store']);
+        Route::get('/users/{user}', [SuperAdminUserController::class, 'show']);
+        Route::patch('/users/{user}', [SuperAdminUserController::class, 'update']);
+        Route::patch('/users/{user}/status', [SuperAdminUserController::class, 'updateStatus']);
+        Route::post('/users/{user}/password', [SuperAdminUserController::class, 'resetPassword']);
+        Route::delete('/users/{user}/sessions', [SuperAdminUserController::class, 'revokeSessions']);
+
+        Route::get('/roles', [SuperAdminRoleController::class, 'index']);
+
+        Route::get('/departments', [SuperAdminDepartmentController::class, 'index']);
+        Route::post('/departments', [SuperAdminDepartmentController::class, 'store']);
+        Route::patch('/departments/{department}', [SuperAdminDepartmentController::class, 'update']);
+        Route::delete('/departments/{department}', [SuperAdminDepartmentController::class, 'destroy']);
+
+        Route::get('/batches', [SuperAdminBatchController::class, 'index']);
+        Route::post('/batches', [SuperAdminBatchController::class, 'store']);
+        Route::patch('/batches/{batch}', [SuperAdminBatchController::class, 'update']);
+        Route::delete('/batches/{batch}', [SuperAdminBatchController::class, 'destroy']);
+
+        Route::get('/audit-logs', [SuperAdminAuditLogController::class, 'index']);
+        Route::get('/security', [SuperAdminSecurityController::class, 'index']);
+        Route::get('/settings', [SuperAdminSettingController::class, 'index']);
+        Route::patch('/settings', [SuperAdminSettingController::class, 'update']);
+    });
 
     Route::get('/super-admin/dashboard', [SuperAdminDashboardController::class, 'index'])
         ->middleware('role:SUPER_ADMIN');

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Resources\UserResource;
+use App\Services\AuditLogger;
 use App\Services\Auth\AuthService;
 use App\Services\Auth\RegistrationService;
 use Illuminate\Http\JsonResponse;
@@ -18,6 +19,7 @@ class AuthController extends Controller
     public function __construct(
         private readonly RegistrationService $registrationService,
         private readonly AuthService $authService,
+        private readonly AuditLogger $audit,
     ) {}
 
     /**
@@ -57,6 +59,8 @@ class AuthController extends Controller
     public function login(LoginRequest $request): JsonResponse
     {
         $user = $this->authService->attemptLogin($request->validated());
+        $user->forceFill(['last_login_at' => now()])->saveQuietly();
+        $this->audit->record('auth.login', "{$user->name} signed in", $user, [], $user);
 
         if ($request->hasSession()) {
             Auth::login($user);
@@ -81,6 +85,10 @@ class AuthController extends Controller
         // itself (invalidated below, when present) is what actually
         // needs revoking in that case; there is no token row to delete.
         $accessToken = $request->user()?->currentAccessToken();
+
+        if ($request->user()) {
+            $this->audit->record('auth.logout', "{$request->user()->name} signed out", $request->user());
+        }
 
         if ($accessToken instanceof PersonalAccessToken) {
             $accessToken->delete();

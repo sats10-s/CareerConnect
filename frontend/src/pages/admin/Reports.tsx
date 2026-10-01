@@ -49,7 +49,7 @@ const GRANULARITY = [
   { value: 'week', label: 'Per week' },
   { value: 'month', label: 'Per month' },
 ]
-const THRESHOLDS = [50, 60, 70, 75, 80, 90].map((n) => ({ value: n, label: `Below ${n}%` }))
+const THRESHOLD_STEPS = [50, 60, 70, 75, 80, 90]
 
 /**
  * Placement Admin > Reports: the institution-wide analytics from
@@ -68,7 +68,8 @@ export function AdminReportsPage() {
   const [dimension, setDimension] = useState<Dimension>('company')
   const [sort, setSort] = useState('total_applications')
   const [granularity, setGranularity] = useState<'day' | 'week' | 'month'>('day')
-  const [threshold, setThreshold] = useState(75)
+  // null = use the institution default (Super Admin > Settings), which the API applies and echoes back.
+  const [pickedThreshold, setThreshold] = useState<number | null>(null)
 
   const dateRangeInvalid = Boolean(from && to && to < from)
   const filters = useMemo<ReportFilters>(() => {
@@ -90,7 +91,12 @@ export function AdminReportsPage() {
   const dashboard = useApiResource(() => adminService.reports.dashboard(filters), `dash:${fkey}`)
   const breakdown = useApiResource(() => adminService.reports.placements({ ...filters, dimension, sort, direction: 'desc' }), `bd:${dimension}:${sort}:${fkey}`)
   const trends = useApiResource(() => adminService.reports.trends({ ...filters, granularity }), `tr:${granularity}:${fkey}`)
-  const attendance = useApiResource(() => adminService.reports.attendance({ ...filters, threshold }), `at:${threshold}:${fkey}`)
+  const attendance = useApiResource(
+    () => adminService.reports.attendance(pickedThreshold === null ? filters : { ...filters, threshold: pickedThreshold }),
+    `at:${pickedThreshold ?? 'default'}:${fkey}`,
+  )
+  const threshold = pickedThreshold ?? attendance.data?.below_threshold.threshold ?? 75
+  const thresholdOptions = [...new Set([...THRESHOLD_STEPS, threshold])].sort((a, b) => a - b).map((n) => ({ value: n, label: `Below ${n}%` }))
   const faculty = useApiResource(() => adminService.reports.faculty(filters), `fa:${fkey}`)
 
   function clear() {
@@ -256,7 +262,7 @@ export function AdminReportsPage() {
         hasData={Boolean(attendance.data)}
         error={attendance.error}
         onRetry={attendance.reload}
-        action={<ChoiceSelect label="Attendance threshold" value={threshold} onChange={(v) => setThreshold(Number(v))} options={THRESHOLDS} />}
+        action={<ChoiceSelect label="Attendance threshold" value={threshold} onChange={(v) => setThreshold(Number(v))} options={thresholdOptions} />}
       >
         {attendance.data && (attendanceRows.length === 0 ? (
           <div className="card"><EmptyState illustration={<EmptyBriefcaseIllustration />} title={attendance.data.items.length === 0 ? 'No attendance has been marked yet' : `Nobody is below ${threshold}%`} description={attendance.data.items.length === 0 ? 'Once faculty mark attendance, students who fall behind show up here.' : `All ${attendance.data.items.length} tracked interns are at or above ${threshold}%.`} /></div>

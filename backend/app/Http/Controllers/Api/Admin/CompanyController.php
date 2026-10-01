@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\StoreCompanyRequest;
 use App\Http\Requests\Admin\UpdateCompanyRequest;
 use App\Http\Resources\CompanyResource;
 use App\Models\Company;
+use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -21,6 +22,8 @@ use Illuminate\Support\Facades\Gate;
 class CompanyController extends Controller
 {
     use FormatsApiResponse;
+
+    public function __construct(private readonly AuditLogger $audit) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -74,6 +77,7 @@ class CompanyController extends Controller
         Gate::authorize('create', Company::class);
 
         $company = Company::create($request->validated() + ['is_active' => true]);
+        $this->audit->record('company.created', "Added company {$company->name}", $company);
         $company->loadCount(['jobPostings', 'internships']);
 
         return $this->success(data: new CompanyResource($company), message: 'Company added.', status: 201);
@@ -83,7 +87,12 @@ class CompanyController extends Controller
     {
         Gate::authorize('update', $company);
 
-        $company->update($request->validated());
+        $company->fill($request->validated());
+        $changed = array_keys($company->getDirty());
+        $company->save();
+        if ($changed) {
+            $this->audit->record('company.updated', "Updated company {$company->name}", $company, ['fields' => $changed]);
+        }
         $company->loadCount(['jobPostings', 'internships']);
 
         return $this->success(data: new CompanyResource($company), message: 'Company updated.');

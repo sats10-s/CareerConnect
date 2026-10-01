@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Enums\RoleName;
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Faculty;
 use App\Models\Role;
 use App\Models\Student;
@@ -24,10 +25,7 @@ class SuperAdminDashboardController extends Controller
                 'faculty' => Faculty::count(),
                 'admins' => User::whereIn('role_id', $adminRoleIds)->count(),
                 'active_accounts' => User::where('is_active', true)->count(),
-                // Audit logging is a placeholder nav item for this
-                // foundation - no audit_logs table exists yet, so this
-                // is a static 0 until that feature is built.
-                'audit_events' => 0,
+                'audit_events' => AuditLog::count(),
             ],
             'recent_users' => User::with('role')->latest()->take(8)->get()->map(fn ($u) => [
                 'id' => $u->id,

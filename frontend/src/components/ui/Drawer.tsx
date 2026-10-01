@@ -38,7 +38,8 @@ export function Drawer({ open, onClose, title, children, footer, side = 'right',
 
   if (!open) return null
 
-  const sideClasses = side === 'right' ? 'right-0 animate-slide-in-right' : 'left-0 animate-slide-in-left'
+  // The panel is a flex child of the overlay, so ml-auto (not right-0) is what pins it to the right edge.
+  const sideClasses = side === 'right' ? 'ml-auto animate-slide-in-right' : 'mr-auto animate-slide-in-left'
 
   return (
     <div className="fixed inset-0 z-50 flex">

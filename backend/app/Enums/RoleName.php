@@ -38,6 +38,43 @@ enum RoleName: string
     /**
      * The frontend route a user with this role should land on after login.
      */
+    /**
+     * What each role can do, for Super Admin > Roles. Roles are fixed in
+     * code (route middleware + policies), so this text describes those rules
+     * rather than configuring them.
+     *
+     * @return list<string>
+     */
+    public function capabilities(): array
+    {
+        return match ($this) {
+            self::STUDENT => [
+                'Browse published jobs, internships and placement drives',
+                'Apply, track applications and see interview schedules',
+                'Manage their own profile and resume',
+                'Submit weekly reports and internship documents for their own internship',
+            ],
+            self::FACULTY => [
+                'See only the students assigned to them as internship coordinator',
+                'Mark and correct attendance for those students',
+                'Review weekly reports and documents, record completion and PPOs',
+                'View their own workload report',
+            ],
+            self::PLACEMENT_ADMIN => [
+                'Manage jobs, internships, placement drives and interviews',
+                'Review every application and change its status',
+                'Assign faculty coordinators to selected interns',
+                'Students directory, companies, Excel import/export and institution reports',
+            ],
+            self::SUPER_ADMIN => [
+                'Everything a Placement Admin can do',
+                'Create and manage staff accounts, activate or deactivate any user',
+                'Manage departments, batches and institution settings',
+                'Read the audit log and security overview',
+            ],
+        };
+    }
+
     public function dashboardPath(): string
     {
         return match ($this) {

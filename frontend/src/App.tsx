@@ -45,6 +45,11 @@ import { AdminApplicationsPage } from '@/pages/admin/Applications'
 import { AdminInterviewsPage } from '@/pages/admin/Interviews'
 import { AdminPlacementDrivesPage } from '@/pages/admin/PlacementDrives'
 import { SuperAdminDashboardPage } from '@/pages/superadmin/Dashboard'
+import { SuperAdminUsersPage } from '@/pages/superadmin/Users'
+import { SuperAdminRolesPage } from '@/pages/superadmin/Roles'
+import { SuperAdminAuditLogsPage } from '@/pages/superadmin/AuditLogs'
+import { SuperAdminSecurityPage } from '@/pages/superadmin/Security'
+import { SuperAdminSettingsPage } from '@/pages/superadmin/Settings'
 import { NotFoundPage } from '@/pages/NotFound'
 import { ToastViewport } from '@/components/ui/Toast'
 import { NAV_ITEMS } from '@/utils/navConfig'
@@ -147,6 +152,11 @@ export default function App() {
             <Route path="dashboard" element={<SuperAdminDashboardPage />} />
             <Route path="departments" element={<SuperAdminDepartmentsPage />} />
             <Route path="batches" element={<SuperAdminBatchesPage />} />
+            <Route path="users" element={<SuperAdminUsersPage />} />
+            <Route path="roles" element={<SuperAdminRolesPage />} />
+            <Route path="security" element={<SuperAdminSecurityPage />} />
+            <Route path="audit-logs" element={<SuperAdminAuditLogsPage />} />
+            <Route path="settings" element={<SuperAdminSettingsPage />} />
             {placeholderRoutesFor('SUPER_ADMIN')}
           </Route>
         </Route>

@@ -6,6 +6,9 @@ use App\Enums\RoleName;
 use App\Models\Role;
 use App\Models\Student;
 use App\Models\User;
+use App\Services\AuditLogger;
+use App\Services\SettingsService;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
@@ -17,12 +20,26 @@ use Illuminate\Support\Facades\Hash;
  */
 class RegistrationService
 {
+    public function __construct(
+        private readonly SettingsService $settings,
+        private readonly AuditLogger $audit,
+    ) {}
+
     /**
      * @param  array{name: string, email: string, password: string, roll_number: string, department_id: int, batch_id: int, year: int, phone?: string|null}  $data
      */
     public function registerStudent(array $data): User
     {
-        return DB::transaction(function () use ($data) {
+        // Super Admin > Settings can close self-registration (accounts then come from Excel Sync imports).
+        if (! $this->settings->get('allow_student_registration')) {
+            $this->audit->record('auth.registration_blocked', 'Registration attempt while self-registration is closed', null, ['email' => $data['email'] ?? null]);
+
+            throw ValidationException::withMessages([
+                'email' => ['Student self-registration is currently closed. Contact the placement office.'],
+            ]);
+        }
+
+        $user = DB::transaction(function () use ($data) {
             $studentRole = Role::where('name', RoleName::STUDENT->value)->firstOrFail();
 
             $user = User::create([
@@ -43,5 +60,9 @@ class RegistrationService
 
             return $user->load(['role', 'student.department', 'student.batch']);
         });
+
+        $this->audit->record('auth.registered', "{$user->name} registered as a student", $user, [], $user);
+
+        return $user;
     }
 }

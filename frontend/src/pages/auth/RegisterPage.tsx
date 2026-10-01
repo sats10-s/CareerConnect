@@ -1,14 +1,16 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
-import { UserPlus } from 'lucide-react'
+import { Lock, UserPlus } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import { metaService } from '@/services/metaService'
+import { superAdminService } from '@/services/superAdminService'
 import { dashboardPathForRole } from '@/utils/roles'
 import type { ApiValidationError } from '@/types/auth'
 import type { Batch, Department } from '@/types/meta'
+import type { PublicSettings } from '@/types/superAdmin'
 
 interface FormState {
   name: string
@@ -45,8 +47,11 @@ export function RegisterPage() {
   const [errors, setErrors] = useState<Record<string, string[]>>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [settings, setSettings] = useState<PublicSettings | null>(null)
 
   useEffect(() => {
+    // Super Admin > Settings can close self-registration; if this request fails the form stays open and the API still enforces it.
+    superAdminService.publicSettings().then(setSettings).catch(() => setSettings(null))
     metaService.departments().then(setDepartments).catch(() => setDepartments([]))
     metaService.batches().then(setBatches).catch(() => setBatches([]))
   }, [])
@@ -84,10 +89,34 @@ export function RegisterPage() {
     return errors[key]?.[0]
   }
 
+  const office = settings?.institution_name ? `the ${settings.institution_name} placement office` : 'the placement office'
+
+  if (settings && !settings.allow_student_registration) {
+    return (
+      <div>
+        <h1 className="font-display font-bold tracking-tight text-3xl text-ink">Registration is closed</h1>
+        <div className="mt-6 flex gap-3 rounded-xl border border-hairline bg-surface p-4">
+          <Lock className="mt-0.5 h-5 w-5 shrink-0 text-ink-faint" aria-hidden="true" />
+          <p className="text-sm text-ink-soft">
+            Student self-registration is currently closed. Contact {office}
+            {settings.support_email ? (
+              <> at <a href={`mailto:${settings.support_email}`} className="font-medium text-primary hover:underline">{settings.support_email}</a></>
+            ) : null}{' '}
+            to get an account.
+          </p>
+        </div>
+        <p className="mt-6 text-center text-sm text-muted">
+          Already have an account?{' '}
+          <Link to="/login" className="font-semibold text-primary hover:text-primary-hov">Sign in</Link>
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div>
       <h1 className="font-display font-bold tracking-tight text-3xl text-ink">Create your student account</h1>
-      <p className="mt-1 text-sm text-muted">Faculty and admin accounts are provisioned by the placement office.</p>
+      <p className="mt-1 text-sm text-muted">Faculty and admin accounts are provisioned by {office}.</p>
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-5">
         {formError && (
