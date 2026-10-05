@@ -23,7 +23,10 @@ class InternshipPolicy
             return true;
         }
 
-        return $internship->status === OpportunityStatus::PUBLISHED;
+        // Students only see postings from APPROVED companies: a pending,
+        // rejected or suspended company's postings stay hidden even when published.
+        return $internship->status === OpportunityStatus::PUBLISHED
+            && $internship->company()->approved()->exists();
     }
 
     public function create(User $user): bool

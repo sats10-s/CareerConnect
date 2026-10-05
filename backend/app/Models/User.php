@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Enums\CompanyMemberRole;
 use App\Enums\RoleName;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -18,6 +20,8 @@ class User extends Authenticatable
         'email',
         'password',
         'role_id',
+        'company_id',
+        'company_member_role',
         'is_active',
         'last_login_at',
     ];
@@ -34,6 +38,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
             'last_login_at' => 'datetime',
+            'company_member_role' => CompanyMemberRole::class,
         ];
     }
 
@@ -50,6 +55,12 @@ class User extends Authenticatable
     public function faculty(): HasOne
     {
         return $this->hasOne(Faculty::class);
+    }
+
+    /** Set only for COMPANY-role logins. */
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
     }
 
     public function hasRole(RoleName $role): bool

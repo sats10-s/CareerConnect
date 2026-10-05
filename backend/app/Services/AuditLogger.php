@@ -39,6 +39,13 @@ class AuditLogger
         'batch.deleted' => 'Batch deleted',
         'company.created' => 'Company created',
         'company.updated' => 'Company updated',
+        'company.registered' => 'Company registered',
+        'company.registration_blocked' => 'Company registration blocked (closed)',
+        'company.approved' => 'Company approved',
+        'company.rejected' => 'Company rejected',
+        'company.suspended' => 'Company suspended',
+        'company.reactivated' => 'Company reactivated',
+        'company.profile_updated' => 'Company profile updated by recruiter',
         'settings.updated' => 'Settings updated',
     ];
 

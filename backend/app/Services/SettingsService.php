@@ -17,6 +17,8 @@ class SettingsService
         'support_email' => ['type' => 'string', 'default' => null, 'rules' => ['nullable', 'email', 'max:255'], 'label' => 'Support email'],
         'academic_year' => ['type' => 'string', 'default' => null, 'rules' => ['nullable', 'string', 'regex:/^\d{4}-\d{2,4}$/'], 'label' => 'Current academic year'],
         'allow_student_registration' => ['type' => 'bool', 'default' => true, 'rules' => ['required', 'boolean'], 'label' => 'Student self-registration'],
+        'allow_company_registration' => ['type' => 'bool', 'default' => true, 'rules' => ['required', 'boolean'], 'label' => 'Company self-registration'],
+        'company_postings_require_review' => ['type' => 'bool', 'default' => true, 'rules' => ['required', 'boolean'], 'label' => 'Company postings need Placement Admin review'],
         'attendance_threshold' => ['type' => 'int', 'default' => 75, 'rules' => ['required', 'integer', 'between:1,100'], 'label' => 'Attendance alert threshold (%)'],
     ];
 

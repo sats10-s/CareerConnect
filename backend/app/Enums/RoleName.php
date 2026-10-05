@@ -3,7 +3,8 @@
 namespace App\Enums;
 
 /**
- * The four roles supported by CareerConnect.
+ * The roles supported by CareerConnect. COMPANY is the external
+ * recruiter login created by company self-registration.
  *
  * The canonical role record lives in the `roles` table (see the
  * RoleSeeder), this enum just gives the application strongly-typed,
@@ -16,6 +17,7 @@ enum RoleName: string
     case FACULTY = 'FACULTY';
     case PLACEMENT_ADMIN = 'PLACEMENT_ADMIN';
     case SUPER_ADMIN = 'SUPER_ADMIN';
+    case COMPANY = 'COMPANY';
 
     /**
      * @return array<int, string>
@@ -32,6 +34,7 @@ enum RoleName: string
             self::FACULTY => 'Faculty',
             self::PLACEMENT_ADMIN => 'Placement Admin',
             self::SUPER_ADMIN => 'Super Admin',
+            self::COMPANY => 'Company Recruiter',
         };
     }
 
@@ -71,6 +74,12 @@ enum RoleName: string
                 'Create and manage staff accounts, activate or deactivate any user',
                 'Manage departments, batches and institution settings',
                 'Read the audit log and security overview',
+                'Approve, reject, suspend and reactivate self-registered companies',
+            ],
+            self::COMPANY => [
+                'Register their company and keep its profile up to date',
+                'Wait for Super Admin approval before anything else is unlocked',
+                'Never sees student phone numbers, personal email or address',
             ],
         };
     }
@@ -82,6 +91,7 @@ enum RoleName: string
             self::FACULTY => '/faculty/dashboard',
             self::PLACEMENT_ADMIN => '/admin/dashboard',
             self::SUPER_ADMIN => '/super-admin/dashboard',
+            self::COMPANY => '/company/dashboard',
         };
     }
 }

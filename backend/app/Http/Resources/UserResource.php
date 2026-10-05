@@ -34,6 +34,15 @@ class UserResource extends JsonResource
                 'department' => $this->faculty->department?->name,
                 'designation' => $this->faculty->designation,
             ]),
+            // COMPANY-role logins only: the SPA needs the approval status to
+            // decide between the company portal and the pending/rejected page.
+            'company' => $this->when($this->company_id !== null, fn () => [
+                'id' => $this->company->id,
+                'name' => $this->company->name,
+                'status' => $this->company->status?->value,
+                'review_note' => $this->company->review_note,
+                'member_role' => $this->company_member_role?->value,
+            ]),
             'created_at' => $this->created_at,
         ];
     }

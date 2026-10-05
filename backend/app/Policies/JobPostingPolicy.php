@@ -28,7 +28,10 @@ class JobPostingPolicy
             return true;
         }
 
-        return $jobPosting->status === OpportunityStatus::PUBLISHED;
+        // Students only see postings from APPROVED companies: a pending,
+        // rejected or suspended company's postings stay hidden even when published.
+        return $jobPosting->status === OpportunityStatus::PUBLISHED
+            && $jobPosting->company()->approved()->exists();
     }
 
     public function create(User $user): bool

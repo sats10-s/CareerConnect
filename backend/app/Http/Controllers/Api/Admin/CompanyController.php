@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Admin;
 
+use App\Enums\CompanyStatus;
 use App\Http\Controllers\Concerns\FormatsApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreCompanyRequest;
@@ -12,6 +13,7 @@ use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 
 /**
  * Placement Admin > Companies: list, view, add and edit the companies
@@ -32,6 +34,7 @@ class CompanyController extends Controller
         $validated = $request->validate([
             'search' => ['sometimes', 'nullable', 'string', 'max:100'],
             'industry' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'status' => ['sometimes', 'nullable', Rule::in(CompanyStatus::values())],
             'page' => ['sometimes', 'integer', 'min:1'],
             'per_page' => ['sometimes', 'integer', 'between:1,100'],
         ]);
@@ -46,6 +49,10 @@ class CompanyController extends Controller
 
         if ($industry = $validated['industry'] ?? null) {
             $query->where('industry', $industry);
+        }
+
+        if ($status = $validated['status'] ?? null) {
+            $query->where('status', $status);
         }
 
         $companies = $query->orderBy('name')->paginate((int) ($validated['per_page'] ?? 15));

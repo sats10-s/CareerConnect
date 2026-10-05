@@ -180,7 +180,7 @@ class SuperAdminConsoleTest extends TestCase
 
         $this->actingAsSuperAdmin();
         $roles = $this->getJson('/api/super-admin/roles')->assertOk()->json('data.items');
-        $this->assertSame(['STUDENT', 'FACULTY', 'PLACEMENT_ADMIN', 'SUPER_ADMIN'], array_column($roles, 'name'));
+        $this->assertSame(['STUDENT', 'FACULTY', 'PLACEMENT_ADMIN', 'SUPER_ADMIN', 'COMPANY'], array_column($roles, 'name'));
         $this->assertSame(1, $roles[0]['users_count']);
         $this->assertNotEmpty($roles[0]['capabilities']);
 

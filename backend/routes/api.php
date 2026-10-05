@@ -20,6 +20,9 @@ use App\Http\Controllers\Api\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Api\Admin\StudentController as AdminStudentController;
 use App\Http\Controllers\Api\Admin\WeeklyProgressReportController as AdminWeeklyProgressReportController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\Company\DashboardController as CompanyDashboardController;
+use App\Http\Controllers\Api\Company\ProfileController as CompanyProfileController;
+use App\Http\Controllers\Api\Company\RegistrationController as CompanyRegistrationController;
 use App\Http\Controllers\Api\Dashboard\AdminDashboardController;
 use App\Http\Controllers\Api\Dashboard\FacultyDashboardController;
 use App\Http\Controllers\Api\Dashboard\StudentDashboardController;
@@ -57,6 +60,7 @@ use App\Http\Controllers\Api\StudentProfileController;
 use App\Http\Controllers\Api\SuperAdmin\AuditLogController as SuperAdminAuditLogController;
 use App\Http\Controllers\Api\SuperAdmin\BatchController as SuperAdminBatchController;
 use App\Http\Controllers\Api\SuperAdmin\DepartmentController as SuperAdminDepartmentController;
+use App\Http\Controllers\Api\SuperAdmin\CompanyApprovalController as SuperAdminCompanyApprovalController;
 use App\Http\Controllers\Api\SuperAdmin\RoleController as SuperAdminRoleController;
 use App\Http\Controllers\Api\SuperAdmin\SecurityController as SuperAdminSecurityController;
 use App\Http\Controllers\Api\SuperAdmin\SettingController as SuperAdminSettingController;
@@ -89,7 +93,24 @@ Route::get('/meta/departments', [MetaController::class, 'departments']);
 Route::get('/meta/batches', [MetaController::class, 'batches']);
 Route::get('/meta/settings', [MetaController::class, 'settings']);
 
+// Public company self-registration (rate limited per IP; closed when the
+// allow_company_registration setting is off).
+Route::post('/company/register', [CompanyRegistrationController::class, 'store'])
+    ->middleware('throttle:company-registration');
+
 Route::middleware('auth:sanctum')->group(function () {
+    // Company portal. /me and /profile stay open while the company is
+    // PENDING/REJECTED/SUSPENDED; everything else needs `company.approved`.
+    // The company is always $request->user()->company, never a route/body id.
+    Route::prefix('company')->middleware('role:COMPANY')->group(function () {
+        Route::get('/me', [CompanyProfileController::class, 'show']);
+        Route::patch('/profile', [CompanyProfileController::class, 'update']);
+
+        Route::middleware('company.approved')->group(function () {
+            Route::get('/dashboard', [CompanyDashboardController::class, 'index']);
+        });
+    });
+
     Route::get('/student/dashboard', [StudentDashboardController::class, 'index'])
         ->middleware('role:STUDENT');
 
@@ -478,6 +499,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/security', [SuperAdminSecurityController::class, 'index']);
         Route::get('/settings', [SuperAdminSettingController::class, 'index']);
         Route::patch('/settings', [SuperAdminSettingController::class, 'update']);
+
+        Route::get('/companies', [SuperAdminCompanyApprovalController::class, 'index']);
+        Route::get('/companies/{company}', [SuperAdminCompanyApprovalController::class, 'show']);
+        Route::post('/companies/{company}/approve', [SuperAdminCompanyApprovalController::class, 'approve']);
+        Route::post('/companies/{company}/reject', [SuperAdminCompanyApprovalController::class, 'reject']);
+        Route::post('/companies/{company}/suspend', [SuperAdminCompanyApprovalController::class, 'suspend']);
+        Route::post('/companies/{company}/reactivate', [SuperAdminCompanyApprovalController::class, 'reactivate']);
     });
 
     Route::get('/super-admin/dashboard', [SuperAdminDashboardController::class, 'index'])
