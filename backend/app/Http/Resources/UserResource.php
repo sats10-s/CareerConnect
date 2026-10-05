@@ -18,6 +18,9 @@ class UserResource extends JsonResource
             'email' => $this->email,
             'role' => $this->role?->name,
             'is_active' => $this->is_active,
+            // A first-time password (mobile number / one-time password) is in
+            // use: the SPA sends the user to the first-login step.
+            'must_change_password' => (bool) $this->must_change_password,
             'student' => $this->whenLoaded('student', fn () => [
                 'roll_number' => $this->student->roll_number,
                 'department_id' => $this->student->department_id,
@@ -25,6 +28,10 @@ class UserResource extends JsonResource
                 'batch_id' => $this->student->batch_id,
                 'batch' => $this->student->batch?->name,
                 'year' => $this->student->year,
+                'section' => $this->student->section,
+                'program' => $this->student->program?->value,
+                'entry_type' => $this->student->entry_type?->value,
+                'personal_email' => $this->student->personal_email,
                 'cgpa' => $this->student->cgpa === null ? null : (float) $this->student->cgpa,
                 'backlogs' => $this->student->backlogs,
                 'phone' => $this->student->phone,

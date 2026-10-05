@@ -1,6 +1,6 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { authService } from '@/services/authService'
-import type { AuthUser, LoginPayload, RegisterPayload } from '@/types/auth'
+import type { AuthUser, FirstLoginPayload, LoginPayload, RegisterPayload } from '@/types/auth'
 
 interface AuthContextValue {
   user: AuthUser | null
@@ -10,6 +10,7 @@ interface AuthContextValue {
   register: (payload: RegisterPayload) => Promise<AuthUser>
   logout: () => Promise<void>
   refresh: () => Promise<void>
+  completeFirstLogin: (payload: FirstLoginPayload) => Promise<AuthUser>
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -50,14 +51,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return newUser
   }, [])
 
+  const completeFirstLogin = useCallback(async (payload: FirstLoginPayload) => {
+    const updated = await authService.firstLogin(payload)
+    setUser(updated)
+    return updated
+  }, [])
+
   const logout = useCallback(async () => {
     await authService.logout()
     setUser(null)
   }, [])
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, isLoading, isAuthenticated: !!user, login, register, logout, refresh }),
-    [user, isLoading, login, register, logout, refresh]
+    () => ({ user, isLoading, isAuthenticated: !!user, login, register, logout, refresh, completeFirstLogin }),
+    [user, isLoading, login, register, logout, refresh, completeFirstLogin]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

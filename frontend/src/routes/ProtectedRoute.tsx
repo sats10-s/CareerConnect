@@ -25,6 +25,12 @@ export function ProtectedRoute({ allowedRoles }: { allowedRoles: Role[] }) {
     return <Navigate to="/login" replace />
   }
 
+  // Still on a first-time password: the backend answers 403 to everything
+  // else, so send them to set their own password first.
+  if (user.must_change_password) {
+    return <Navigate to="/first-login" replace />
+  }
+
   if (!allowedRoles.includes(user.role)) {
     return <Navigate to={dashboardPathForRole(user.role)} replace />
   }

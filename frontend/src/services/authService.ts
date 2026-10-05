@@ -1,5 +1,5 @@
 import { api, ensureCsrfCookie } from './api'
-import type { AuthUser, LoginPayload, RegisterPayload } from '@/types/auth'
+import type { AuthUser, FirstLoginPayload, LoginPayload, RegisterPayload } from '@/types/auth'
 
 export const authService = {
   async register(payload: RegisterPayload): Promise<AuthUser> {
@@ -25,6 +25,24 @@ export const authService = {
       )
     }
     return user
+  },
+
+  /** The forced first-login step: own password + personal email. */
+  async firstLogin(payload: FirstLoginPayload): Promise<AuthUser> {
+    const { data } = await api.post('/auth/first-login', payload)
+    return data.data as AuthUser
+  },
+
+  async forgotPassword(login: string): Promise<string> {
+    await ensureCsrfCookie()
+    const { data } = await api.post('/auth/forgot-password', { login })
+    return data.message as string
+  },
+
+  async resetPassword(payload: { login: string; token: string; password: string; password_confirmation: string }): Promise<string> {
+    await ensureCsrfCookie()
+    const { data } = await api.post('/auth/reset-password', payload)
+    return data.message as string
   },
 
   async logout(): Promise<void> {

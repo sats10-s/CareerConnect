@@ -4,6 +4,9 @@ import { useAuth } from '@/hooks/useAuth'
 import { Spinner } from '@/components/ui/Spinner'
 import { PlaceholderPage } from '@/components/common/PlaceholderPage'
 import { ProtectedRoute } from '@/routes/ProtectedRoute'
+import { FirstLoginPage } from '@/pages/auth/FirstLoginPage'
+import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
+import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 import { AuthLayout } from '@/layouts/AuthLayout'
 import { StudentLayout } from '@/layouts/StudentLayout'
 import { FacultyLayout } from '@/layouts/FacultyLayout'
@@ -97,6 +100,9 @@ export default function App() {
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/first-login" element={<FirstLoginPage />} />
         </Route>
 
         <Route element={<ProtectedRoute allowedRoles={['STUDENT']} />}>

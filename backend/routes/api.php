@@ -60,6 +60,7 @@ use App\Http\Controllers\Api\SuperAdmin\DepartmentController as SuperAdminDepart
 use App\Http\Controllers\Api\SuperAdmin\RoleController as SuperAdminRoleController;
 use App\Http\Controllers\Api\SuperAdmin\SecurityController as SuperAdminSecurityController;
 use App\Http\Controllers\Api\SuperAdmin\SettingController as SuperAdminSettingController;
+use App\Http\Controllers\Api\SuperAdmin\StudentAccountController as SuperAdminStudentAccountController;
 use App\Http\Controllers\Api\SuperAdmin\StudentDataController as SuperAdminStudentDataController;
 use App\Http\Controllers\Api\SuperAdmin\DepartmentAliasController as SuperAdminDepartmentAliasController;
 use App\Http\Controllers\Api\SuperAdmin\UserController as SuperAdminUserController;
@@ -80,10 +81,15 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
+    // Reachable while a first-time password is still in use - everything
+    // else answers 403 until the student sets their own (password.changed).
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/me', [AuthController::class, 'me']);
+        Route::post('/first-login', [AuthController::class, 'firstLogin']);
     });
 });
 
@@ -91,7 +97,7 @@ Route::get('/meta/departments', [MetaController::class, 'departments']);
 Route::get('/meta/batches', [MetaController::class, 'batches']);
 Route::get('/meta/settings', [MetaController::class, 'settings']);
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'password.changed'])->group(function () {
     Route::get('/student/dashboard', [StudentDashboardController::class, 'index'])
         ->middleware('role:STUDENT');
 
@@ -492,6 +498,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/student-data/imports/{batch}/cancel', [SuperAdminStudentDataController::class, 'cancel']);
         Route::post('/student-data/imports/{batch}/rollback', [SuperAdminStudentDataController::class, 'rollback']);
         Route::post('/student-data/imports/{batch}/one-time-passwords', [SuperAdminStudentDataController::class, 'oneTimePasswords']);
+        Route::post('/students/{student}/reset-password', [SuperAdminStudentAccountController::class, 'resetPassword']);
         Route::get('/student-data/department-aliases', [SuperAdminDepartmentAliasController::class, 'index']);
         Route::post('/student-data/department-aliases', [SuperAdminDepartmentAliasController::class, 'store']);
         Route::delete('/student-data/department-aliases/{alias}', [SuperAdminDepartmentAliasController::class, 'destroy']);

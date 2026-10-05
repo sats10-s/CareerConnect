@@ -3,15 +3,19 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\FirstLoginRequest;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Http\Resources\UserResource;
 use App\Services\AuditLogger;
 use App\Services\Auth\AuthService;
+use App\Services\Auth\PasswordService;
 use App\Services\Auth\RegistrationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
@@ -20,6 +24,7 @@ class AuthController extends Controller
         private readonly RegistrationService $registrationService,
         private readonly AuthService $authService,
         private readonly AuditLogger $audit,
+        private readonly PasswordService $passwords,
     ) {}
 
     /**
@@ -58,7 +63,7 @@ class AuthController extends Controller
      */
     public function login(LoginRequest $request): JsonResponse
     {
-        $user = $this->authService->attemptLogin($request->validated());
+        $user = $this->authService->attemptLogin($request->identifier(), $request->validated('password'), $request->ip(), $request->identifierField());
         $user->forceFill(['last_login_at' => now()])->saveQuietly();
         $this->audit->record('auth.login', "{$user->name} signed in", $user, [], $user);
 
@@ -72,6 +77,51 @@ class AuthController extends Controller
         return (new UserResource($user))
             ->additional(['token' => $token])
             ->response();
+    }
+
+    /**
+     * The forced first-login step for an account still on its first-time
+     * password: set a new one (and, for students, a personal email).
+     */
+    public function firstLogin(FirstLoginRequest $request): UserResource
+    {
+        $user = $this->passwords->completeFirstLogin(
+            $request->user(),
+            $request->validated('password'),
+            $request->validated('personal_email'),
+        );
+
+        return new UserResource($user);
+    }
+
+    /**
+     * Always the same answer, whether or not the account exists or has a
+     * reset email - never a way to probe for accounts.
+     */
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        $data = $request->validate(['login' => ['required', 'string', 'max:255']]);
+        $key = 'forgot-password:'.$request->ip();
+
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            return response()->json(['message' => 'Too many requests. Please wait a few minutes and try again.'], 429);
+        }
+        RateLimiter::hit($key, 600);
+
+        $login = PasswordService::normalizeLogin($data['login']);
+        $this->passwords->sendResetLink($this->authService->findByIdentifier($login), $login);
+
+        return response()->json([
+            'message' => 'If that account has a personal email on file, a reset link is on its way. Check your inbox (and spam folder).',
+        ]);
+    }
+
+    public function resetPassword(ResetPasswordRequest $request): JsonResponse
+    {
+        $user = $this->authService->findByIdentifier(PasswordService::normalizeLogin($request->validated('login')));
+        $this->passwords->resetWithToken($user, $request->validated('token'), $request->validated('password'));
+
+        return response()->json(['message' => 'Password changed. You can sign in with it now.']);
     }
 
     public function logout(Request $request): JsonResponse

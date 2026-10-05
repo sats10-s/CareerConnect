@@ -60,6 +60,16 @@ class User extends Authenticatable
         return $this->hasOne(Faculty::class);
     }
 
+    /**
+     * The password broker's key for this account. Imported students have no
+     * email (they sign in by JNTU No), so they get a stable stand-in; the
+     * reset link itself goes to their personal email (PasswordService).
+     */
+    public function getEmailForPasswordReset(): string
+    {
+        return $this->email ?? "user-{$this->id}@no-email.careerconnect";
+    }
+
     public function hasRole(RoleName $role): bool
     {
         return $this->role?->name === $role->value;
