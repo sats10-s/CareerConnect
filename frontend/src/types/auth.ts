@@ -9,7 +9,7 @@ export interface CompanyMembership {
   name: string
   status: CompanyStatus
   review_note: string | null
-  member_role: 'OWNER' | null
+  member_role: 'OWNER' | 'RECRUITER' | null
 }
 
 export interface StudentProfile {

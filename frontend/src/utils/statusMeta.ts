@@ -78,6 +78,15 @@ export const COMPANY_STATUS: MetaMap<'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSP
   SUSPENDED: { label: 'Suspended', tone: 'neutral' },
 }
 
+/** A company-portal posting as the recruiter reads it (Api\Company\PostingController::reviewState). */
+export const POSTING_REVIEW_STATE: MetaMap<'draft' | 'in_review' | 'live' | 'closed' | 'archived'> = {
+  draft: { label: 'Draft', tone: 'neutral' },
+  in_review: { label: 'In review', tone: 'warning' },
+  live: { label: 'Live', tone: 'success' },
+  closed: { label: 'Closed', tone: 'info' },
+  archived: { label: 'Archived', tone: 'neutral' },
+}
+
 export const COMPANY_SIZES = ['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'] as const
 
 // ---- Placement Admin ------------------------------------------------------

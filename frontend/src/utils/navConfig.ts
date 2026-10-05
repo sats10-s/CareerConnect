@@ -90,6 +90,10 @@ export const NAV_ITEMS: Record<Role, NavItem[]> = {
   ],
   COMPANY: [
     { label: 'Dashboard', path: '/company/dashboard', icon: LayoutDashboard, implemented: true },
+    { label: 'Postings', path: '/company/postings', icon: Briefcase, implemented: true },
+    { label: 'Applicants', path: '/company/applicants', icon: FileText, implemented: true },
+    { label: 'Interviews', path: '/company/interviews', icon: MessagesSquare, implemented: true },
+    { label: 'Team', path: '/company/team', icon: Users, implemented: true },
     { label: 'Company Profile', path: '/company/profile', icon: Building2, implemented: true },
     { label: 'Notifications', path: '/company/notifications', icon: Bell, implemented: true },
   ],

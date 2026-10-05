@@ -40,6 +40,9 @@ export interface AdminOpportunity {
   openings: number | null
   status: OpportunityLifecycle
   is_active: boolean
+  /** ADMIN = posted by the placement office, COMPANY = created by a recruiter in the company portal. */
+  source: 'ADMIN' | 'COMPANY'
+  submitted_for_review_at: string | null
   salary_range?: string | null
   employment_type?: EmploymentTypeValue | null
   duration_months?: number | null

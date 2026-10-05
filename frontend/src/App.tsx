@@ -17,6 +17,10 @@ import { CompanyRegisterPage } from '@/pages/company/Register'
 import { CompanyDashboardPage } from '@/pages/company/Dashboard'
 import { CompanyProfilePage } from '@/pages/company/Profile'
 import { CompanyNotificationsPage } from '@/pages/company/Notifications'
+import { CompanyPostingsPage } from '@/pages/company/Postings'
+import { CompanyApplicantsPage } from '@/pages/company/Applicants'
+import { CompanyInterviewsPage } from '@/pages/company/Interviews'
+import { CompanyTeamPage } from '@/pages/company/Team'
 import { StudentDashboardPage } from '@/pages/student/Dashboard'
 import { StudentProfilePage } from '@/pages/student/Profile'
 import { StudentNotificationsPage } from '@/pages/student/Notifications'
@@ -169,11 +173,15 @@ export default function App() {
           </Route>
         </Route>
 
-        {/* Company portal: every page here works while the company is pending;
-            the dashboard shows the review status until it's approved. */}
+        {/* Company portal. The dashboard shows the review status until the
+            company is approved; the recruiting pages show a locked state. */}
         <Route element={<ProtectedRoute allowedRoles={['COMPANY']} />}>
           <Route path="/company" element={<CompanyLayout />}>
             <Route path="dashboard" element={<CompanyDashboardPage />} />
+            <Route path="postings" element={<CompanyPostingsPage />} />
+            <Route path="applicants" element={<CompanyApplicantsPage />} />
+            <Route path="interviews" element={<CompanyInterviewsPage />} />
+            <Route path="team" element={<CompanyTeamPage />} />
             <Route path="profile" element={<CompanyProfilePage />} />
             <Route path="notifications" element={<CompanyNotificationsPage />} />
             {placeholderRoutesFor('COMPANY')}

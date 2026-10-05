@@ -58,6 +58,9 @@ interface Paging {
 export interface OpportunityListParams extends Paging {
   status?: OpportunityLifecycle
   company_id?: number
+  source?: 'ADMIN' | 'COMPANY'
+  /** Company drafts submitted for the placement office to review and publish. */
+  awaiting_review?: 1
 }
 
 export interface AdminApplicationParams extends Paging {

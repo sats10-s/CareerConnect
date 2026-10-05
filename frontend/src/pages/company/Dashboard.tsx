@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
-import { Briefcase, GraduationCap, ListChecks } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
+import { Briefcase, Clock, ListChecks, Trophy, Users } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { StatCard } from '@/components/ui/StatCard'
 import { DashboardError, DashboardLoading } from '@/components/dashboard/DashboardStatus'
@@ -8,30 +8,59 @@ import { CompanyStatusPanel } from '@/components/company/CompanyStatusPanel'
 import { useApiResource } from '@/hooks/useApiResource'
 import { useAuth } from '@/hooks/useAuth'
 import { companyService } from '@/services/companyService'
+import { formatDateTime } from '@/utils/dateFormat'
 
 function ApprovedDashboard() {
   const { data, isLoading, error, reload } = useApiResource(companyService.dashboard, 'company-dashboard')
 
-  if (isLoading && !data) return <DashboardLoading stats={2} />
+  if (isLoading && !data) return <DashboardLoading stats={4} />
   if (error || !data) return <DashboardError message={error} onRetry={reload} />
+  const { stats } = data
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <StatCard label="Job postings" value={data.stats.job_postings} icon={Briefcase} />
-        <StatCard label="Internships" value={data.stats.internships} icon={GraduationCap} tone="green" />
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard label="Live postings" value={stats.live_postings} icon={Briefcase} tone="green" />
+        <StatCard label="Waiting for review" value={stats.in_review} icon={Clock} tone="amber" />
+        <StatCard label="Active applicants" value={stats.applicants} icon={Users} />
+        <StatCard label="Selected" value={stats.selected} icon={Trophy} tone="green" />
       </div>
-      <div className="card mt-6 flex items-start gap-4 p-6">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-tint text-indigo">
-          <ListChecks className="h-5 w-5" aria-hidden="true" />
-        </span>
-        <div>
-          <h2 className="text-sm font-semibold text-ink">Posting jobs is coming next</h2>
-          <p className="mt-1 text-sm text-ink-soft">
-            Your company is approved. Creating postings, reviewing applicants and scheduling interviews from this portal are the next
-            step; until then the placement office posts on your behalf. Every posting you create will be published by a Placement Admin.
-          </p>
-        </div>
+
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        <section className="card p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold text-ink">Upcoming interviews</h2>
+            <Link to="/company/interviews" className="text-xs font-semibold text-primary hover:text-primary-hov">View all</Link>
+          </div>
+          {data.upcoming_interviews.length === 0 ? (
+            <p className="text-sm text-ink-faint">Nothing scheduled. Shortlist applicants to start interviewing.</p>
+          ) : (
+            <ul className="divide-y divide-hairline">
+              {data.upcoming_interviews.map((iv) => (
+                <li key={iv.id} className="flex items-center justify-between gap-3 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-ink">{iv.student?.name ?? 'Applicant'}</p>
+                    <p className="truncate text-xs text-ink-faint">{iv.opportunity?.title} · Round {iv.round}</p>
+                  </div>
+                  <p className="shrink-0 text-xs text-ink-soft">{formatDateTime(iv.scheduled_at)}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="card p-5">
+          <h2 className="mb-4 text-sm font-semibold text-ink">Pipeline</h2>
+          <dl className="space-y-3 text-sm">
+            <div className="flex justify-between"><dt className="text-ink-soft">Drafts</dt><dd className="tabular-nums text-ink">{stats.drafts}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink-soft">Waiting for placement office</dt><dd className="tabular-nums text-ink">{stats.in_review}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink-soft">Shortlisted or interviewing</dt><dd className="tabular-nums text-ink">{stats.shortlisted}</dd></div>
+          </dl>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link to="/company/postings" className="btn-primary"><ListChecks className="h-4 w-4" />Manage postings</Link>
+            <Link to="/company/applicants" className="btn-secondary">Review applicants</Link>
+          </div>
+        </section>
       </div>
     </>
   )
