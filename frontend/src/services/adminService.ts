@@ -216,7 +216,7 @@ export const adminService = {
   },
 
   companies: {
-    list: (params: { search?: string; industry?: string; page?: number; per_page?: number } = {}) =>
+    list: (params: { search?: string; industry?: string; status?: string; page?: number; per_page?: number } = {}) =>
       unwrap(api.get<ApiEnvelope<PaginatedList<CompanyRecord> & { industries: string[] }>>('/admin/companies', { params })),
     show: (id: number) => unwrap(api.get<ApiEnvelope<CompanyRecord>>(`/admin/companies/${id}`)),
     create: (payload: CompanyPayload) => unwrap(api.post<ApiEnvelope<CompanyRecord>>('/admin/companies', payload)),

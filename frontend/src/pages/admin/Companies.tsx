@@ -9,12 +9,14 @@ import { SearchBar } from '@/components/ui/SearchBar'
 import { CompanyLogo } from '@/components/opportunities/CompanyLogo'
 import { EmptyBriefcaseIllustration, EmptySearchIllustration } from '@/components/illustrations/EmptyStateIllustrations'
 import { FilterBar, FilterSelect } from '@/components/common/FilterBar'
+import { MetaBadge } from '@/components/common/Cells'
 import { ListState } from '@/components/common/ListState'
 import { CompanyDrawer } from '@/components/admin/CompanyDrawer'
 import { CompanyFormModal } from '@/components/admin/CompanyFormModal'
 import { useApiList } from '@/hooks/useApiList'
 import { useApiResource } from '@/hooks/useApiResource'
 import { adminService } from '@/services/adminService'
+import { COMPANY_STATUS, optionsFor } from '@/utils/statusMeta'
 import type { CompanyRecord } from '@/types/admin'
 
 function CompanyCell({ row }: { row: CompanyRecord }) {
@@ -32,20 +34,24 @@ function CompanyCell({ row }: { row: CompanyRecord }) {
 /**
  * Placement Admin > Companies - GET/POST/PATCH /admin/companies. Add and
  * edit companies here, then post jobs and internships for them. No delete:
- * a company's postings, applications and offers depend on it.
+ * a company's postings, applications and offers depend on it. Status is
+ * read-only here: only Super Admins approve or suspend self-registered
+ * companies, and students never see postings of a non-approved company.
  */
 export function AdminCompaniesPage() {
   const [search, setSearch] = useState('')
   const [industry, setIndustry] = useState('')
+  const [status, setStatus] = useState('')
   const [openId, setOpenId] = useState<number | null>(null)
   const [creating, setCreating] = useState(false)
   const industries = useApiResource(() => adminService.companies.list({ per_page: 1 }).then((d) => d.industries), 'company-industries')
 
-  const list = useApiList(adminService.companies.list, { search: search.trim() || undefined, industry: industry || undefined })
-  const hasFilters = Boolean(search.trim() || industry)
+  const list = useApiList(adminService.companies.list, { search: search.trim() || undefined, industry: industry || undefined, status: status || undefined })
+  const hasFilters = Boolean(search.trim() || industry || status)
   const clearFilters = () => {
     setSearch('')
     setIndustry('')
+    setStatus('')
   }
   const refresh = () => {
     list.reload()
@@ -57,6 +63,7 @@ export function AdminCompaniesPage() {
     { key: 'website', header: 'Website', render: (row: CompanyRecord) => <span className="text-sm text-ink-soft">{row.website ? row.website.replace(/^https?:\/\//, '') : '—'}</span> },
     { key: 'jobs', header: 'Jobs', render: (row: CompanyRecord) => <span className="tabular-nums">{row.job_postings_count ?? 0}</span> },
     { key: 'internships', header: 'Internships', render: (row: CompanyRecord) => <span className="tabular-nums">{row.internships_count ?? 0}</span> },
+    { key: 'status', header: 'Status', render: (row: CompanyRecord) => <MetaBadge map={COMPANY_STATUS} value={row.status} /> },
   ]
 
   return (
@@ -66,6 +73,7 @@ export function AdminCompaniesPage() {
       <FilterBar>
         <SearchBar value={search} onChange={setSearch} placeholder="Search by name or industry" className="w-full sm:w-80" />
         <FilterSelect label="Industry" value={industry} onChange={setIndustry} options={(industries.data ?? []).map((i) => ({ value: i, label: i }))} allLabel="All industries" />
+        <FilterSelect label="Status" value={status} onChange={setStatus} options={optionsFor(COMPANY_STATUS)} allLabel="All statuses" />
         {hasFilters && <Button variant="secondary" onClick={clearFilters}>Clear filters</Button>}
         <div className="w-full sm:ml-auto sm:w-auto">
           <Button className="w-full sm:w-auto" onClick={() => setCreating(true)}>
@@ -96,7 +104,10 @@ export function AdminCompaniesPage() {
           onRowClick={(row) => setOpenId(row.id)}
           renderMobileCard={(row) => (
             <div className="space-y-2">
-              <CompanyCell row={row} />
+              <div className="flex items-start justify-between gap-3">
+                <CompanyCell row={row} />
+                <MetaBadge map={COMPANY_STATUS} value={row.status} />
+              </div>
               <p className="text-xs text-ink-faint">{row.job_postings_count ?? 0} job{row.job_postings_count === 1 ? '' : 's'} · {row.internships_count ?? 0} internship{row.internships_count === 1 ? '' : 's'}</p>
             </div>
           )}

@@ -24,6 +24,7 @@ import {
   Layers,
   Lock,
   History,
+  BadgeCheck,
   type LucideIcon,
 } from 'lucide-react'
 import type { Role } from '@/types/auth'
@@ -79,12 +80,18 @@ export const NAV_ITEMS: Record<Role, NavItem[]> = {
   SUPER_ADMIN: [
     { label: 'Dashboard', path: '/super-admin/dashboard', icon: LayoutDashboard, implemented: true },
     { label: 'Users', path: '/super-admin/users', icon: Users, implemented: true },
+    { label: 'Company Approvals', path: '/super-admin/company-approvals', icon: BadgeCheck, implemented: true },
     { label: 'Roles', path: '/super-admin/roles', icon: Network, implemented: true },
     { label: 'Departments', path: '/super-admin/departments', icon: Landmark, implemented: true },
     { label: 'Batches', path: '/super-admin/batches', icon: Layers, implemented: true },
     { label: 'Security', path: '/super-admin/security', icon: Lock, implemented: true },
     { label: 'Audit Logs', path: '/super-admin/audit-logs', icon: History, implemented: true },
     { label: 'Settings', path: '/super-admin/settings', icon: Settings, implemented: true },
+  ],
+  COMPANY: [
+    { label: 'Dashboard', path: '/company/dashboard', icon: LayoutDashboard, implemented: true },
+    { label: 'Company Profile', path: '/company/profile', icon: Building2, implemented: true },
+    { label: 'Notifications', path: '/company/notifications', icon: Bell, implemented: true },
   ],
 }
 
@@ -107,4 +114,5 @@ export const ROLE_ICON: Record<Role, LucideIcon> = {
   FACULTY: Users,
   PLACEMENT_ADMIN: ShieldCheck,
   SUPER_ADMIN: Lock,
+  COMPANY: Building2,
 }

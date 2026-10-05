@@ -4,6 +4,8 @@ import type {
   AuditLogEntry,
   AuditLogParams,
   BatchRecord,
+  CompanyApprovalRecord,
+  CompanyStatusCounts,
   CreateUserPayload,
   DepartmentRecord,
   InstitutionSettings,
@@ -49,6 +51,15 @@ export const superAdminService = {
     get: () => unwrap(api.get<ApiEnvelope<{ values: InstitutionSettings }>>('/super-admin/settings')).then((d) => d.values),
     update: (payload: Partial<InstitutionSettings>) =>
       api.patch<ApiEnvelope<{ values: InstitutionSettings }>>('/super-admin/settings', payload).then((r) => ({ values: r.data.data.values, message: r.data.message })),
+  },
+  companies: {
+    list: (params: { status?: string; search?: string; page?: number; per_page?: number } = {}) =>
+      unwrap(api.get<ApiEnvelope<PaginatedList<CompanyApprovalRecord> & { counts: CompanyStatusCounts }>>('/super-admin/companies', { params })),
+    show: (id: number) => unwrap(api.get<ApiEnvelope<CompanyApprovalRecord>>(`/super-admin/companies/${id}`)),
+    approve: (id: number, note?: string) => unwrap(api.post<ApiEnvelope<CompanyApprovalRecord>>(`/super-admin/companies/${id}/approve`, { note })),
+    reject: (id: number, reason: string) => unwrap(api.post<ApiEnvelope<CompanyApprovalRecord>>(`/super-admin/companies/${id}/reject`, { reason })),
+    suspend: (id: number, reason: string) => unwrap(api.post<ApiEnvelope<CompanyApprovalRecord>>(`/super-admin/companies/${id}/suspend`, { reason })),
+    reactivate: (id: number, note?: string) => unwrap(api.post<ApiEnvelope<CompanyApprovalRecord>>(`/super-admin/companies/${id}/reactivate`, { note })),
   },
   publicSettings: () => api.get<PublicSettings>('/meta/settings').then((r) => r.data),
 }

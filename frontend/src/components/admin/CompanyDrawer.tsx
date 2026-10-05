@@ -11,7 +11,7 @@ import { CompanyFormModal } from './CompanyFormModal'
 import { useApiResource } from '@/hooks/useApiResource'
 import { adminService } from '@/services/adminService'
 import { formatDate } from '@/utils/dateFormat'
-import { OPPORTUNITY_STATUS } from '@/utils/statusMeta'
+import { COMPANY_STATUS, OPPORTUNITY_STATUS } from '@/utils/statusMeta'
 
 /** GET /admin/companies/{id}: details and every job/internship posted for the company, with edit. */
 export function CompanyDrawer({ id, onClose, onChanged }: { id: number | null; onClose: () => void; onChanged: () => void }) {
@@ -48,7 +48,17 @@ export function CompanyDrawer({ id, onClose, onChanged }: { id: number | null; o
                 <p className="truncate text-base font-semibold text-ink">{data.name}</p>
                 <p className="text-sm text-ink-soft">{data.industry ?? 'Industry not set'}</p>
               </div>
+              <div className="ml-auto"><MetaBadge map={COMPANY_STATUS} value={data.status} /></div>
             </div>
+
+            {data.status !== 'APPROVED' && (
+              <p className="rounded-lg border border-hairline bg-surface-raised px-3.5 py-2.5 text-sm text-ink-soft">
+                {data.status === 'PENDING'
+                  ? 'This self-registered company is waiting for Super Admin approval. Students won’t see its postings until then.'
+                  : `This company is ${data.status_label.toLowerCase()}. Students won’t see its postings.`}
+                {data.review_note ? ` Reason: ${data.review_note}` : ''}
+              </p>
+            )}
 
             <dl className="grid grid-cols-2 gap-4">
               <DetailItem label="Website">

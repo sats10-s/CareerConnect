@@ -1,6 +1,7 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { authService } from '@/services/authService'
-import type { AuthUser, LoginPayload, RegisterPayload } from '@/types/auth'
+import { companyService } from '@/services/companyService'
+import type { AuthUser, CompanyRegisterPayload, LoginPayload, RegisterPayload } from '@/types/auth'
 
 interface AuthContextValue {
   user: AuthUser | null
@@ -8,6 +9,7 @@ interface AuthContextValue {
   isAuthenticated: boolean
   login: (payload: LoginPayload) => Promise<AuthUser>
   register: (payload: RegisterPayload) => Promise<AuthUser>
+  registerCompany: (payload: CompanyRegisterPayload) => Promise<AuthUser>
   logout: () => Promise<void>
   refresh: () => Promise<void>
 }
@@ -50,14 +52,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return newUser
   }, [])
 
+  const registerCompany = useCallback(async (payload: CompanyRegisterPayload) => {
+    const newUser = await companyService.register(payload)
+    setUser(newUser)
+    return newUser
+  }, [])
+
   const logout = useCallback(async () => {
     await authService.logout()
     setUser(null)
   }, [])
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, isLoading, isAuthenticated: !!user, login, register, logout, refresh }),
-    [user, isLoading, login, register, logout, refresh]
+    () => ({ user, isLoading, isAuthenticated: !!user, login, register, registerCompany, logout, refresh }),
+    [user, isLoading, login, register, registerCompany, logout, refresh]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

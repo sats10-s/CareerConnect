@@ -10,6 +10,7 @@ export const ROLE_DASHBOARD_PATH: Record<Role, string> = {
   FACULTY: '/faculty/dashboard',
   PLACEMENT_ADMIN: '/admin/dashboard',
   SUPER_ADMIN: '/super-admin/dashboard',
+  COMPANY: '/company/dashboard',
 }
 
 export const ROLE_LABEL: Record<Role, string> = {
@@ -17,6 +18,7 @@ export const ROLE_LABEL: Record<Role, string> = {
   FACULTY: 'Faculty',
   PLACEMENT_ADMIN: 'Placement Admin',
   SUPER_ADMIN: 'Super Admin',
+  COMPANY: 'Company Recruiter',
 }
 
 export function dashboardPathForRole(role: Role): string {

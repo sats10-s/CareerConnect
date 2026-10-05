@@ -118,6 +118,12 @@ export function LoginPage() {
           Create an account
         </Link>
       </p>
+      <p className="mt-2 text-center text-sm text-muted">
+        Hiring from campus?{' '}
+        <Link to="/company/register" className="font-semibold text-primary hover:text-primary-hov">
+          Register your company
+        </Link>
+      </p>
     </div>
   )
 }

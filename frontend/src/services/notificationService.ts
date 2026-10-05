@@ -9,7 +9,7 @@ import type { ApiEnvelope, NotificationItem, NotificationListData } from '@/type
  * same as PLACEMENT_ADMIN's). There is no separate super-admin
  * notification route.
  */
-function prefixForRole(role: Role): 'student' | 'faculty' | 'admin' {
+function prefixForRole(role: Role): 'student' | 'faculty' | 'admin' | 'company' {
   switch (role) {
     case 'STUDENT':
       return 'student'
@@ -18,6 +18,8 @@ function prefixForRole(role: Role): 'student' | 'faculty' | 'admin' {
     case 'PLACEMENT_ADMIN':
     case 'SUPER_ADMIN':
       return 'admin'
+    case 'COMPANY':
+      return 'company'
   }
 }
 

@@ -9,9 +9,14 @@ import { StudentLayout } from '@/layouts/StudentLayout'
 import { FacultyLayout } from '@/layouts/FacultyLayout'
 import { AdminLayout } from '@/layouts/AdminLayout'
 import { SuperAdminLayout } from '@/layouts/SuperAdminLayout'
+import { CompanyLayout } from '@/layouts/CompanyLayout'
 import { LandingPage } from '@/pages/public/LandingPage'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { RegisterPage } from '@/pages/auth/RegisterPage'
+import { CompanyRegisterPage } from '@/pages/company/Register'
+import { CompanyDashboardPage } from '@/pages/company/Dashboard'
+import { CompanyProfilePage } from '@/pages/company/Profile'
+import { CompanyNotificationsPage } from '@/pages/company/Notifications'
 import { StudentDashboardPage } from '@/pages/student/Dashboard'
 import { StudentProfilePage } from '@/pages/student/Profile'
 import { StudentNotificationsPage } from '@/pages/student/Notifications'
@@ -46,6 +51,7 @@ import { AdminInterviewsPage } from '@/pages/admin/Interviews'
 import { AdminPlacementDrivesPage } from '@/pages/admin/PlacementDrives'
 import { SuperAdminDashboardPage } from '@/pages/superadmin/Dashboard'
 import { SuperAdminUsersPage } from '@/pages/superadmin/Users'
+import { SuperAdminCompanyApprovalsPage } from '@/pages/superadmin/CompanyApprovals'
 import { SuperAdminRolesPage } from '@/pages/superadmin/Roles'
 import { SuperAdminAuditLogsPage } from '@/pages/superadmin/AuditLogs'
 import { SuperAdminSecurityPage } from '@/pages/superadmin/Security'
@@ -96,6 +102,7 @@ export default function App() {
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/company/register" element={<CompanyRegisterPage />} />
         </Route>
 
         <Route element={<ProtectedRoute allowedRoles={['STUDENT']} />}>
@@ -153,11 +160,23 @@ export default function App() {
             <Route path="departments" element={<SuperAdminDepartmentsPage />} />
             <Route path="batches" element={<SuperAdminBatchesPage />} />
             <Route path="users" element={<SuperAdminUsersPage />} />
+            <Route path="company-approvals" element={<SuperAdminCompanyApprovalsPage />} />
             <Route path="roles" element={<SuperAdminRolesPage />} />
             <Route path="security" element={<SuperAdminSecurityPage />} />
             <Route path="audit-logs" element={<SuperAdminAuditLogsPage />} />
             <Route path="settings" element={<SuperAdminSettingsPage />} />
             {placeholderRoutesFor('SUPER_ADMIN')}
+          </Route>
+        </Route>
+
+        {/* Company portal: every page here works while the company is pending;
+            the dashboard shows the review status until it's approved. */}
+        <Route element={<ProtectedRoute allowedRoles={['COMPANY']} />}>
+          <Route path="/company" element={<CompanyLayout />}>
+            <Route path="dashboard" element={<CompanyDashboardPage />} />
+            <Route path="profile" element={<CompanyProfilePage />} />
+            <Route path="notifications" element={<CompanyNotificationsPage />} />
+            {placeholderRoutesFor('COMPANY')}
           </Route>
         </Route>
 
