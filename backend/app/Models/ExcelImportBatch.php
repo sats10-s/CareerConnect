@@ -35,7 +35,13 @@ class ExcelImportBatch extends Model
         'rolled_back_by',
         'rolled_back_at',
         'error_message',
+        'summary',
+        'progress_total',
+        'progress_done',
+        'secret',
     ];
+
+    protected $hidden = ['secret'];
 
     protected function casts(): array
     {
@@ -49,6 +55,10 @@ class ExcelImportBatch extends Model
             'error_rows' => 'integer',
             'confirmed_at' => 'datetime',
             'rolled_back_at' => 'datetime',
+            'summary' => 'array',
+            'progress_total' => 'integer',
+            'progress_done' => 'integer',
+            'secret' => 'encrypted:array',
         ];
     }
 

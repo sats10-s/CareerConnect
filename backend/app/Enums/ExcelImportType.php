@@ -38,12 +38,32 @@ enum ExcelImportType: string
     case FINAL_SELECTION = 'FINAL_SELECTION';
     case ATTENDANCE = 'ATTENDANCE';
 
+    // Super Admin > Student Data (App\Services\StudentImport\StudentImportService) -
+    // same batch/row/change tables, its own routes, never the Excel Sync Center's.
+    case STUDENTS = 'STUDENTS';
+    case ACADEMIC_UPDATE = 'ACADEMIC_UPDATE';
+
     /**
      * @return array<int, string>
      */
     public static function values(): array
     {
         return array_map(fn (self $type) => $type->value, self::cases());
+    }
+
+    /**
+     * The Excel Sync Center's own types - everything except Student Data.
+     *
+     * @return array<int, string>
+     */
+    public static function syncCenterValues(): array
+    {
+        return array_values(array_map(fn (self $type) => $type->value, array_filter(self::cases(), fn (self $type) => ! $type->isStudentData())));
+    }
+
+    public function isStudentData(): bool
+    {
+        return $this === self::STUDENTS || $this === self::ACADEMIC_UPDATE;
     }
 
     public function label(): string
@@ -57,6 +77,8 @@ enum ExcelImportType: string
             self::ASSESSMENT_RESULT => 'Assessment Results',
             self::FINAL_SELECTION => 'Final Selection',
             self::ATTENDANCE => 'Attendance',
+            self::STUDENTS => 'Full student list',
+            self::ACADEMIC_UPDATE => 'Results update',
         };
     }
 

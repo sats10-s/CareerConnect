@@ -25,6 +25,7 @@ import {
   Lock,
   History,
   type LucideIcon,
+  FileSpreadsheet,
 } from 'lucide-react'
 import type { Role } from '@/types/auth'
 
@@ -79,6 +80,7 @@ export const NAV_ITEMS: Record<Role, NavItem[]> = {
   SUPER_ADMIN: [
     { label: 'Dashboard', path: '/super-admin/dashboard', icon: LayoutDashboard, implemented: true },
     { label: 'Users', path: '/super-admin/users', icon: Users, implemented: true },
+    { label: 'Student Data', path: '/super-admin/student-data', icon: FileSpreadsheet, implemented: true },
     { label: 'Roles', path: '/super-admin/roles', icon: Network, implemented: true },
     { label: 'Departments', path: '/super-admin/departments', icon: Landmark, implemented: true },
     { label: 'Batches', path: '/super-admin/batches', icon: Layers, implemented: true },

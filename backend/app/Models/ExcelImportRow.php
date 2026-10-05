@@ -32,6 +32,7 @@ class ExcelImportRow extends Model
         'entity_id',
         'confirm_context',
         'outcome',
+        'category',
         'messages',
         'changes',
         'applied',

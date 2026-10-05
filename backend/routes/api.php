@@ -60,6 +60,8 @@ use App\Http\Controllers\Api\SuperAdmin\DepartmentController as SuperAdminDepart
 use App\Http\Controllers\Api\SuperAdmin\RoleController as SuperAdminRoleController;
 use App\Http\Controllers\Api\SuperAdmin\SecurityController as SuperAdminSecurityController;
 use App\Http\Controllers\Api\SuperAdmin\SettingController as SuperAdminSettingController;
+use App\Http\Controllers\Api\SuperAdmin\StudentDataController as SuperAdminStudentDataController;
+use App\Http\Controllers\Api\SuperAdmin\DepartmentAliasController as SuperAdminDepartmentAliasController;
 use App\Http\Controllers\Api\SuperAdmin\UserController as SuperAdminUserController;
 use Illuminate\Support\Facades\Route;
 
@@ -478,6 +480,21 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/security', [SuperAdminSecurityController::class, 'index']);
         Route::get('/settings', [SuperAdminSettingController::class, 'index']);
         Route::patch('/settings', [SuperAdminSettingController::class, 'update']);
+
+        // Student Data: the college's student file and semester results.
+        Route::get('/student-data/imports', [SuperAdminStudentDataController::class, 'index']);
+        Route::post('/student-data/imports', [SuperAdminStudentDataController::class, 'store']);
+        Route::get('/student-data/imports/{batch}', [SuperAdminStudentDataController::class, 'show']);
+        Route::get('/student-data/imports/{batch}/rows', [SuperAdminStudentDataController::class, 'rows']);
+        Route::get('/student-data/imports/{batch}/issues', [SuperAdminStudentDataController::class, 'issues']);
+        Route::post('/student-data/imports/{batch}/recheck', [SuperAdminStudentDataController::class, 'recheck']);
+        Route::post('/student-data/imports/{batch}/confirm', [SuperAdminStudentDataController::class, 'confirm']);
+        Route::post('/student-data/imports/{batch}/cancel', [SuperAdminStudentDataController::class, 'cancel']);
+        Route::post('/student-data/imports/{batch}/rollback', [SuperAdminStudentDataController::class, 'rollback']);
+        Route::post('/student-data/imports/{batch}/one-time-passwords', [SuperAdminStudentDataController::class, 'oneTimePasswords']);
+        Route::get('/student-data/department-aliases', [SuperAdminDepartmentAliasController::class, 'index']);
+        Route::post('/student-data/department-aliases', [SuperAdminDepartmentAliasController::class, 'store']);
+        Route::delete('/student-data/department-aliases/{alias}', [SuperAdminDepartmentAliasController::class, 'destroy']);
     });
 
     Route::get('/super-admin/dashboard', [SuperAdminDashboardController::class, 'index'])

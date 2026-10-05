@@ -30,7 +30,7 @@ class StoreExcelImportRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'type' => ['required', Rule::in(ExcelImportType::values())],
+            'type' => ['required', Rule::in(ExcelImportType::syncCenterValues())],
             'file' => ['required', 'file', 'mimes:xlsx,xls', 'max:10240'],
         ];
     }

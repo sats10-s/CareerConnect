@@ -50,6 +50,7 @@ import { SuperAdminRolesPage } from '@/pages/superadmin/Roles'
 import { SuperAdminAuditLogsPage } from '@/pages/superadmin/AuditLogs'
 import { SuperAdminSecurityPage } from '@/pages/superadmin/Security'
 import { SuperAdminSettingsPage } from '@/pages/superadmin/Settings'
+import { SuperAdminStudentDataPage } from '@/pages/superadmin/StudentData'
 import { NotFoundPage } from '@/pages/NotFound'
 import { ToastViewport } from '@/components/ui/Toast'
 import { NAV_ITEMS } from '@/utils/navConfig'
@@ -153,6 +154,7 @@ export default function App() {
             <Route path="departments" element={<SuperAdminDepartmentsPage />} />
             <Route path="batches" element={<SuperAdminBatchesPage />} />
             <Route path="users" element={<SuperAdminUsersPage />} />
+            <Route path="student-data" element={<SuperAdminStudentDataPage />} />
             <Route path="roles" element={<SuperAdminRolesPage />} />
             <Route path="security" element={<SuperAdminSecurityPage />} />
             <Route path="audit-logs" element={<SuperAdminAuditLogsPage />} />

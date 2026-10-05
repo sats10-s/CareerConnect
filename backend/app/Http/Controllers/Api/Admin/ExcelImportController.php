@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Admin;
 
+use App\Enums\ExcelImportType;
 use App\Exceptions\ExcelImportException;
 use App\Http\Controllers\Concerns\FormatsApiResponse;
 use App\Http\Controllers\Controller;
@@ -41,7 +42,9 @@ class ExcelImportController extends Controller
     {
         Gate::authorize('viewAny', ExcelImportBatch::class);
 
-        $query = ExcelImportBatch::query()->with(['uploadedBy', 'confirmedBy', 'rolledBackBy']);
+        // Student Data imports (Super Admin only) have their own screens.
+        $query = ExcelImportBatch::query()->with(['uploadedBy', 'confirmedBy', 'rolledBackBy'])
+            ->whereIn('import_type', ExcelImportType::syncCenterValues());
 
         if ($type = $request->input('import_type')) {
             $query->where('import_type', $type);
@@ -95,6 +98,7 @@ class ExcelImportController extends Controller
 
     public function show(ExcelImportBatch $batch): JsonResponse
     {
+        abort_if($batch->import_type->isStudentData(), 404);
         Gate::authorize('view', $batch);
 
         $batch->load(['uploadedBy', 'confirmedBy', 'rolledBackBy']);
@@ -112,6 +116,7 @@ class ExcelImportController extends Controller
      */
     public function preview(Request $request, ExcelImportBatch $batch): JsonResponse
     {
+        abort_if($batch->import_type->isStudentData(), 404);
         Gate::authorize('view', $batch);
 
         $query = $batch->rows();
@@ -148,6 +153,7 @@ class ExcelImportController extends Controller
      */
     public function confirm(ConfirmExcelImportRequest $request, ExcelImportBatch $batch): JsonResponse
     {
+        abort_if($batch->import_type->isStudentData(), 404);
         Gate::authorize('confirm', $batch);
 
         try {
@@ -167,6 +173,7 @@ class ExcelImportController extends Controller
      */
     public function rollback(Request $request, ExcelImportBatch $batch): JsonResponse
     {
+        abort_if($batch->import_type->isStudentData(), 404);
         Gate::authorize('rollback', $batch);
 
         try {

@@ -32,7 +32,7 @@ class ExcelTemplateController extends Controller
 
         $importType = ExcelImportType::tryFrom(strtoupper($type));
 
-        if ($importType === null) {
+        if ($importType === null || $importType->isStudentData()) {
             return $this->failure('Unknown import type.', [], 404);
         }
 

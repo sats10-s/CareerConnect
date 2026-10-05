@@ -41,6 +41,11 @@ enum ExcelImportBatchStatus: string
     case FAILED = 'FAILED';
     case ROLLED_BACK = 'ROLLED_BACK';
 
+    // Student Data imports only: the queued confirm job is running, or the
+    // Super Admin cancelled the preview (file deleted, nothing written).
+    case PROCESSING = 'PROCESSING';
+    case CANCELLED = 'CANCELLED';
+
     /**
      * @return array<int, string>
      */

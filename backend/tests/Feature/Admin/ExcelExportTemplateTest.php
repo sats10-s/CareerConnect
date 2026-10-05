@@ -40,7 +40,8 @@ class ExcelExportTemplateTest extends TestCase
 
     public static function importTypes(): array
     {
-        return array_map(fn (string $v) => [$v], ExcelImportType::values());
+        // Student Data imports (Super Admin > Student Data) have no Sync Center template.
+        return array_map(fn (string $v) => [$v], ExcelImportType::syncCenterValues());
     }
 
     #[DataProvider('importTypes')]
