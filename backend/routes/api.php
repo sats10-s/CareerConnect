@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\Admin\StudentController as AdminStudentController;
 use App\Http\Controllers\Api\Admin\WeeklyProgressReportController as AdminWeeklyProgressReportController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\Company\DashboardController as CompanyDashboardController;
+use App\Http\Controllers\Api\Company\NotificationController as CompanyNotificationController;
 use App\Http\Controllers\Api\Company\ProfileController as CompanyProfileController;
 use App\Http\Controllers\Api\Company\RegistrationController as CompanyRegistrationController;
 use App\Http\Controllers\Api\Dashboard\AdminDashboardController;
@@ -99,12 +100,16 @@ Route::post('/company/register', [CompanyRegistrationController::class, 'store']
     ->middleware('throttle:company-registration');
 
 Route::middleware('auth:sanctum')->group(function () {
-    // Company portal. /me and /profile stay open while the company is
+    // Company portal. /me, /profile and /notifications stay open while the company is
     // PENDING/REJECTED/SUSPENDED; everything else needs `company.approved`.
     // The company is always $request->user()->company, never a route/body id.
     Route::prefix('company')->middleware('role:COMPANY')->group(function () {
         Route::get('/me', [CompanyProfileController::class, 'show']);
         Route::patch('/profile', [CompanyProfileController::class, 'update']);
+        Route::get('/notifications', [CompanyNotificationController::class, 'index']);
+        Route::get('/notifications/unread-count', [CompanyNotificationController::class, 'unreadCount']);
+        Route::patch('/notifications/{notification}/read', [CompanyNotificationController::class, 'markRead']);
+        Route::post('/notifications/read-all', [CompanyNotificationController::class, 'markAllRead']);
 
         Route::middleware('company.approved')->group(function () {
             Route::get('/dashboard', [CompanyDashboardController::class, 'index']);

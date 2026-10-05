@@ -160,6 +160,8 @@ class CompanyRegistrationTest extends TestCase
 
         Sanctum::actingAs($owner->fresh(), ['*']);
         $this->getJson('/api/company/dashboard')->assertOk()->assertJsonPath('data.company.status', 'APPROVED');
+        $this->getJson('/api/company/notifications/unread-count')->assertOk()->assertJsonPath('data.unread_count', 1);
+        $this->getJson('/api/company/notifications')->assertJsonPath('data.items.0.title', 'Your company is approved');
     }
 
     public function test_reject_and_suspend_need_a_reason_and_follow_valid_transitions(): void
