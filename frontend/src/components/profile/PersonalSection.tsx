@@ -8,13 +8,11 @@ import { describeFailure, ErrorBanner, FieldError, fieldError } from './shared'
 
 interface FormState {
   personal_email: string
-  phone: string
 }
 
 function toForm(profile: StudentProfileData): FormState {
   return {
     personal_email: profile.personal_email ?? '',
-    phone: profile.phone ?? '',
   }
 }
 
@@ -59,8 +57,7 @@ export function PersonalSection({
     setFormError(null)
     try {
       const payload = studentProfileService.toUpdatePayload(profile, {
-        personal_email: form.personal_email === '' ? null : form.personal_email,
-        phone: form.phone === '' ? null : form.phone,
+        personal_email: form.personal_email,
       })
       const updated = await studentProfileService.updateProfile(payload)
       onProfileChange(updated)
@@ -92,47 +89,25 @@ export function PersonalSection({
       {!isEditing ? (
         <div className="grid grid-cols-1 gap-x-6 gap-y-4 px-5 py-5 sm:grid-cols-2">
           <ReadOnlyField label="Full name" value={profile.name} />
-          <ReadOnlyField label="College email" value={profile.college_email} locked />
+          <ReadOnlyField label="College email" value={profile.college_email ?? '—'} locked />
           <ReadOnlyField label="Personal email" value={profile.personal_email ?? '—'} />
-          <ReadOnlyField label="Phone" value={profile.phone ?? '—'} />
+          <ReadOnlyField label="Mobile (college record)" value={profile.phone ?? '—'} locked />
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4 px-5 py-5">
           {formError && <ErrorBanner message={formError} />}
 
           <div>
-            <label className="label" htmlFor="college_email">College email</label>
-            <div className="flex items-center gap-2">
-              <input id="college_email" className="input" value={profile.college_email} disabled readOnly />
-              <Lock className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden="true" />
-            </div>
-            <p className="mt-1 text-xs text-ink-faint">Your college email is fixed and cannot be changed here.</p>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="label" htmlFor="personal_email">Personal email</label>
-              <input
-                id="personal_email"
-                type="email"
-                className="input"
-                placeholder="you@example.com"
-                value={form.personal_email}
-                onChange={(e) => setForm((prev) => ({ ...prev, personal_email: e.target.value }))}
-              />
-              <FieldError message={fieldError(errors, 'personal_email')} />
-            </div>
-            <div>
-              <label className="label" htmlFor="phone">Phone</label>
-              <input
-                id="phone"
-                className="input"
-                placeholder="+91 98765 43210"
-                value={form.phone}
-                onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
-              />
-              <FieldError message={fieldError(errors, 'phone')} />
-            </div>
+            <label className="label" htmlFor="personal_email">Personal email</label>
+            <input
+              id="personal_email"
+              type="email"
+              className="input"
+              placeholder="you@example.com"
+              value={form.personal_email}
+              onChange={(e) => setForm((prev) => ({ ...prev, personal_email: e.target.value }))}
+            />
+            <FieldError message={fieldError(errors, 'personal_email')} />
           </div>
 
           <div className="flex gap-3">

@@ -79,9 +79,15 @@ class OpportunityEligibilityService
             ];
         }
 
+        // A missing CGPA/backlog count is never read as 0 - it fails a
+        // gated criterion, with a reason saying it isn't on record yet.
         $minCgpa = $criteria?->min_cgpa;
-        if ($minCgpa !== null
-            && ($student->cgpa === null || (float) $student->cgpa < (float) $minCgpa)) {
+        if ($minCgpa !== null && $student->cgpa === null) {
+            $reasons[] = [
+                'code' => 'CGPA',
+                'message' => sprintf('Minimum CGPA required is %.2f, and your CGPA is not yet available from the college.', (float) $minCgpa),
+            ];
+        } elseif ($minCgpa !== null && (float) $student->cgpa < (float) $minCgpa) {
             $reasons[] = [
                 'code' => 'CGPA',
                 'message' => sprintf('Minimum CGPA required is %.2f.', (float) $minCgpa),
@@ -89,8 +95,12 @@ class OpportunityEligibilityService
         }
 
         $maxBacklogs = $criteria?->max_backlogs;
-        if ($maxBacklogs !== null
-            && ($student->backlogs === null || (int) $student->backlogs > (int) $maxBacklogs)) {
+        if ($maxBacklogs !== null && $student->backlogs === null) {
+            $reasons[] = [
+                'code' => 'BACKLOGS',
+                'message' => sprintf('Maximum allowed backlogs is %d, and your backlogs have not been reported by the college.', (int) $maxBacklogs),
+            ];
+        } elseif ($maxBacklogs !== null && (int) $student->backlogs > (int) $maxBacklogs) {
             $reasons[] = [
                 'code' => 'BACKLOGS',
                 'message' => sprintf('Maximum allowed backlogs is %d.', (int) $maxBacklogs),

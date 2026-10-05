@@ -235,6 +235,25 @@ class OpportunityEligibilityTest extends TestCase
         $response->assertJsonFragment(['code' => 'BACKLOGS', 'message' => 'Maximum allowed backlogs is 0.']);
     }
 
+    public function test_missing_cgpa_is_not_eligible_and_says_why(): void
+    {
+        $jobPosting = $this->makeJobPosting([
+            'eligibility_enforced' => true,
+            'min_cgpa' => 6.0,
+            'max_backlogs' => 2,
+        ]);
+
+        // Never treated as 0 - and never as a pass either.
+        Sanctum::actingAs($this->makeStudent(['cgpa' => null, 'backlogs' => null]), ['*']);
+
+        $response = $this->getJson("/api/student/opportunities/jobs/{$jobPosting->id}");
+
+        $response->assertOk();
+        $response->assertJsonPath('data.my_eligibility.eligible', false);
+        $response->assertJsonFragment(['code' => 'CGPA', 'message' => 'Minimum CGPA required is 6.00, and your CGPA is not yet available from the college.']);
+        $response->assertJsonFragment(['code' => 'BACKLOGS', 'message' => 'Maximum allowed backlogs is 2, and your backlogs have not been reported by the college.']);
+    }
+
     public function test_missing_required_skill_produces_skills_reason(): void
     {
         $jobPosting = $this->makeJobPosting([

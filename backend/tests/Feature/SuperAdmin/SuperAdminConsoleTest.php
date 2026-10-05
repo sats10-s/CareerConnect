@@ -200,7 +200,8 @@ class SuperAdminConsoleTest extends TestCase
     public function test_settings_update_validate_audit_and_registration_toggle_is_enforced(): void
     {
         $this->actingAsSuperAdmin();
-        $this->getJson('/api/super-admin/settings')->assertOk()->assertJsonPath('data.values.allow_student_registration', true);
+        $this->getJson('/api/super-admin/settings')->assertOk()->assertJsonPath('data.values.allow_student_registration', false);
+        $this->patchJson('/api/super-admin/settings', ['allow_student_registration' => true])->assertOk()->assertJsonPath('data.values.allow_student_registration', true);
 
         $this->patchJson('/api/super-admin/settings', ['support_email' => 'nope', 'attendance_threshold' => 150, 'academic_year' => '26'])
             ->assertStatus(422)->assertJsonValidationErrors(['support_email', 'attendance_threshold', 'academic_year']);

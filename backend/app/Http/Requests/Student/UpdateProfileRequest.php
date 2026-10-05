@@ -3,25 +3,33 @@
 namespace App\Http\Requests\Student;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 /**
- * Validates a student editing their own profile (see StudentProfileController).
- * The route is already gated by auth:sanctum + role:STUDENT, so this only
- * validates field shape/uniqueness, not who's allowed to call it.
+ * A student editing their own "My Profile" fields (see
+ * StudentProfileController). Only student-owned fields are accepted:
+ * personal email, address, LinkedIn, portfolio and GitHub. Skills and the
+ * resume have their own endpoints.
  *
- * `college_email`/`email` are explicitly `prohibited`: the college email
- * is the immutable login identity (see AuthController/RegistrationService)
- * and must never be changeable from this endpoint. FormRequest::validated()
- * only ever returns keys declared in rules() below, and `email`/
- * `college_email` aren't fillable on the Student model either - so a
- * stray value could never silently reach the database regardless. The
- * `prohibited` rule turns that into a visible, explicit 422 instead of a
- * silent no-op, per the module spec's "reject...or explicitly ignore"
- * requirement - this project takes the reject option.
+ * Every college-record field (the 11 columns of the college's student file,
+ * plus what is derived from them) is `prohibited`: it comes from the Super
+ * Admin's import and the student can only view it. Sending one is a
+ * visible 422, never a silent no-op - the "Report a correction" button is
+ * the student's route for a wrong value.
+ *
+ * All editable fields are `sometimes`, so a PATCH can update just one.
  */
 class UpdateProfileRequest extends FormRequest
 {
+    /** College-record fields a student may never write. */
+    public const COLLEGE_FIELDS = [
+        'name', 'college_email', 'email',
+        'roll_number', 'year_of_joining', 'gender', 'department_id', 'department', 'section',
+        'phone', 'mobile', 'cgpa', 'backlogs', 'ssc_score', 'ssc_scale', 'inter_score', 'inter_type',
+        'batch_id', 'year', 'entry_type', 'program', 'academics_updated_at',
+    ];
+
+    public const LINKEDIN_PATTERN = '~^https://(www\.)?linkedin\.com/in/[^/\s?#]+/?(\?\S*)?$~i';
+
     public function authorize(): bool
     {
         return true;
@@ -29,36 +37,47 @@ class UpdateProfileRequest extends FormRequest
 
     public function rules(): array
     {
-        // Ignore the caller's own student record when checking roll_number
-        // uniqueness, otherwise re-submitting the form with an unchanged
-        // roll number would always fail validation against itself.
-        $studentId = $this->user()?->student?->id;
+        $rules = [];
+        foreach (self::COLLEGE_FIELDS as $field) {
+            $rules[$field] = ['prohibited'];
+        }
 
-        return [
-            'college_email' => ['prohibited'],
-            'email' => ['prohibited'],
-
-            'roll_number' => ['required', 'string', 'max:32', Rule::unique('students', 'roll_number')->ignore($studentId)],
-            'department_id' => ['required', 'integer', 'exists:departments,id'],
-            'batch_id' => ['required', 'integer', 'exists:batches,id'],
-            'year' => ['required', 'integer', 'between:1,4'],
-            'cgpa' => ['nullable', 'numeric', 'between:0,10'],
-            'backlogs' => ['nullable', 'integer', 'min:0'],
-            'phone' => ['nullable', 'string', 'max:20'],
-
-            'personal_email' => ['nullable', 'email', 'max:190'],
-            'linkedin_url' => ['nullable', 'url', 'max:255'],
-            'github_url' => ['nullable', 'url', 'max:255'],
-            'portfolio_url' => ['nullable', 'url', 'max:255'],
+        return $rules + [
+            'personal_email' => ['sometimes', 'required', 'email', 'max:190'],
+            'address' => ['sometimes', 'nullable', 'string', 'max:500'],
+            'linkedin_url' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:'.self::LINKEDIN_PATTERN],
+            'portfolio_url' => ['sometimes', 'nullable', 'url:https', 'max:255'],
+            'github_url' => ['sometimes', 'nullable', 'url:https', 'max:255'],
         ];
     }
 
     public function messages(): array
     {
-        return [
-            'roll_number.unique' => 'This roll number is already registered to another student.',
-            'college_email.prohibited' => 'College email cannot be changed.',
-            'email.prohibited' => 'College email cannot be changed.',
+        $messages = [
+            'linkedin_url.regex' => 'Use your LinkedIn profile link, like https://www.linkedin.com/in/your-name.',
+            'portfolio_url.url' => 'Use a full https:// link.',
+            'github_url.url' => 'Use a full https:// link.',
+            'personal_email.required' => 'Your personal email is needed to reset your password.',
         ];
+
+        foreach (self::COLLEGE_FIELDS as $field) {
+            $messages["{$field}.prohibited"] = 'This comes from your college records and can\'t be changed here. Use "Report a correction" if it\'s wrong.';
+        }
+
+        return $messages;
+    }
+
+    /** Trims, and turns empty strings into null so "clear this field" works. */
+    protected function prepareForValidation(): void
+    {
+        $clean = [];
+        foreach (['personal_email', 'address', 'linkedin_url', 'portfolio_url', 'github_url'] as $field) {
+            if ($this->has($field)) {
+                $value = is_string($this->input($field)) ? trim($this->input($field)) : $this->input($field);
+                $clean[$field] = $value === '' ? null : $value;
+            }
+        }
+
+        $this->merge($clean);
     }
 }

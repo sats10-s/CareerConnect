@@ -101,200 +101,86 @@ class StudentProfileTest extends TestCase
         $response->assertJsonStructure(['data' => ['profile_completion']]);
     }
 
-    public function test_student_can_update_personal_academic_and_link_fields(): void
+    public function test_student_can_update_their_own_profile_fields(): void
     {
         $user = $this->makeStudent();
         Sanctum::actingAs($user, ['*']);
 
-        $response = $this->putJson('/api/student/profile', [
-            'roll_number' => 'CC24001',
-            'department_id' => $this->otherDepartment->id,
-            'batch_id' => $this->otherBatch->id,
-            'year' => 3,
-            'cgpa' => 9.1,
-            'backlogs' => 1,
-            'phone' => '9999999999',
+        $response = $this->patchJson('/api/student/profile', [
             'personal_email' => 'aarav.personal@gmail.com',
+            'address' => '12 Lake Road, Vizag',
             'linkedin_url' => 'https://linkedin.com/in/aarav',
             'github_url' => 'https://github.com/aarav',
             'portfolio_url' => 'https://aarav.dev',
         ]);
 
         $response->assertOk();
-        $response->assertJsonPath('data.department', 'Information Technology');
-        $response->assertJsonPath('data.batch', '2023-2027');
-        $response->assertJsonPath('data.year', 3);
-        $response->assertJsonPath('data.cgpa', 9.1);
-        $response->assertJsonPath('data.backlogs', 1);
-        $response->assertJsonPath('data.phone', '9999999999');
         $response->assertJsonPath('data.personal_email', 'aarav.personal@gmail.com');
+        $response->assertJsonPath('data.address', '12 Lake Road, Vizag');
         $response->assertJsonPath('data.linkedin_url', 'https://linkedin.com/in/aarav');
         $response->assertJsonPath('data.github_url', 'https://github.com/aarav');
         $response->assertJsonPath('data.portfolio_url', 'https://aarav.dev');
+        // College record untouched.
+        $response->assertJsonPath('data.cgpa', 8.25);
+        $response->assertJsonPath('data.department', 'Computer Science & Engineering');
 
-        $this->assertDatabaseHas('students', [
-            'user_id' => $user->id,
-            'department_id' => $this->otherDepartment->id,
-            'batch_id' => $this->otherBatch->id,
-            'year' => 3,
-            'backlogs' => 1,
-            'personal_email' => 'aarav.personal@gmail.com',
-        ]);
+        // PATCH semantics: sending one field leaves the others alone.
+        $this->patchJson('/api/student/profile', ['address' => ''])->assertOk()
+            ->assertJsonPath('data.address', null)
+            ->assertJsonPath('data.linkedin_url', 'https://linkedin.com/in/aarav');
     }
 
-    public function test_college_email_cannot_be_changed_via_profile_update(): void
+    public function test_any_college_record_field_from_a_student_is_rejected(): void
     {
         $user = $this->makeStudent();
         Sanctum::actingAs($user, ['*']);
 
-        $response = $this->putJson('/api/student/profile', [
-            'roll_number' => 'CC24001',
-            'department_id' => $this->department->id,
-            'batch_id' => $this->batch->id,
-            'year' => 2,
-            'college_email' => 'attacker@evil.com',
-        ]);
+        $collegeFields = [
+            'name' => 'Someone Else', 'roll_number' => 'CC99999', 'year_of_joining' => 2020, 'gender' => 'male',
+            'department_id' => $this->otherDepartment->id, 'section' => 'B', 'phone' => '9999999999',
+            'cgpa' => 9.9, 'backlogs' => 0, 'ssc_score' => 99, 'inter_score' => 99,
+            'batch_id' => $this->otherBatch->id, 'year' => 4, 'college_email' => 'x@evil.com', 'email' => 'x@evil.com',
+        ];
 
-        $response->assertStatus(422);
-        $response->assertJsonValidationErrors(['college_email']);
-        $this->assertDatabaseHas('users', ['id' => $user->id, 'email' => 'aarav@careerconnect.edu']);
-
-        // Same guard on the legacy key name.
-        $response = $this->putJson('/api/student/profile', [
-            'roll_number' => 'CC24001',
-            'department_id' => $this->department->id,
-            'batch_id' => $this->batch->id,
-            'year' => 2,
-            'email' => 'attacker@evil.com',
-        ]);
-
-        $response->assertStatus(422);
-        $response->assertJsonValidationErrors(['email']);
-        $this->assertDatabaseHas('users', ['id' => $user->id, 'email' => 'aarav@careerconnect.edu']);
-    }
-
-    public function test_profile_update_rejects_invalid_payload(): void
-    {
-        $user = $this->makeStudent();
-        Sanctum::actingAs($user, ['*']);
-
-        $response = $this->putJson('/api/student/profile', [
-            'roll_number' => '',
-            'department_id' => 999999,
-            'batch_id' => 999999,
-            'year' => 9,
-            'cgpa' => 11,
-            'backlogs' => -1,
-            'personal_email' => 'not-an-email',
-            'linkedin_url' => 'not-a-url',
-            'github_url' => 'not-a-url',
-            'portfolio_url' => 'not-a-url',
-        ]);
-
-        $response->assertStatus(422);
-        $response->assertJsonValidationErrors([
-            'roll_number', 'department_id', 'batch_id', 'year', 'cgpa', 'backlogs',
-            'personal_email', 'linkedin_url', 'github_url', 'portfolio_url',
-        ]);
-    }
-
-    public function test_cgpa_must_be_within_zero_to_ten(): void
-    {
-        $user = $this->makeStudent();
-        Sanctum::actingAs($user, ['*']);
-
-        $response = $this->putJson('/api/student/profile', [
-            'roll_number' => 'CC24001',
-            'department_id' => $this->department->id,
-            'batch_id' => $this->batch->id,
-            'year' => 2,
-            'cgpa' => 10.01,
-        ]);
-
-        $response->assertStatus(422);
-        $response->assertJsonValidationErrors(['cgpa']);
-
-        $response = $this->putJson('/api/student/profile', [
-            'roll_number' => 'CC24001',
-            'department_id' => $this->department->id,
-            'batch_id' => $this->batch->id,
-            'year' => 2,
-            'cgpa' => -0.5,
-        ]);
-
-        $response->assertStatus(422);
-        $response->assertJsonValidationErrors(['cgpa']);
-    }
-
-    public function test_backlogs_cannot_be_negative(): void
-    {
-        $user = $this->makeStudent();
-        Sanctum::actingAs($user, ['*']);
-
-        $response = $this->putJson('/api/student/profile', [
-            'roll_number' => 'CC24001',
-            'department_id' => $this->department->id,
-            'batch_id' => $this->batch->id,
-            'year' => 2,
-            'backlogs' => -1,
-        ]);
-
-        $response->assertStatus(422);
-        $response->assertJsonValidationErrors(['backlogs']);
-    }
-
-    public function test_year_must_be_between_one_and_four(): void
-    {
-        $user = $this->makeStudent();
-        Sanctum::actingAs($user, ['*']);
-
-        foreach ([0, 5] as $invalidYear) {
-            $response = $this->putJson('/api/student/profile', [
-                'roll_number' => 'CC24001',
-                'department_id' => $this->department->id,
-                'batch_id' => $this->batch->id,
-                'year' => $invalidYear,
-            ]);
-
-            $response->assertStatus(422);
-            $response->assertJsonValidationErrors(['year']);
+        foreach ($collegeFields as $field => $value) {
+            $this->patchJson('/api/student/profile', [$field => $value, 'address' => 'ok'])
+                ->assertStatus(422)
+                ->assertJsonValidationErrors([$field]);
         }
+
+        $this->assertDatabaseHas('students', ['user_id' => $user->id, 'cgpa' => 8.25, 'roll_number' => 'CC24001', 'address' => null]);
+        $this->assertDatabaseHas('users', ['id' => $user->id, 'email' => 'aarav@careerconnect.edu', 'name' => 'Aarav Mehta']);
     }
 
-    public function test_profile_update_allows_keeping_own_unchanged_roll_number(): void
+    public function test_profile_update_rejects_invalid_links_and_email(): void
     {
         $user = $this->makeStudent();
         Sanctum::actingAs($user, ['*']);
 
-        $response = $this->putJson('/api/student/profile', [
-            'roll_number' => 'CC24001',
-            'department_id' => $this->department->id,
-            'batch_id' => $this->batch->id,
-            'year' => 2,
+        $this->patchJson('/api/student/profile', [
+            'personal_email' => 'not-an-email',
+            'linkedin_url' => 'https://github.com/aarav',
+            'github_url' => 'not-a-url',
+            'portfolio_url' => 'http://aarav.dev',
+            'address' => str_repeat('a', 501),
+        ])->assertStatus(422)->assertJsonValidationErrors([
+            'personal_email', 'linkedin_url', 'github_url', 'portfolio_url', 'address',
         ]);
-
-        $response->assertOk();
     }
 
-    public function test_profile_update_rejects_roll_number_already_used_by_another_student(): void
+    public function test_linkedin_must_be_a_linkedin_profile_link(): void
     {
-        $this->makeStudent(); // CC24001 / aarav@careerconnect.edu
+        $user = $this->makeStudent();
+        Sanctum::actingAs($user, ['*']);
 
-        $otherUser = $this->makeStudent([
-            'email' => 'diya@careerconnect.edu',
-            'roll_number' => 'CC24002',
-        ]);
-        Sanctum::actingAs($otherUser, ['*']);
+        foreach (['https://www.linkedin.com/in/aarav-mehta', 'https://linkedin.com/in/aarav/', 'https://www.linkedin.com/in/aarav?trk=x'] as $ok) {
+            $this->patchJson('/api/student/profile', ['linkedin_url' => $ok])->assertOk();
+        }
 
-        $response = $this->putJson('/api/student/profile', [
-            'roll_number' => 'CC24001',
-            'department_id' => $this->department->id,
-            'batch_id' => $this->batch->id,
-            'year' => 2,
-        ]);
-
-        $response->assertStatus(422);
-        $response->assertJsonValidationErrors(['roll_number']);
+        foreach (['http://www.linkedin.com/in/aarav', 'https://www.linkedin.com/company/acme', 'https://evil.com/linkedin.com/in/aarav', 'linkedin.com/in/aarav', 'https://aarav.dev'] as $bad) {
+            $this->patchJson('/api/student/profile', ['linkedin_url' => $bad])
+                ->assertStatus(422)->assertJsonValidationErrors(['linkedin_url']);
+        }
     }
 
     public function test_guest_cannot_view_or_update_student_profile(): void
@@ -342,75 +228,41 @@ class StudentProfileTest extends TestCase
 
         // Student B "updating their profile" can never touch student A's
         // row - update() is always scoped to $request->user()->student.
-        $this->putJson('/api/student/profile', [
-            'roll_number' => 'CC24002',
-            'department_id' => $this->department->id,
-            'batch_id' => $this->batch->id,
-            'year' => 1,
-            'phone' => '9111111111',
-        ])->assertOk();
+        $this->patchJson('/api/student/profile', ['address' => 'B street'])->assertOk();
 
-        $this->assertDatabaseHas('students', ['user_id' => $studentA->id, 'phone' => '9876543210']);
-        $this->assertDatabaseHas('students', ['user_id' => $studentB->id, 'phone' => '9111111111']);
+        $this->assertDatabaseHas('students', ['user_id' => $studentA->id, 'address' => null]);
+        $this->assertDatabaseHas('students', ['user_id' => $studentB->id, 'address' => 'B street']);
     }
 
     /**
-     * Verifies the deterministic, weighted completion calculation end to
-     * end via the real API rather than asserting on the service class in
-     * isolation - each section's weight only appears once its rule is
-     * satisfied, and never partially.
+     * Completion counts only student-fillable fields: LinkedIn 15,
+     * portfolio 15, 3+ skills 20, personal email 15, address 10, resume 25.
+     * College-record fields (all present here) count for nothing.
      */
-    public function test_profile_completion_reflects_weighted_sections(): void
+    public function test_profile_completion_counts_only_student_fillable_fields(): void
     {
-        // Minimal student: name + college email exist (from makeStudent),
-        // but no personal_email -> personal (15%) incomplete. Academic
-        // fields are all present (roll_number/department/batch/year/cgpa/
-        // backlogs) -> academic (15%) complete. Nothing else filled in.
         $user = $this->makeStudent();
         Sanctum::actingAs($user, ['*']);
 
-        $response = $this->getJson('/api/student/profile');
-        $response->assertJsonPath('data.profile_completion', 15); // academic only
+        $this->getJson('/api/student/profile')->assertJsonPath('data.profile_completion', 0);
 
-        // Add personal_email + phone (phone already set by makeStudent) -> personal complete too.
-        $this->putJson('/api/student/profile', [
-            'roll_number' => 'CC24001',
-            'department_id' => $this->department->id,
-            'batch_id' => $this->batch->id,
-            'year' => 2,
-            'personal_email' => 'aarav.personal@gmail.com',
-        ])->assertOk();
+        $this->patchJson('/api/student/profile', ['personal_email' => 'aarav.personal@gmail.com'])->assertOk()
+            ->assertJsonPath('data.profile_completion', 15);
 
-        $response = $this->getJson('/api/student/profile');
-        $response->assertJsonPath('data.profile_completion', 30); // personal + academic
-
-        // A single skill earns the full 10% skills weight.
+        // Skills only count from the third one.
         $this->postJson('/api/student/profile/skills', ['skill_name' => 'Laravel'])->assertOk();
-        $this->getJson('/api/student/profile')->assertJsonPath('data.profile_completion', 40);
+        $this->postJson('/api/student/profile/skills', ['skill_name' => 'React'])->assertOk()
+            ->assertJsonPath('data.profile_completion', 15);
+        $this->postJson('/api/student/profile/skills', ['skill_name' => 'SQL'])->assertOk()
+            ->assertJsonPath('data.profile_completion', 35);
 
-        // Only two of three links -> the 15% links weight does NOT apply yet.
-        $this->putJson('/api/student/profile', [
-            'roll_number' => 'CC24001',
-            'department_id' => $this->department->id,
-            'batch_id' => $this->batch->id,
-            'year' => 2,
-            'personal_email' => 'aarav.personal@gmail.com',
+        $this->patchJson('/api/student/profile', [
             'linkedin_url' => 'https://linkedin.com/in/aarav',
-            'github_url' => 'https://github.com/aarav',
-        ])->assertOk();
-        $this->getJson('/api/student/profile')->assertJsonPath('data.profile_completion', 40);
-
-        // Adding the third link completes the set -> +15%.
-        $this->putJson('/api/student/profile', [
-            'roll_number' => 'CC24001',
-            'department_id' => $this->department->id,
-            'batch_id' => $this->batch->id,
-            'year' => 2,
-            'personal_email' => 'aarav.personal@gmail.com',
-            'linkedin_url' => 'https://linkedin.com/in/aarav',
-            'github_url' => 'https://github.com/aarav',
             'portfolio_url' => 'https://aarav.dev',
-        ])->assertOk();
-        $this->getJson('/api/student/profile')->assertJsonPath('data.profile_completion', 55);
+            'address' => 'Vizag',
+        ])->assertOk()->assertJsonPath('data.profile_completion', 75);
+
+        // The dashboard uses the same calculator.
+        $this->getJson('/api/student/dashboard')->assertOk()->assertJsonPath('stats.profile_completion', 75);
     }
 }

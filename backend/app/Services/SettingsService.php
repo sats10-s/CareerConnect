@@ -16,7 +16,7 @@ class SettingsService
         'institution_name' => ['type' => 'string', 'default' => 'CareerConnect Institute', 'rules' => ['required', 'string', 'max:120'], 'label' => 'Institution name'],
         'support_email' => ['type' => 'string', 'default' => null, 'rules' => ['nullable', 'email', 'max:255'], 'label' => 'Support email'],
         'academic_year' => ['type' => 'string', 'default' => null, 'rules' => ['nullable', 'string', 'regex:/^\d{4}-\d{2,4}$/'], 'label' => 'Current academic year'],
-        'allow_student_registration' => ['type' => 'bool', 'default' => true, 'rules' => ['required', 'boolean'], 'label' => 'Student self-registration'],
+        'allow_student_registration' => ['type' => 'bool', 'default' => false, 'rules' => ['required', 'boolean'], 'label' => 'Student self-registration'],
         'attendance_threshold' => ['type' => 'int', 'default' => 75, 'rules' => ['required', 'integer', 'between:1,100'], 'label' => 'Attendance alert threshold (%)'],
     ];
 

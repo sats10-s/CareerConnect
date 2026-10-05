@@ -89,7 +89,7 @@ class StudentController extends Controller
 
         $student->load([
             'user.student.department', 'user.student.batch', 'user.student.skills', 'user.student.projects',
-            'user.student.certifications', 'user.student.experiences',
+            'user.student.certifications', 'user.student.experiences', 'user.student.academicRecords.changedBy',
             'applications.applicable.company',
             'internshipAssignments.internship.company', 'internshipAssignments.faculty.user',
         ]);

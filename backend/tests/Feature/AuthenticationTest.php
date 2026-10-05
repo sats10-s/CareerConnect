@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\RoleName;
+use App\Models\AppSetting;
 use App\Models\Batch;
 use App\Models\Department;
 use App\Models\Faculty;
@@ -47,8 +48,21 @@ class AuthenticationTest extends TestCase
         $this->batch = Batch::create(['name' => '2022-2026', 'start_year' => 2022, 'end_year' => 2026]);
     }
 
+    public function test_self_registration_is_closed_by_default(): void
+    {
+        $this->postJson('/api/auth/register', [
+            'name' => 'Aarav Mehta', 'email' => 'aarav@careerconnect.edu',
+            'password' => 'Password@123', 'password_confirmation' => 'Password@123',
+            'roll_number' => 'CC24001', 'department_id' => $this->department->id, 'batch_id' => $this->batch->id, 'year' => 2,
+        ])->assertStatus(422)->assertJsonPath('errors.email.0', 'Student self-registration is currently closed. Contact the placement office.');
+    }
+
     public function test_student_can_register_with_valid_details(): void
     {
+        // Self-registration is off by default (students come from the
+        // college's Student Data import); a Super Admin can reopen it.
+        AppSetting::create(['key' => 'allow_student_registration', 'value' => '1']);
+
         $response = $this->postJson('/api/auth/register', [
             'name' => 'Aarav Mehta',
             'email' => 'aarav@careerconnect.edu',

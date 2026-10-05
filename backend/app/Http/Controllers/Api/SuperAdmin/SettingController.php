@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\FormatsApiResponse;
 use App\Http\Controllers\Controller;
 use App\Services\AuditLogger;
 use App\Services\SettingsService;
+use App\Services\Student\AcademicCalendar;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -17,6 +18,7 @@ class SettingController extends Controller
     public function __construct(
         private readonly SettingsService $settings,
         private readonly AuditLogger $audit,
+        private readonly AcademicCalendar $calendar,
     ) {}
 
     public function index(): JsonResponse
@@ -38,6 +40,10 @@ class SettingController extends Controller
         if ($diff) {
             $labels = collect(array_keys($diff))->map(fn ($k) => SettingsService::DEFINITIONS[$k]['label'])->implode(', ');
             $this->audit->record('settings.updated', "Changed settings: {$labels}", null, ['changes' => $diff]);
+        }
+        // Students' current year (1-4) is computed from their batch and the academic year.
+        if (array_key_exists('academic_year', $diff)) {
+            $this->calendar->refreshCurrentYears();
         }
 
         return $this->success(data: $this->payload(), message: $diff ? 'Settings saved.' : 'Nothing changed.');

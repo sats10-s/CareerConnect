@@ -49,19 +49,43 @@ export interface StudentResumeMeta {
 export interface StudentProfileData {
   id: number
   name: string
-  /** The login identity - immutable from this module. Never render an edit control for this field. */
-  college_email: string
+  /** Staff-style login email - imported students have none (they sign in with their JNTU No). Never editable. */
+  college_email: string | null
   personal_email: string | null
   phone: string | null
 
+  must_change_password: boolean
+
+  // --- College record (the 11 columns of the college's file) - read-only for the student. ---
   roll_number: string
+  year_of_joining: number | null
+  /** null when hidden from the viewer (faculty) or not recorded. */
+  gender: 'female' | 'male' | null
   department_id: number | null
   department: string | null
+  department_code: string | null
+  section: string | null
+  cgpa: number | null
+  /** null = "not reported", never the same as 0. */
+  backlogs: number | null
+  ssc_score: number | null
+  ssc_scale: 'percent' | 'cgpa10' | null
+  inter_score: number | null
+  inter_type: 'inter' | 'diploma' | null
+
+  // --- Derived ---
   batch_id: number | null
   batch: string | null
+  batch_start_year: number | null
+  batch_end_year: number | null
+  /** Current year of study (1-4), from the batch and the academic year setting. */
   year: number | null
-  cgpa: number | null
-  backlogs: number | null
+  entry_type: 'regular' | 'lateral' | null
+  program: 'btech' | 'mtech' | null
+  academics_updated_at: string | null
+  academic_history: AcademicHistoryEntry[]
+
+  address: string | null
 
   skills: StudentSkill[]
   projects: StudentProject[]
@@ -77,22 +101,34 @@ export interface StudentProfileData {
 
   /** Deterministic, backend-calculated (ProfileCompletionCalculator) - never estimate this on the frontend. */
   profile_completion: number
+  profile_checklist: ProfileChecklistItem[]
 }
 
-/**
- * PUT /student/profile is a full replace of these fields (not a
- * partial patch) - every section that edits a subset of them must
- * send the rest unchanged. See studentProfileService.toUpdatePayload.
- */
+export interface AcademicHistoryEntry {
+  id: number
+  cgpa: number | null
+  backlogs: number | null
+  previous_cgpa: number | null
+  previous_backlogs: number | null
+  semester_label: string | null
+  source: 'import' | 'manual'
+  /** Staff viewers only - null for the student. */
+  reason: string | null
+  changed_by: string | null
+  created_at: string
+}
+
+export interface ProfileChecklistItem {
+  key: 'linkedin' | 'portfolio' | 'skills' | 'personal_email' | 'address' | 'resume'
+  label: string
+  weight: number
+  done: boolean
+}
+
+/** PATCH /student/profile - only the student's own fields; send just the ones that changed. */
 export interface UpdateStudentProfilePayload {
-  roll_number: string
-  department_id: number
-  batch_id: number
-  year: number
-  cgpa?: number | null
-  backlogs?: number | null
-  phone?: string | null
   personal_email?: string | null
+  address?: string | null
   linkedin_url?: string | null
   github_url?: string | null
   portfolio_url?: string | null

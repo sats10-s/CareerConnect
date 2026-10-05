@@ -20,6 +20,9 @@ class User extends Authenticatable
         'role_id',
         'is_active',
         'last_login_at',
+        'must_change_password',
+        'credentials_issued_at',
+        'password_changed_at',
     ];
 
     protected $hidden = [
@@ -34,6 +37,11 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
             'last_login_at' => 'datetime',
+            'must_change_password' => 'boolean',
+            'credentials_issued_at' => 'datetime',
+            'password_changed_at' => 'datetime',
+            'failed_logins' => 'integer',
+            'locked_until' => 'datetime',
         ];
     }
 

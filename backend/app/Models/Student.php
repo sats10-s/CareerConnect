@@ -2,6 +2,11 @@
 
 namespace App\Models;
 
+use App\Enums\EntryType;
+use App\Enums\Gender;
+use App\Enums\InterType;
+use App\Enums\Program;
+use App\Enums\SscScale;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,14 +22,25 @@ class Student extends Model
         'department_id',
         'batch_id',
         'year',
+        'section',
+        'gender',
+        'year_of_joining',
+        'entry_type',
+        'program',
         'cgpa',
         'backlogs',
+        'ssc_score',
+        'ssc_scale',
+        'inter_score',
+        'inter_type',
+        'academics_updated_at',
         'phone',
         'faculty_mentor_id',
         'personal_email',
         'linkedin_url',
         'github_url',
         'portfolio_url',
+        'address',
         'resume_path',
         'resume_original_name',
         'resume_size',
@@ -37,6 +53,15 @@ class Student extends Model
             'year' => 'integer',
             'cgpa' => 'decimal:2',
             'backlogs' => 'integer',
+            'gender' => Gender::class,
+            'year_of_joining' => 'integer',
+            'entry_type' => EntryType::class,
+            'program' => Program::class,
+            'ssc_score' => 'decimal:2',
+            'ssc_scale' => SscScale::class,
+            'inter_score' => 'decimal:2',
+            'inter_type' => InterType::class,
+            'academics_updated_at' => 'datetime',
             'resume_size' => 'integer',
             'resume_uploaded_at' => 'datetime',
         ];
@@ -84,6 +109,17 @@ class Student extends Model
     public function skills(): HasMany
     {
         return $this->hasMany(StudentSkill::class);
+    }
+
+    /** CGPA/backlogs history, newest first. */
+    public function academicRecords(): HasMany
+    {
+        return $this->hasMany(StudentAcademicRecord::class)->orderByDesc('created_at')->orderByDesc('id');
+    }
+
+    public function correctionRequests(): HasMany
+    {
+        return $this->hasMany(CorrectionRequest::class);
     }
 
     public function projects(): HasMany

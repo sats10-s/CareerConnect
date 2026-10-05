@@ -64,7 +64,7 @@ export function StudentProfilePage() {
 
       <ProfileHeader profile={profile} />
       <PersonalSection profile={profile} onProfileChange={setProfile} />
-      <AcademicSection profile={profile} onProfileChange={setProfile} />
+      <AcademicSection profile={profile} />
       <SkillsSection profile={profile} onProfileChange={setProfile} />
       <ProjectsSection profile={profile} onProfileChange={setProfile} />
       <CertificationsSection profile={profile} onProfileChange={setProfile} />

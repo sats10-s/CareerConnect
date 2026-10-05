@@ -27,7 +27,7 @@ export const studentProfileService = {
   },
 
   async updateProfile(payload: UpdateStudentProfilePayload): Promise<StudentProfileData> {
-    const { data } = await api.put('/student/profile', payload)
+    const { data } = await api.patch('/student/profile', payload)
     return data.data as StudentProfileData
   },
 
@@ -117,28 +117,11 @@ export const studentProfileService = {
   },
 
   /**
-   * PUT /student/profile always replaces roll_number/department_id/
-   * batch_id/year/cgpa/backlogs/phone/personal_email/linkedin_url/
-   * github_url/portfolio_url as a full set (see UpdateProfileRequest) -
-   * it is not a partial patch. Sections that edit only a subset of
-   * these fields (Personal, Academic, Links) build their payload from
-   * the currently-loaded profile plus their own edits, so saving one
-   * section never clobbers another's already-saved values.
+   * PATCH /student/profile accepts only the student's own fields
+   * (personal email, address, LinkedIn, portfolio, GitHub) and updates
+   * just the ones sent. College-record fields are rejected by the backend.
    */
-  toUpdatePayload(profile: StudentProfileData, overrides: Partial<UpdateStudentProfilePayload>): UpdateStudentProfilePayload {
-    return {
-      roll_number: profile.roll_number,
-      department_id: profile.department_id ?? 0,
-      batch_id: profile.batch_id ?? 0,
-      year: profile.year ?? 0,
-      cgpa: profile.cgpa,
-      backlogs: profile.backlogs,
-      phone: profile.phone,
-      personal_email: profile.personal_email,
-      linkedin_url: profile.linkedin_url,
-      github_url: profile.github_url,
-      portfolio_url: profile.portfolio_url,
-      ...overrides,
-    }
+  toUpdatePayload(_profile: StudentProfileData, overrides: UpdateStudentProfilePayload): UpdateStudentProfilePayload {
+    return { ...overrides }
   },
 }

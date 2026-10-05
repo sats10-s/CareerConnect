@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Enums\ApplicationStatus;
 use App\Http\Controllers\Controller;
+use App\Services\Student\ProfileCompletionCalculator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -16,16 +17,7 @@ class StudentDashboardController extends Controller
         $applications = $student->applications()->with('applicable')->latest('applied_at');
         $statusCounts = (clone $applications)->get()->countBy(fn ($app) => $app->status instanceof ApplicationStatus ? $app->status->value : $app->status);
 
-        $profileFields = [
-            $request->user()->name,
-            $request->user()->email,
-            $student->phone,
-            $student->department_id,
-            $student->batch_id,
-            $student->roll_number,
-        ];
-        $filled = count(array_filter($profileFields, fn ($v) => ! empty($v)));
-        $profileCompletion = (int) round(($filled / count($profileFields)) * 100);
+        $profileCompletion = ProfileCompletionCalculator::calculate($student);
 
         return response()->json([
             'stats' => [
@@ -34,6 +26,14 @@ class StudentDashboardController extends Controller
                 'interviews' => $statusCounts->get(ApplicationStatus::INTERVIEW->value, 0),
                 'selected' => $statusCounts->get(ApplicationStatus::SELECTED->value, 0),
                 'profile_completion' => $profileCompletion,
+            ],
+            // The compact strip under the dashboard header - same college
+            // record the Profile page shows, null when not reported.
+            'academics' => [
+                'cgpa' => $student->cgpa === null ? null : (float) $student->cgpa,
+                'backlogs' => $student->backlogs,
+                'year' => $student->year,
+                'section' => $student->section,
             ],
             'recent_applications' => (clone $applications)->take(5)->get()->map(fn ($app) => [
                 'id' => $app->id,
