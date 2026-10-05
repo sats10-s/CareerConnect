@@ -15,6 +15,8 @@ export interface CompanyRef {
   name: string
   industry?: string | null
   logo_path: string | null
+  /** Sent on placement-drive payloads so admins can see when a drive's company isn't approved. */
+  status?: CompanyStatus
 }
 
 export interface OpportunityEligibility {

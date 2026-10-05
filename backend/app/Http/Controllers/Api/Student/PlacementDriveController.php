@@ -15,8 +15,9 @@ use Illuminate\Support\Facades\Gate;
 
 /**
  * Published placement drives, browsable by any student. PRODUCT RULE -
- * do not weaken this: index() lists every PUBLISHED drive to every
- * student, full stop, exactly like
+ * do not weaken this: index() lists every PUBLISHED drive of an APPROVED
+ * company to every student (pending, rejected and suspended companies'
+ * drives stay hidden, like their postings), exactly like
  * Api\Student\OpportunityController::index's own published-opportunity
  * listing - there is no second eligibility-filtering system here.
  * Existing opportunity eligibility remains entirely
@@ -31,6 +32,8 @@ class PlacementDriveController extends Controller
     {
         $query = PlacementDrive::query()
             ->where('status', PlacementDriveStatus::PUBLISHED)
+            // Never a pending, rejected or suspended company's drive.
+            ->whereHas('company', fn ($company) => $company->approved())
             ->with('company')
             ->withCount('opportunities');
 
