@@ -128,6 +128,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/applications', [CompanyApplicantController::class, 'index']);
             Route::get('/applications/{application}', [CompanyApplicantController::class, 'show'])->whereNumber('application');
             Route::patch('/applications/{application}/status', [CompanyApplicantController::class, 'updateStatus'])->whereNumber('application');
+            Route::get('/applications/{application}/resume', [CompanyApplicantController::class, 'resume'])->whereNumber('application');
             Route::post('/applications/{application}/interviews', [CompanyInterviewController::class, 'store']);
 
             Route::get('/interviews', [CompanyInterviewController::class, 'index']);

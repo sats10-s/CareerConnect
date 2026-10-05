@@ -16,11 +16,14 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * /api/company/applications - applicants to the recruiter's own company's
- * postings only, in the privacy-safe CompanyApplicantResource shape.
+ * postings only, in the privacy-safe CompanyApplicantResource shape, plus
+ * their resume file.
  * Status changes go through the same ApplicationService (and therefore the
  * same transition rules, history rows and student notifications) the
  * placement office uses.
@@ -99,6 +102,24 @@ class ApplicantController extends Controller
         }
 
         return $this->success(data: new CompanyApplicantResource($this->loadDetail($model)), message: 'Application status updated.');
+    }
+
+    /**
+     * GET /api/company/applications/{application}/resume - the applicant's
+     * resume, for an application to the caller's own company's posting only.
+     * The resume file itself may carry the student's own contact details;
+     * sharing it with recruiters of the postings they applied to was an
+     * explicit product decision.
+     */
+    public function resume(Request $request, int $application): StreamedResponse|JsonResponse
+    {
+        $student = $this->find($request, $application)->student;
+
+        if (! $student?->resume_path || ! Storage::disk('local')->exists($student->resume_path)) {
+            return $this->failure('This student has not uploaded a resume.', [], 404);
+        }
+
+        return Storage::disk('local')->download($student->resume_path, $student->resume_original_name ?? 'resume');
     }
 
     /** Applications whose job or internship belongs to the caller's company. */

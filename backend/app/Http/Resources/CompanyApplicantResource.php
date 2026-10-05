@@ -10,9 +10,10 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * An application as a recruiter sees it (/api/company/applications). A
  * deliberately separate, allow-listed shape - NOT AdminApplicationResource:
  * a recruiter never receives the student's phone number, any email address
- * (college or personal), home address or resume file. Contact goes through
- * the placement office. The profile block (skills, projects,
- * certifications) is only present on the detail endpoint.
+ * (college or personal) or home address in the API. Contact goes through
+ * the placement office. The resume is only described here (name, size,
+ * date); the file itself comes from .../{application}/resume. The profile
+ * block (skills, projects, certifications) is only on the detail endpoint.
  *
  * @mixin \App\Models\Application
  */
@@ -54,6 +55,11 @@ class CompanyApplicantResource extends JsonResource
             'linkedin_url' => $student->linkedin_url,
             'github_url' => $student->github_url,
             'portfolio_url' => $student->portfolio_url,
+            'resume' => $student->resume_path ? [
+                'original_name' => $student->resume_original_name,
+                'size' => $student->resume_size,
+                'uploaded_at' => $student->resume_uploaded_at?->toIso8601String(),
+            ] : null,
         ];
 
         if ($student->relationLoaded('skills')) {

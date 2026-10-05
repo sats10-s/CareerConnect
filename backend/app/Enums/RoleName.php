@@ -81,7 +81,8 @@ enum RoleName: string
                 'Wait for Super Admin approval before anything else is unlocked',
                 'Create job and internship postings; the placement office publishes them',
                 'Review applicants to their own postings and schedule interviews',
-                'Never sees student phone numbers, email addresses, home address or resume files',
+                'Downloads resumes of applicants to their own postings only',
+                'Never sees student phone numbers, email addresses or home address',
                 'The owner adds and deactivates recruiter logins for the company',
             ],
         };

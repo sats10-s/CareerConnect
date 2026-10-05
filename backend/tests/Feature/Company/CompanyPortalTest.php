@@ -12,6 +12,8 @@ use App\Models\StudentSkill;
 use App\Models\User;
 use App\Services\SettingsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\Concerns\BuildsPlacementFixtures;
 use Tests\TestCase;
@@ -131,7 +133,6 @@ class CompanyPortalTest extends TestCase
             $this->assertStringNotContainsString('9876543210', $body);
             $this->assertStringNotContainsString('asha.home@example.com', $body);
             $this->assertStringNotContainsString($student->email, $body);
-            $this->assertStringNotContainsString('resume', $body);
             $this->assertStringNotContainsString('"phone"', $body);
         }
 
@@ -139,6 +140,27 @@ class CompanyPortalTest extends TestCase
         $this->patchJson("/api/company/applications/{$applicationId}/status", ['status' => 'SELECTED'])->assertStatus(422);
         $this->patchJson("/api/company/applications/{$applicationId}/status", ['status' => 'UNDER_REVIEW'])->assertOk()->assertJsonPath('data.status', 'UNDER_REVIEW');
         $this->assertDatabaseHas('notifications', ['recipient_user_id' => $student->id, 'type' => 'APPLICATION_STATUS_CHANGED']);
+    }
+
+    public function test_recruiters_download_resumes_only_for_their_own_applicants(): void
+    {
+        Storage::fake('local');
+        $ownerA = $this->makeCompanyOwner('Acme Robotics');
+        $ownerB = $this->makeCompanyOwner('Beta Analytics');
+        [, $student, $applicationId] = $this->jobWithApplicant($ownerA);
+        $path = UploadedFile::fake()->create('cv.pdf', 20, 'application/pdf')->store('resumes', 'local');
+        $student->student->update(['resume_path' => $path, 'resume_original_name' => 'Asha_CV.pdf', 'resume_size' => 20480]);
+
+        Sanctum::actingAs($ownerA, ['*']);
+        $this->getJson("/api/company/applications/{$applicationId}")->assertJsonPath('data.student.resume.original_name', 'Asha_CV.pdf')
+            ->assertJsonMissingPath('data.student.resume.path');
+        $this->get("/api/company/applications/{$applicationId}/resume")->assertOk()->assertDownload('Asha_CV.pdf');
+
+        Sanctum::actingAs($ownerB, ['*']);
+        $this->getJson("/api/company/applications/{$applicationId}/resume")->assertNotFound();
+
+        Sanctum::actingAs($this->makeStudentUser(), ['*']);
+        $this->getJson("/api/company/applications/{$applicationId}/resume")->assertForbidden();
     }
 
     public function test_recruiter_schedules_and_manages_interviews(): void
