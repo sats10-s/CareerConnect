@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
-import { Lock, UserPlus } from 'lucide-react'
+import { ArrowRight, Building2, Lock, UserPlus } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
@@ -105,6 +105,7 @@ export function RegisterPage() {
             to get an account.
           </p>
         </div>
+        <CompanySignupLink />
         <p className="mt-6 text-center text-sm text-muted">
           Already have an account?{' '}
           <Link to="/login" className="font-semibold text-primary hover:text-primary-hov">Sign in</Link>
@@ -117,6 +118,7 @@ export function RegisterPage() {
     <div>
       <h1 className="font-display font-bold tracking-tight text-3xl text-ink">Create your student account</h1>
       <p className="mt-1 text-sm text-muted">Faculty and admin accounts are provisioned by {office}.</p>
+      <CompanySignupLink />
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-5">
         {formError && (
@@ -202,5 +204,22 @@ export function RegisterPage() {
         <Link to="/login" className="font-semibold text-primary hover:text-primary-hov">Sign in</Link>
       </p>
     </div>
+  )
+}
+
+/** Recruiters land here from "Sign up" too - point them at the company registration flow (/company/register). */
+function CompanySignupLink() {
+  return (
+    <Link
+      to="/company/register"
+      className="mt-6 flex items-center gap-3 rounded-xl border border-hairline bg-surface p-4 text-sm transition-colors hover:border-primary"
+    >
+      <Building2 className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+      <span className="min-w-0 flex-1">
+        <span className="block font-semibold text-ink">Registering as a company?</span>
+        <span className="block text-ink-soft">Sign up your company to post jobs and internships for students.</span>
+      </span>
+      <ArrowRight className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden="true" />
+    </Link>
   )
 }
