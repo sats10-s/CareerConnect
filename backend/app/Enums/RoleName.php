@@ -79,7 +79,10 @@ enum RoleName: string
             self::COMPANY => [
                 'Register their company and keep its profile up to date',
                 'Wait for Super Admin approval before anything else is unlocked',
-                'Never sees student phone numbers, personal email or address',
+                'Create job and internship postings; the placement office publishes them',
+                'Review applicants to their own postings and schedule interviews',
+                'Never sees student phone numbers, email addresses, home address or resume files',
+                'The owner adds and deactivates recruiter logins for the company',
             ],
         };
     }

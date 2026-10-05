@@ -39,6 +39,14 @@ class InternshipPolicy
         return $this->isAdmin($user);
     }
 
+    /** A recruiter managing a posting from the company portal: its own company's only. */
+    public function manageAsCompany(User $user, Internship $internship): bool
+    {
+        return $user->roleName() === RoleName::COMPANY
+            && $user->company_id !== null
+            && $internship->company_id === $user->company_id;
+    }
+
     private function isAdmin(User $user): bool
     {
         return in_array($user->roleName(), [RoleName::PLACEMENT_ADMIN, RoleName::SUPER_ADMIN], true);

@@ -37,6 +37,8 @@ enum NotificationType: string
     case INTERNSHIP_COMPLETED = 'INTERNSHIP_COMPLETED';
     case PPO_UPDATED = 'PPO_UPDATED';
     case COMPANY_STATUS_CHANGED = 'COMPANY_STATUS_CHANGED';
+    case COMPANY_POSTING_SUBMITTED = 'COMPANY_POSTING_SUBMITTED';
+    case COMPANY_POSTING_PUBLISHED = 'COMPANY_POSTING_PUBLISHED';
     case ANNOUNCEMENT = 'ANNOUNCEMENT';
     case SYSTEM = 'SYSTEM';
 
@@ -65,6 +67,8 @@ enum NotificationType: string
             self::INTERNSHIP_COMPLETED => 'Internship Completed',
             self::PPO_UPDATED => 'PPO Updated',
             self::COMPANY_STATUS_CHANGED => 'Company Status Changed',
+            self::COMPANY_POSTING_SUBMITTED => 'Company Posting Submitted',
+            self::COMPANY_POSTING_PUBLISHED => 'Company Posting Published',
             self::ANNOUNCEMENT => 'Announcement',
             self::SYSTEM => 'System',
         };

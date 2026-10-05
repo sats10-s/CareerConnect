@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\CompanyMemberRole;
 use App\Enums\RoleName;
 use App\Models\Company;
 use App\Models\User;
@@ -47,6 +48,13 @@ class CompanyPolicy
         return $user->roleName() === RoleName::COMPANY
             && $user->company_id !== null
             && $user->company_id === $company->id;
+    }
+
+    /** Adding / deactivating recruiter logins: the company's OWNER only. */
+    public function manageMembers(User $user, Company $company): bool
+    {
+        return $this->manageOwn($user, $company)
+            && $user->company_member_role === CompanyMemberRole::OWNER;
     }
 
     private function isAdmin(User $user): bool

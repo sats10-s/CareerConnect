@@ -41,6 +41,14 @@ class InterviewPolicy
         return $this->isAdmin($user);
     }
 
+    /** A recruiter handling an interview for one of its own company's postings. */
+    public function manageAsCompany(User $user, Interview $interview): bool
+    {
+        return $user->roleName() === RoleName::COMPANY
+            && $user->company_id !== null
+            && $interview->application?->applicable?->company_id === $user->company_id;
+    }
+
     private function owns(User $user, Interview $interview): bool
     {
         return $user->student !== null

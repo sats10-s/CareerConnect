@@ -9,6 +9,7 @@ use App\Http\Requests\Admin\StoreInternshipRequest;
 use App\Http\Requests\Admin\UpdateInternshipRequest;
 use App\Http\Resources\InternshipResource;
 use App\Models\Internship;
+use App\Services\CompanyPostingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -43,6 +44,8 @@ class InternshipController extends Controller
         'requiredSkills',
     ];
 
+    public function __construct(private readonly CompanyPostingService $companyPostings) {}
+
     public function index(Request $request): JsonResponse
     {
         Gate::authorize('viewAny', Internship::class);
@@ -58,6 +61,15 @@ class InternshipController extends Controller
 
         if ($status = $request->input('status')) {
             $query->where('status', $status);
+        }
+
+        // ADMIN | COMPANY, and the queue of company drafts waiting to be published.
+        if (in_array($source = $request->input('source'), ['ADMIN', 'COMPANY'], true)) {
+            $query->where('source', $source);
+        }
+
+        if ($request->boolean('awaiting_review')) {
+            $query->where('source', 'COMPANY')->where('status', 'draft')->whereNotNull('submitted_for_review_at');
         }
 
         if ($companyId = (int) $request->input('company_id')) {
@@ -117,6 +129,8 @@ class InternshipController extends Controller
     {
         Gate::authorize('update', $internship);
 
+        $previousStatus = $internship->status;
+
         DB::transaction(function () use ($request, $internship) {
             $data = $request->safe()->except(self::ELIGIBILITY_FIELDS);
             $data['updated_by'] = $request->user()->id;
@@ -126,6 +140,7 @@ class InternshipController extends Controller
         });
 
         $internship->refresh()->load(self::EAGER_LOAD);
+        $this->companyPostings->afterAdminUpdate($internship, $previousStatus);
 
         return $this->success(data: new InternshipResource($internship), message: 'Internship updated successfully.');
     }

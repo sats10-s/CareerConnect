@@ -44,6 +44,14 @@ class ApplicationPolicy
         return $this->isAdmin($user);
     }
 
+    /** A recruiter viewing or moving an application to one of its own company's postings. */
+    public function manageAsCompany(User $user, Application $application): bool
+    {
+        return $user->roleName() === RoleName::COMPANY
+            && $user->company_id !== null
+            && $application->applicable?->company_id === $user->company_id;
+    }
+
     private function owns(User $user, Application $application): bool
     {
         return $user->student !== null && $application->student_id === $user->student->id;

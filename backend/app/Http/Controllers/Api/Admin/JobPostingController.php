@@ -9,6 +9,7 @@ use App\Http\Requests\Admin\StoreJobPostingRequest;
 use App\Http\Requests\Admin\UpdateJobPostingRequest;
 use App\Http\Resources\JobPostingResource;
 use App\Models\JobPosting;
+use App\Services\CompanyPostingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -50,6 +51,8 @@ class JobPostingController extends Controller
         'requiredSkills',
     ];
 
+    public function __construct(private readonly CompanyPostingService $companyPostings) {}
+
     public function index(Request $request): JsonResponse
     {
         Gate::authorize('viewAny', JobPosting::class);
@@ -65,6 +68,15 @@ class JobPostingController extends Controller
 
         if ($status = $request->input('status')) {
             $query->where('status', $status);
+        }
+
+        // ADMIN | COMPANY, and the queue of company drafts waiting to be published.
+        if (in_array($source = $request->input('source'), ['ADMIN', 'COMPANY'], true)) {
+            $query->where('source', $source);
+        }
+
+        if ($request->boolean('awaiting_review')) {
+            $query->where('source', 'COMPANY')->where('status', 'draft')->whereNotNull('submitted_for_review_at');
         }
 
         if ($companyId = (int) $request->input('company_id')) {
@@ -124,6 +136,8 @@ class JobPostingController extends Controller
     {
         Gate::authorize('update', $jobPosting);
 
+        $previousStatus = $jobPosting->status;
+
         DB::transaction(function () use ($request, $jobPosting) {
             $data = $request->safe()->except(self::ELIGIBILITY_FIELDS);
             $data['updated_by'] = $request->user()->id;
@@ -133,6 +147,7 @@ class JobPostingController extends Controller
         });
 
         $jobPosting->refresh()->load(self::EAGER_LOAD);
+        $this->companyPostings->afterAdminUpdate($jobPosting, $previousStatus);
 
         return $this->success(data: new JobPostingResource($jobPosting), message: 'Job posting updated successfully.');
     }

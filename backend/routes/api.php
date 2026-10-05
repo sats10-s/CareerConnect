@@ -20,8 +20,12 @@ use App\Http\Controllers\Api\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Api\Admin\StudentController as AdminStudentController;
 use App\Http\Controllers\Api\Admin\WeeklyProgressReportController as AdminWeeklyProgressReportController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\Company\ApplicantController as CompanyApplicantController;
 use App\Http\Controllers\Api\Company\DashboardController as CompanyDashboardController;
+use App\Http\Controllers\Api\Company\InterviewController as CompanyInterviewController;
+use App\Http\Controllers\Api\Company\MemberController as CompanyMemberController;
 use App\Http\Controllers\Api\Company\NotificationController as CompanyNotificationController;
+use App\Http\Controllers\Api\Company\PostingController as CompanyPostingController;
 use App\Http\Controllers\Api\Company\ProfileController as CompanyProfileController;
 use App\Http\Controllers\Api\Company\RegistrationController as CompanyRegistrationController;
 use App\Http\Controllers\Api\Dashboard\AdminDashboardController;
@@ -113,6 +117,28 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::middleware('company.approved')->group(function () {
             Route::get('/dashboard', [CompanyDashboardController::class, 'index']);
+
+            Route::get('/postings', [CompanyPostingController::class, 'index']);
+            Route::post('/postings', [CompanyPostingController::class, 'store']);
+            Route::get('/postings/{type}/{id}', [CompanyPostingController::class, 'show'])->whereIn('type', ['job', 'internship'])->whereNumber('id');
+            Route::patch('/postings/{type}/{id}', [CompanyPostingController::class, 'update'])->whereIn('type', ['job', 'internship'])->whereNumber('id');
+            Route::post('/postings/{type}/{id}/submit', [CompanyPostingController::class, 'submit'])->whereIn('type', ['job', 'internship'])->whereNumber('id');
+            Route::post('/postings/{type}/{id}/close', [CompanyPostingController::class, 'close'])->whereIn('type', ['job', 'internship'])->whereNumber('id');
+
+            Route::get('/applications', [CompanyApplicantController::class, 'index']);
+            Route::get('/applications/{application}', [CompanyApplicantController::class, 'show'])->whereNumber('application');
+            Route::patch('/applications/{application}/status', [CompanyApplicantController::class, 'updateStatus'])->whereNumber('application');
+            Route::post('/applications/{application}/interviews', [CompanyInterviewController::class, 'store']);
+
+            Route::get('/interviews', [CompanyInterviewController::class, 'index']);
+            Route::get('/interviews/{interview}', [CompanyInterviewController::class, 'show'])->whereNumber('interview');
+            Route::post('/interviews/{interview}/reschedule', [CompanyInterviewController::class, 'reschedule']);
+            Route::post('/interviews/{interview}/complete', [CompanyInterviewController::class, 'complete']);
+            Route::post('/interviews/{interview}/cancel', [CompanyInterviewController::class, 'cancel']);
+
+            Route::get('/members', [CompanyMemberController::class, 'index']);
+            Route::post('/members', [CompanyMemberController::class, 'store']);
+            Route::patch('/members/{member}/status', [CompanyMemberController::class, 'updateStatus'])->whereNumber('member');
         });
     });
 

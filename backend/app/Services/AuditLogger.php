@@ -46,6 +46,14 @@ class AuditLogger
         'company.suspended' => 'Company suspended',
         'company.reactivated' => 'Company reactivated',
         'company.profile_updated' => 'Company profile updated by recruiter',
+        'company.posting_created' => 'Company posting created',
+        'company.posting_updated' => 'Company posting updated',
+        'company.posting_submitted' => 'Company posting submitted for review',
+        'company.posting_published' => 'Company posting published',
+        'company.posting_closed' => 'Company posting closed',
+        'company.member_added' => 'Company recruiter added',
+        'company.member_deactivated' => 'Company recruiter deactivated',
+        'company.member_activated' => 'Company recruiter reactivated',
         'settings.updated' => 'Settings updated',
     ];
 

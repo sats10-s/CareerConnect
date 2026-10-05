@@ -44,6 +44,14 @@ class JobPostingPolicy
         return $this->isAdmin($user);
     }
 
+    /** A recruiter managing a posting from the company portal: its own company's only. */
+    public function manageAsCompany(User $user, JobPosting $jobPosting): bool
+    {
+        return $user->roleName() === RoleName::COMPANY
+            && $user->company_id !== null
+            && $jobPosting->company_id === $user->company_id;
+    }
+
     private function isAdmin(User $user): bool
     {
         return in_array($user->roleName(), [RoleName::PLACEMENT_ADMIN, RoleName::SUPER_ADMIN], true);
