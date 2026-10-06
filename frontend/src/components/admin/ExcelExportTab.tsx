@@ -3,8 +3,10 @@ import { Download } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import { toast } from '@/components/ui/Toast'
-import { FilterDate } from '@/components/common/FilterBar'
+import { FilterDate, FilterSelect } from '@/components/common/FilterBar'
+import { useApiResource } from '@/hooks/useApiResource'
 import { adminService } from '@/services/adminService'
+import { metaService } from '@/services/metaService'
 import type { ExportFilters } from '@/services/adminService'
 import { parseBlobApiError } from '@/utils/apiError'
 import { saveBlob } from '@/utils/downloadBlob'
@@ -12,6 +14,8 @@ import { EXCEL_EXPORT_TYPES } from '@/utils/statusMeta'
 import type { ExcelExportType } from '@/types/admin'
 
 const GROUPS = ['Records', 'Internships', 'Reports']
+const YEARS = [1, 2, 3, 4].map((y) => ({ value: y, label: `Year ${y}` }))
+const SECTIONS = ['A', 'B', 'C', 'D'].map((x) => ({ value: x, label: `Section ${x}` }))
 
 /**
  * Downloads a live .xlsx from GET /admin/excel/exports/{type}. Nothing is
@@ -19,11 +23,17 @@ const GROUPS = ['Records', 'Internships', 'Reports']
  */
 export function ExcelExportTab() {
   const [type, setType] = useState<string>('APPLICATIONS')
+  const [departmentId, setDepartmentId] = useState('')
+  const [batchId, setBatchId] = useState('')
+  const [year, setYear] = useState('')
+  const [section, setSection] = useState('')
   const [applicableType, setApplicableType] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const departments = useApiResource(() => metaService.departments(), 'departments')
+  const batches = useApiResource(() => metaService.batches(), 'batches')
 
   async function download() {
     if (dateFrom && dateTo && dateTo < dateFrom) {
@@ -33,6 +43,10 @@ export function ExcelExportTab() {
     setError(null)
     setBusy(true)
     const filters: ExportFilters = {}
+    if (departmentId) filters.department_id = Number(departmentId)
+    if (batchId) filters.batch_id = Number(batchId)
+    if (year) filters.year = Number(year)
+    if (section) filters.section = section
     if (applicableType) filters.applicable_type = applicableType as 'job' | 'internship'
     if (dateFrom) filters.date_from = dateFrom
     if (dateTo) filters.date_to = dateTo
@@ -64,6 +78,10 @@ export function ExcelExportTab() {
         <div>
           <p className="label">Narrow it down (optional)</p>
           <div className="flex flex-wrap items-center gap-3">
+            <FilterSelect label="Department" value={departmentId} onChange={setDepartmentId} options={(departments.data ?? []).map((d) => ({ value: d.id, label: d.name }))} allLabel="All departments" />
+            <FilterSelect label="Batch" value={batchId} onChange={setBatchId} options={(batches.data ?? []).map((b) => ({ value: b.id, label: b.name }))} allLabel="All batches" />
+            <FilterSelect label="Year" value={year} onChange={setYear} options={YEARS} allLabel="All years" />
+            <FilterSelect label="Section" value={section} onChange={setSection} options={SECTIONS} allLabel="All sections" />
             <div className="w-full sm:w-44">
               <Select aria-label="Job or internship" value={applicableType} onChange={(e) => setApplicableType(e.target.value)}>
                 <option value="">Jobs &amp; internships</option>

@@ -28,7 +28,8 @@ class ExcelExportFilterRequest extends FormRequest
         return [
             'department_id' => ['sometimes', 'nullable', 'integer', 'exists:departments,id'],
             'batch_id' => ['sometimes', 'nullable', 'integer', 'exists:batches,id'],
-            'year' => ['sometimes', 'nullable', 'integer'],
+            'year' => ['sometimes', 'nullable', 'integer', 'between:1,6'],
+            'section' => ['sometimes', 'nullable', 'string', 'max:10'],
             'company_id' => ['sometimes', 'nullable', 'integer', 'exists:companies,id'],
             'faculty_id' => ['sometimes', 'nullable', 'integer', 'exists:faculty,id'],
             'status' => ['sometimes', 'nullable', 'string', 'max:40'],

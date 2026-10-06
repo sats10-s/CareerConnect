@@ -182,6 +182,7 @@ export const EXCEL_EXPORT_TYPES: { value: string; label: string; group: string }
   { value: 'COMPANY_WISE_PLACEMENT_REPORT', label: 'Company-wise placements', group: 'Reports' },
   { value: 'DEPARTMENT_WISE_PLACEMENT_REPORT', label: 'Department-wise placements', group: 'Reports' },
   { value: 'BATCH_WISE_PLACEMENT_REPORT', label: 'Batch-wise placements', group: 'Reports' },
+  { value: 'SECTION_WISE_PLACEMENT_REPORT', label: 'Section-wise placements (department, year, section)', group: 'Reports' },
   { value: 'STUDENT_APPLICATION_REPORT', label: 'Student application report', group: 'Reports' },
   { value: 'UNPLACED_STUDENT_REPORT', label: 'Unplaced students', group: 'Reports' },
   { value: 'STUDENT_APPLICATION_ACTIVITY', label: 'Student application activity', group: 'Reports' },

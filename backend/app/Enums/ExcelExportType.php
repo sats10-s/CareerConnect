@@ -33,6 +33,7 @@ enum ExcelExportType: string
     case COMPANY_WISE_PLACEMENT_REPORT = 'COMPANY_WISE_PLACEMENT_REPORT';
     case DEPARTMENT_WISE_PLACEMENT_REPORT = 'DEPARTMENT_WISE_PLACEMENT_REPORT';
     case BATCH_WISE_PLACEMENT_REPORT = 'BATCH_WISE_PLACEMENT_REPORT';
+    case SECTION_WISE_PLACEMENT_REPORT = 'SECTION_WISE_PLACEMENT_REPORT';
     case STUDENT_APPLICATION_REPORT = 'STUDENT_APPLICATION_REPORT';
     case UNPLACED_STUDENT_REPORT = 'UNPLACED_STUDENT_REPORT';
     case STUDENT_APPLICATION_ACTIVITY = 'STUDENT_APPLICATION_ACTIVITY';
@@ -78,6 +79,7 @@ enum ExcelExportType: string
             self::COMPANY_WISE_PLACEMENT_REPORT => 'Company-wise Placement Report',
             self::DEPARTMENT_WISE_PLACEMENT_REPORT => 'Department-wise Placement Report',
             self::BATCH_WISE_PLACEMENT_REPORT => 'Batch-wise Placement Report',
+            self::SECTION_WISE_PLACEMENT_REPORT => 'Section-wise Placement Report',
             self::STUDENT_APPLICATION_REPORT => 'Student Application Report',
             self::UNPLACED_STUDENT_REPORT => 'Unplaced Student Report',
             self::STUDENT_APPLICATION_ACTIVITY => 'Student Application Activity',

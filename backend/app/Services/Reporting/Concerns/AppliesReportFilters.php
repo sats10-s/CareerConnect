@@ -2,6 +2,8 @@
 
 namespace App\Services\Reporting\Concerns;
 
+use App\Models\Internship;
+use App\Models\JobPosting;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -21,10 +23,13 @@ use Illuminate\Database\Eloquent\Builder;
  * ExcelExportFilterRequest's own tolerant convention.
  *
  * Recognised filter keys:
- *  - department_id, batch_id, year: student-scoping (a Student's own
- *    columns, or reached via whereHas('student', ...) / a join on
- *    students.department_id|batch_id|year for a query that is not
- *    itself Student::query()).
+ *  - department_id, batch_id, year, section: student-scoping (a
+ *    Student's own columns, or reached via whereHas('student', ...) /
+ *    a join on students.* for a query that is not itself
+ *    Student::query()). Section is compared upper-cased, the way the
+ *    Student Data import stores it.
+ *  - applicable_type ('job'|'internship'): narrows an Application-based
+ *    query to one kind of opportunity.
  *  - company_id: an opportunity's owning company (job posting or
  *    internship), only meaningful once a company/companies join is
  *    already present in the query.
@@ -59,6 +64,10 @@ trait AppliesReportFilters
             $query->where('year', $filters['year']);
         }
 
+        if (! empty($filters['section'])) {
+            $query->where('section', self::normalizedSection($filters['section']));
+        }
+
         if (! empty($filters['student_id'])) {
             $query->where('id', $filters['student_id']);
         }
@@ -85,9 +94,58 @@ trait AppliesReportFilters
             $query->whereHas($relation, fn (Builder $q) => $q->where('year', $filters['year']));
         }
 
+        if (! empty($filters['section'])) {
+            $query->whereHas($relation, fn (Builder $q) => $q->where('section', self::normalizedSection($filters['section'])));
+        }
+
         if (! empty($filters['student_id'])) {
             $query->where('student_id', $filters['student_id']);
         }
+    }
+
+    /**
+     * company_id only ever narrows an Application-based query (an
+     * application's opportunity belongs to a company via
+     * applicable_type/applicable_id) - it has no meaning on its own
+     * for a Student-based query. Resolved via two plain subqueries
+     * (job postings and internships belonging to the company) rather
+     * than a raw join, so this stays composable with whatever other
+     * filters/joins the caller has already applied.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    private function applyCompanyScope(Builder $query, array $filters): void
+    {
+        if (empty($filters['company_id'])) {
+            return;
+        }
+
+        $companyId = $filters['company_id'];
+
+        $query->where(function (Builder $q) use ($companyId) {
+            $q->where(function (Builder $q2) use ($companyId) {
+                $q2->where('applicable_type', JobPosting::class)
+                    ->whereIn('applicable_id', JobPosting::query()->where('company_id', $companyId)->select('id'));
+            })->orWhere(function (Builder $q2) use ($companyId) {
+                $q2->where('applicable_type', Internship::class)
+                    ->whereIn('applicable_id', Internship::query()->where('company_id', $companyId)->select('id'));
+            });
+        });
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     */
+    private function applyApplicableType(Builder $query, array $filters): void
+    {
+        if (! empty($filters['applicable_type'])) {
+            $query->where('applicable_type', $filters['applicable_type'] === 'internship' ? Internship::class : JobPosting::class);
+        }
+    }
+
+    private static function normalizedSection(string $section): string
+    {
+        return mb_strtoupper(trim($section));
     }
 
     /**

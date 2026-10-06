@@ -98,6 +98,7 @@ class PlacementReportService
         $this->applyStudentRelationScope($applicationQuery, $filters);
         $this->applyDateRange($applicationQuery, 'applied_at', $filters);
         $this->applyCompanyScope($applicationQuery, $filters);
+        $this->applyApplicableType($applicationQuery, $filters);
 
         $totalApplications = (clone $applicationQuery)->count();
         $uniqueApplicants = (clone $applicationQuery)->distinct('student_id')->count('student_id');
@@ -194,8 +195,28 @@ class PlacementReportService
             $query->where('students.batch_id', $filters['batch_id']);
         }
 
-        if (! empty($filters['company_id']) && $joinCompanies) {
-            $query->where('companies.id', $filters['company_id']);
+        if (! empty($filters['year'])) {
+            $query->where('students.year', $filters['year']);
+        }
+
+        if (! empty($filters['section'])) {
+            $query->where('students.section', self::normalizedSection($filters['section']));
+        }
+
+        if (! empty($filters['applicable_type'])) {
+            $query->where('applications.applicable_type', $filters['applicable_type'] === 'internship' ? Internship::class : JobPosting::class);
+        }
+
+        if (! empty($filters['company_id'])) {
+            $query->where(function ($q) use ($filters) {
+                $q->where(function ($q2) use ($filters) {
+                    $q2->where('applications.applicable_type', JobPosting::class)
+                        ->whereIn('applications.applicable_id', JobPosting::query()->where('company_id', $filters['company_id'])->select('id'));
+                })->orWhere(function ($q2) use ($filters) {
+                    $q2->where('applications.applicable_type', Internship::class)
+                        ->whereIn('applications.applicable_id', Internship::query()->where('company_id', $filters['company_id'])->select('id'));
+                });
+            });
         }
 
         if (! empty($filters['date_from'])) {
@@ -229,6 +250,68 @@ class PlacementReportService
     }
 
     /**
+     * One row per department + year + section: how many students the
+     * class has, how many applied, how many were placed (>=1 SELECTED
+     * application) and how many are still unplaced. Unlike breakdownBy(),
+     * which only sees students who applied, this counts from the
+     * students table, so a class where nobody applied still shows up
+     * with its full headcount. Student filters (department/batch/year/
+     * section) narrow the classes; application filters (dates, company,
+     * job vs internship) narrow which applications count as "applied"
+     * and "placed". With no application filters, students_unplaced
+     * matches the Unplaced Student Report row for row.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return list<array{department: ?string, year: ?int, section: ?string, total_students: int, students_applied: int, students_placed: int, students_unplaced: int, placement_rate: float}>
+     */
+    public function classBreakdown(array $filters): array
+    {
+        $applied = Application::query();
+        $this->applyDateRange($applied, 'applied_at', $filters);
+        $this->applyCompanyScope($applied, $filters);
+        $this->applyApplicableType($applied, $filters);
+
+        $placed = (clone $applied)->where('status', ApplicationStatus::SELECTED->value)->select('student_id')->toBase();
+        $applied = $applied->select('student_id')->toBase();
+
+        $inScope = Student::query();
+        $this->applyStudentOwnScope($inScope, $filters);
+
+        $rows = DB::table('students')
+            ->whereIn('students.id', $inScope->select('id'))
+            ->leftJoin('departments', 'departments.id', '=', 'students.department_id')
+            ->selectRaw(sprintf(
+                'departments.name as department, students.year as year, students.section as section, COUNT(*) as total_students, '
+                .'SUM(CASE WHEN students.id IN (%s) THEN 1 ELSE 0 END) as students_applied, '
+                .'SUM(CASE WHEN students.id IN (%s) THEN 1 ELSE 0 END) as students_placed',
+                $applied->toSql(),
+                $placed->toSql(),
+            ))
+            ->addBinding([...$applied->getBindings(), ...$placed->getBindings()], 'select')
+            ->groupBy('departments.name', 'students.year', 'students.section')
+            ->orderBy('departments.name')
+            ->orderBy('students.year')
+            ->orderBy('students.section')
+            ->get();
+
+        return $rows->map(function ($r) {
+            $total = (int) $r->total_students;
+            $placedCount = (int) $r->students_placed;
+
+            return [
+                'department' => $r->department,
+                'year' => $r->year === null ? null : (int) $r->year,
+                'section' => $r->section,
+                'total_students' => $total,
+                'students_applied' => (int) $r->students_applied,
+                'students_placed' => $placedCount,
+                'students_unplaced' => $total - $placedCount,
+                'placement_rate' => $total > 0 ? round(($placedCount / $total) * 100, 2) : 0.0,
+            ];
+        })->all();
+    }
+
+    /**
      * Distinct students whose applications ever transitioned to the
      * given status, per ApplicationStatusHistory - see this class's
      * docblock for why this is historical rather than current-status.
@@ -247,6 +330,7 @@ class PlacementReportService
         $this->applyStudentRelationScope($query, $filters);
         $this->applyDateRange($query, 'applied_at', $filters);
         $this->applyCompanyScope($query, $filters);
+        $this->applyApplicableType($query, $filters);
 
         return (clone $query)->distinct('student_id')->count('student_id');
     }
@@ -266,37 +350,8 @@ class PlacementReportService
         $this->applyStudentRelationScope($query, $filters);
         $this->applyDateRange($query, 'applied_at', $filters);
         $this->applyCompanyScope($query, $filters);
+        $this->applyApplicableType($query, $filters);
 
         return (clone $query)->distinct('student_id')->count('student_id');
-    }
-
-    /**
-     * company_id only ever narrows an Application-based query (an
-     * application's opportunity belongs to a company via
-     * applicable_type/applicable_id) - it has no meaning on its own
-     * for a Student-based query. Resolved via two plain subqueries
-     * (job postings and internships belonging to the company) rather
-     * than a raw join, so this stays composable with whatever other
-     * filters/joins the caller has already applied.
-     *
-     * @param  array<string, mixed>  $filters
-     */
-    private function applyCompanyScope(Builder $query, array $filters): void
-    {
-        if (empty($filters['company_id'])) {
-            return;
-        }
-
-        $companyId = $filters['company_id'];
-
-        $query->where(function (Builder $q) use ($companyId) {
-            $q->where(function (Builder $q2) use ($companyId) {
-                $q2->where('applicable_type', JobPosting::class)
-                    ->whereIn('applicable_id', JobPosting::query()->where('company_id', $companyId)->pluck('id'));
-            })->orWhere(function (Builder $q2) use ($companyId) {
-                $q2->where('applicable_type', Internship::class)
-                    ->whereIn('applicable_id', Internship::query()->where('company_id', $companyId)->pluck('id'));
-            });
-        });
     }
 }

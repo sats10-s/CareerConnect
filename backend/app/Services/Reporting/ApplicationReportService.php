@@ -38,6 +38,8 @@ class ApplicationReportService
         $query = Application::query();
         $this->applyStudentRelationScope($query, $filters);
         $this->applyDateRange($query, 'applied_at', $filters);
+        $this->applyCompanyScope($query, $filters);
+        $this->applyApplicableType($query, $filters);
 
         $rows = $query
             ->selectRaw('status, COUNT(*) as application_count, COUNT(DISTINCT student_id) as student_count')
