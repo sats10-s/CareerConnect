@@ -21,7 +21,8 @@ use Tests\TestCase;
  * checked against a direct query on the same data. The fixture mirrors
  * the college's Student Data import: two departments, the 2023-27
  * batch in year 3 and the 2024-28 batch in year 2 (no CGPA yet),
- * sections A and B, and some blank backlogs.
+ * sections A and B (and some students with no section), and some
+ * blank backlogs.
  */
 class ExcelExportAccuracyTest extends TestCase
 {
@@ -75,6 +76,9 @@ class ExcelExportAccuracyTest extends TestCase
             ['aiml', 2024, 2, 'B', null, null, [[$internship, ['UNDER_REVIEW', 'SHORTLISTED', 'ASSESSMENT', 'SELECTED']]]],
             ['aiml', 2024, 2, 'B', null, null, []],
             ['aiml', 2024, 2, 'B', null, 0, [[$job, ['UNDER_REVIEW', 'REJECTED']]]],
+            // Section is optional in the college file.
+            ['aiml', 2024, 2, null, null, null, [[$job, []]]],
+            ['cse', 2023, 3, null, 7.9, 0, [[$internship, ['UNDER_REVIEW', 'SHORTLISTED', 'ASSESSMENT', 'SELECTED']]]],
         ];
 
         foreach ($students as $i => [$dept, $batch, $year, $section, $cgpa, $backlogs, $applications]) {
@@ -214,7 +218,7 @@ class ExcelExportAccuracyTest extends TestCase
         $this->assertCount($classes->count(), $rows);
 
         foreach ($rows as $row) {
-            $students = $classes->get($row['Department'].'|'.$row['Year'].'|'.$row['Section']);
+            $students = $classes->get($row['Department'].'|'.$row['Year'].'|'.($row['Section'] === '—' ? '' : $row['Section']));
             $this->assertNotNull($students, json_encode($row));
             $this->assertEquals($students->count(), $row['Total Students']);
             $this->assertEquals($students->whereIn('id', $applied)->count(), $row['Students Applied']);
