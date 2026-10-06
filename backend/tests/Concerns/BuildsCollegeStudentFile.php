@@ -16,16 +16,18 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
  *  - #N/A sections (an Excel error cell and the literal text)
  *  - a row with no JNTU No, a duplicate JNTU No, an unknown department
  *  - a CGPA above 10, blank backlogs
- *  - blank Year of Joining for 5A laterals and 1D M.Tech
+ *  - blank Year of Joining for 5A laterals
+ *  - 1D M.Tech students, who are out of scope and skipped
  *  - department aliases: CSE, AIML, AI&ML, AI&DS, CE, Civil, ME, MECH,
- *    VLSI&ES, "VLSI & ES", ECE, EEE, IT
+ *    ECE, EEE, IT
  *  - 10th on a 10-point scale (9.8, 9.5) including "10 POINTS OUT 10"
  *  - mobiles as numbers and as text, one with a space, one with 11 digits,
  *    one missing
  *  - gender as F/M and as female/male
  *
  * Expected preview (see StudentDataImportTest):
- *   18 rows; 13 new (9 clean + 4 with warnings), 5 errors; 2 one-time passwords.
+ *   18 rows; 11 new (7 clean + 4 with warnings), 7 errors (2 of them M.Tech);
+ *   2 one-time passwords.
  */
 trait BuildsCollegeStudentFile
 {
@@ -50,14 +52,14 @@ trait BuildsCollegeStudentFile
         ];
     }
 
-    /** Sheet 2: laterals (5A) and M.Tech (1D) - Year of Joining left blank. */
+    /** Sheet 2: laterals (5A) and M.Tech (1D, skipped) - Year of Joining left blank. */
     protected function lateralSheetRows(): array
     {
         return [
             ['Mohan Test', '24345A0501', null, 'M', 'CSE', 'A', 9876500013, 7.9, 0, 85, 82],                     // new lateral -> 2023 batch, diploma
             ['Neha Test', '24345A0401', null, 'F', 'ECE', 'Section B', 9876500014, 8.2, null, 9.5, 78],          // new lateral
-            ['Om Test', '24341D5701', null, 'M', 'VLSI&ES', 'A', 9876500015, 8.8, 0, 90, 85],                    // new M.Tech -> 2024-2026
-            ['Pooja Test', '24341D5702', null, 'F', 'VLSI & ES', 'A', 9876500016, 9.1, 0, 94, 89],               // new M.Tech
+            ['Om Test', '24341D5701', null, 'M', 'VLSI&ES', 'A', 9876500015, 8.8, 0, 90, 85],                    // error: M.Tech is not imported
+            ['Pooja Test', '24341D5702', null, 'F', 'CSE', 'A', 9876500016, 9.1, 0, 94, 89],                     // error: M.Tech is not imported
             ['Ravi Test', '24345A0201', null, 'male', 'EEE', '#N/A', 9876500017, 7.4, 1, 77, 70],                // error: "#N/A" as text
             ['Sita Test', '23341A1201', 2023, 'female', 'IT', 'c', null, 8.6, 0, 91, 92],                        // new + warning: no mobile -> OTP
         ];

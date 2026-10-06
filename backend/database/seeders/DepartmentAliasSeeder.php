@@ -24,7 +24,6 @@ class DepartmentAliasSeeder extends Seeder
         'EEE' => ['name' => 'Electrical & Electronics Engineering', 'aliases' => ['EEE']],
         'IT' => ['name' => 'Information Technology', 'aliases' => ['IT']],
         'MECH' => ['name' => 'Mechanical Engineering', 'aliases' => ['ME', 'MECH', 'Mechanical']],
-        'VLSIES' => ['name' => 'VLSI & Embedded Systems (M.Tech)', 'aliases' => ['VLSI&ES', 'VLSI & ES', 'VLSI']],
     ];
 
     public function run(): void

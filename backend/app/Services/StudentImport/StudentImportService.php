@@ -6,7 +6,6 @@ use App\Enums\AcademicRecordSource;
 use App\Enums\ExcelImportBatchStatus;
 use App\Enums\ExcelImportType;
 use App\Enums\ExcelRowOutcome;
-use App\Enums\Program;
 use App\Enums\RoleName;
 use App\Exceptions\ExcelImportException;
 use App\Jobs\ConfirmStudentImport;
@@ -287,10 +286,9 @@ class StudentImportService
             return ['category' => 'error', 'errors' => $result['errors'], 'warnings' => $result['warnings'], 'changes' => [], 'context' => ['values' => $values, 'unknown_department' => $result['unknown_department']]];
         }
 
-        $program = $values['program'] ? Program::from($values['program']) : null;
-        $values['year'] = $this->calendar->currentYear($values['year_of_joining'], $program);
+        $values['year'] = $this->calendar->currentYear($values['year_of_joining']);
         $values['batch_start'] = $values['year_of_joining'];
-        $values['batch_end'] = $values['year_of_joining'] === null ? null : $values['year_of_joining'] + AcademicCalendar::programLength($program);
+        $values['batch_end'] = $values['year_of_joining'] === null ? null : $values['year_of_joining'] + AcademicCalendar::PROGRAM_YEARS;
         $values['batch'] = $values['year_of_joining'] === null ? null : "{$values['batch_start']}-{$values['batch_end']}";
 
         $context = ['values' => $values, 'needs_one_time_password' => $result['needs_one_time_password']];
@@ -553,8 +551,7 @@ class StudentImportService
             throw new ExcelImportException("A student with JNTU No {$values['roll_number']} was added after this preview; re-upload the file to update them.");
         }
 
-        $program = $values['program'] ? Program::from($values['program']) : null;
-        $batchModel = $values['year_of_joining'] ? $this->calendar->batchFor($values['year_of_joining'], $program) : null;
+        $batchModel = $values['year_of_joining'] ? $this->calendar->batchFor($values['year_of_joining']) : null;
 
         if ($batchModel === null) {
             throw new ExcelImportException('No year of joining, so no batch could be assigned.');
@@ -633,8 +630,7 @@ class StudentImportService
             }
 
             if ($field === 'batch_id') {
-                $program = $values['program'] ? Program::from($values['program']) : $student->program;
-                $newBatch = $this->calendar->batchFor($values['year_of_joining'], $program);
+                $newBatch = $this->calendar->batchFor($values['year_of_joining']);
                 $this->recordChange($batch, $row, Student::class, $student->id, 'batch_id', $student->batch_id, $newBatch->id, $actor);
                 $studentUpdates['batch_id'] = $newBatch->id;
 

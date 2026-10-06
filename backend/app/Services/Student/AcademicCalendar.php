@@ -2,7 +2,6 @@
 
 namespace App\Services\Student;
 
-use App\Enums\Program;
 use App\Models\Batch;
 use App\Models\Student;
 use App\Services\SettingsService;
@@ -20,10 +19,8 @@ class AcademicCalendar
 {
     public function __construct(private readonly SettingsService $settings) {}
 
-    public static function programLength(?Program $program): int
-    {
-        return $program === Program::MTECH ? 2 : 4;
-    }
+    /** B.Tech only - M.Tech students are not imported, so every batch is four years. */
+    public const PROGRAM_YEARS = 4;
 
     public function academicStartYear(): int
     {
@@ -39,7 +36,7 @@ class AcademicCalendar
     }
 
     /** 1..program length; null when the year of joining is unknown. */
-    public function currentYear(?int $yearOfJoining, ?Program $program): ?int
+    public function currentYear(?int $yearOfJoining): ?int
     {
         if ($yearOfJoining === null) {
             return null;
@@ -47,13 +44,13 @@ class AcademicCalendar
 
         $year = $this->academicStartYear() - $yearOfJoining + 1;
 
-        return max(1, min(self::programLength($program), $year));
+        return max(1, min(self::PROGRAM_YEARS, $year));
     }
 
-    /** Finds or creates the batch for a joining year: 2023 B.Tech -> 2023-2027, 2024 M.Tech -> 2024-2026. */
-    public function batchFor(int $yearOfJoining, ?Program $program, bool $create = true): ?Batch
+    /** Finds or creates the batch for a joining year: 2023 -> 2023-2027, 2024 -> 2024-2028. */
+    public function batchFor(int $yearOfJoining, bool $create = true): ?Batch
     {
-        $endYear = $yearOfJoining + self::programLength($program);
+        $endYear = $yearOfJoining + self::PROGRAM_YEARS;
         $query = Batch::query()->where('start_year', $yearOfJoining)->where('end_year', $endYear);
 
         if (! $create) {
@@ -74,7 +71,7 @@ class AcademicCalendar
 
         Student::query()->whereNotNull('year_of_joining')->chunkById(500, function ($students) use (&$updated) {
             foreach ($students as $student) {
-                $year = $this->currentYear($student->year_of_joining, $student->program);
+                $year = $this->currentYear($student->year_of_joining);
 
                 if ($year !== $student->year) {
                     $student->forceFill(['year' => $year])->saveQuietly();

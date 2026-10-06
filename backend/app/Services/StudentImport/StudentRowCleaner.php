@@ -5,6 +5,7 @@ namespace App\Services\StudentImport;
 use App\Enums\EntryType;
 use App\Enums\Gender;
 use App\Enums\InterType;
+use App\Enums\Program;
 use App\Enums\SscScale;
 use App\Models\Department;
 use App\Models\DepartmentAlias;
@@ -12,6 +13,8 @@ use App\Support\JntuNumber;
 
 /**
  * The cleaning rules for one row of the college's student file.
+ *
+ * M.Tech students (JNTU No with "1D") are out of scope and always skipped.
  *
  * A bad JNTU No, name, department or section skips the whole row (ERROR).
  * A bad academic cell (CGPA, backlogs, 10th, Inter, mobile, gender) only
@@ -58,6 +61,19 @@ class StudentRowCleaner
             $errors[] = "\"{$rawRoll}\" is not a valid JNTU No.";
         }
         $values['roll_number'] = $roll;
+        if ($error = self::mtechError($roll)) {
+            // Out of scope: one clear reason, not a list of department/section problems.
+            $name = self::text($data['name'] ?? null);
+
+            return [
+                'skip' => true,
+                'errors' => [$error],
+                'warnings' => [],
+                'unknown_department' => null,
+                'needs_one_time_password' => false,
+                'values' => ['roll_number' => $roll, 'name' => $name === null ? null : (string) preg_replace('/\s+/u', ' ', $name)],
+            ];
+        }
 
         // --- Name -------------------------------------------------------------
         $name = self::text($data['name'] ?? null);
@@ -213,6 +229,10 @@ class StudentRowCleaner
             $errors[] = "\"{$rawRoll}\" is not a valid JNTU No.";
         }
 
+        if ($error = self::mtechError($roll)) {
+            $errors[] = $error;
+        }
+
         [$cgpa, $warning] = self::cgpa($data['cgpa'] ?? null);
         if ($warning) {
             $warnings[] = $warning;
@@ -230,6 +250,12 @@ class StudentRowCleaner
             'warnings' => $warnings,
             'values' => ['roll_number' => $roll, 'cgpa' => $cgpa, 'backlogs' => $backlogs, 'semester' => $semester === null ? null : mb_substr($semester, 0, 40)],
         ];
+    }
+
+    /** The portal covers B.Tech only (the 2023-27 and 2024-28 batches); M.Tech ("1D") rows are skipped. */
+    private static function mtechError(string $roll): ?string
+    {
+        return JntuNumber::isValid($roll) && JntuNumber::program($roll) === Program::MTECH ? 'M.Tech students are not imported.' : null;
     }
 
     /** @return array{0: ?float, 1: ?string} */

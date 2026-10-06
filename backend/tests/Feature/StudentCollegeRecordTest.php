@@ -127,11 +127,12 @@ class StudentCollegeRecordTest extends TestCase
         AppSetting::create(['key' => 'academic_year', 'value' => '2026-27']);
         $calendar = app(AcademicCalendar::class);
 
-        $this->assertSame(4, $calendar->currentYear(2023, null));
-        $this->assertSame(1, $calendar->currentYear(2026, null));
-        // Clamped to the program length.
-        $this->assertSame(4, $calendar->currentYear(2020, null));
-        $this->assertSame(2, $calendar->currentYear(2024, \App\Enums\Program::MTECH));
-        $this->assertNull($calendar->currentYear(null, null));
+        $this->assertSame(4, $calendar->currentYear(2023));
+        $this->assertSame(3, $calendar->currentYear(2024));
+        $this->assertSame(1, $calendar->currentYear(2026));
+        // Clamped to the four B.Tech years.
+        $this->assertSame(4, $calendar->currentYear(2020));
+        $this->assertNull($calendar->currentYear(null));
+        $this->assertSame('2024-2028', $calendar->batchFor(2024)->name);
     }
 }

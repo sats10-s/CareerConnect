@@ -77,15 +77,15 @@ class StudentDataImportTest extends TestCase
 
         $this->assertSame('READY_FOR_CONFIRMATION', $batch['status']);
         $this->assertSame(18, $batch['total_rows']);
-        $this->assertSame(['new' => 13, 'updated' => 0, 'unchanged' => 0, 'error' => 5, 'warning' => 4], $batch['counts']);
+        $this->assertSame(['new' => 11, 'updated' => 0, 'unchanged' => 0, 'error' => 7, 'warning' => 4], $batch['counts']);
 
         $sheets = collect($batch['sheets'])->keyBy('name');
         $this->assertSame(12, $sheets['2023 Batch']['rows']);
         $this->assertSame(8, $sheets['2023 Batch']['new']);
         $this->assertSame(4, $sheets['2023 Batch']['error']);
         $this->assertSame(6, $sheets['Lateral & MTech']['rows']);
-        $this->assertSame(5, $sheets['Lateral & MTech']['new']);
-        $this->assertSame(1, $sheets['Lateral & MTech']['error']);
+        $this->assertSame(3, $sheets['Lateral & MTech']['new']);
+        $this->assertSame(3, $sheets['Lateral & MTech']['error']);
         $this->assertSame([['value' => 'ROBOTICS', 'rows' => 1]], $batch['unknown_departments']);
 
         $this->assertDatabaseCount('students', 0);
@@ -96,6 +96,10 @@ class StudentDataImportTest extends TestCase
         $this->assertStringContainsString('No JNTU No on this row.', $messages);
         $this->assertStringContainsString('Unknown department "Robotics"', $messages);
         $this->assertStringContainsString('Duplicate JNTU No - already on 2023 Batch row 2.', $messages);
+        // M.Tech rows get that one reason only - no department/section noise, no "create department" prompt.
+        $mtech = collect($errors)->whereIn('roll_number', ['24341D5701', '24341D5702']);
+        $this->assertCount(2, $mtech);
+        $this->assertSame([['M.Tech students are not imported.'], ['M.Tech students are not imported.']], $mtech->pluck('messages')->values()->all());
 
         $warnings = $this->getJson("/api/super-admin/student-data/imports/{$batch['id']}/rows?tab=warnings")->assertOk()->json('data.items');
         $this->assertCount(4, $warnings);
@@ -107,9 +111,9 @@ class StudentDataImportTest extends TestCase
         $batch = $this->importFixture();
 
         $this->assertSame('CONFIRMED', $batch['status']);
-        $this->assertSame(['created' => 13, 'updated' => 0, 'failed' => 0, 'one_time_passwords' => 2], $batch['result']);
-        $this->assertSame(['done' => 13, 'total' => 13], $batch['progress']);
-        $this->assertDatabaseCount('students', 13);
+        $this->assertSame(['created' => 11, 'updated' => 0, 'failed' => 0, 'one_time_passwords' => 2], $batch['result']);
+        $this->assertSame(['done' => 11, 'total' => 11], $batch['progress']);
+        $this->assertDatabaseCount('students', 11);
 
         $aarav = Student::with(['user', 'department', 'batch'])->where('roll_number', '23341A0501')->firstOrFail();
         $this->assertSame('Aarav Test', $aarav->user->name);
@@ -163,14 +167,10 @@ class StudentDataImportTest extends TestCase
         $this->assertSame(4, $mohan->year);
         $this->assertSame('2023-2027', Student::with('batch')->where('roll_number', '24345A0401')->first()->batch->name);
 
-        // M.Tech: 1D -> joined 2024, two-year batch created on confirm.
-        $om = Student::with(['batch', 'department'])->where('roll_number', '24341D5701')->firstOrFail();
-        $this->assertSame(2024, $om->year_of_joining);
-        $this->assertSame('2024-2026', $om->batch->name);
-        $this->assertSame('mtech', $om->program->value);
-        $this->assertSame(2, $om->year);
-        $this->assertSame('VLSIES', $om->department->code);
-        $this->assertSame('VLSIES', Student::with('department')->where('roll_number', '24341D5702')->first()->department->code); // "VLSI & ES"
+        // M.Tech (1D) is out of scope: never imported, and no two-year batch is ever created.
+        $this->assertDatabaseMissing('students', ['roll_number' => '24341D5701']);
+        $this->assertDatabaseMissing('students', ['roll_number' => '24341D5702']);
+        $this->assertSame(['2023-2027'], \App\Models\Batch::pluck('name')->all());
 
         // History: one initial record per student with a CGPA or backlogs.
         $this->assertDatabaseHas('student_academic_records', ['student_id' => $aarav->id, 'cgpa' => 8.05, 'backlogs' => 0, 'source' => 'import', 'import_id' => $batch['id']]);
@@ -219,7 +219,7 @@ class StudentDataImportTest extends TestCase
 
         // 0 changes. The three data problems in the file (CGPA 78.5, section E,
         // 11-digit mobile) are still reported as warnings on unchanged rows.
-        $this->assertSame(['new' => 0, 'updated' => 0, 'unchanged' => 13, 'error' => 5, 'warning' => 3], $batch['counts']);
+        $this->assertSame(['new' => 0, 'updated' => 0, 'unchanged' => 11, 'error' => 7, 'warning' => 3], $batch['counts']);
         $this->assertSame('VALIDATED', $batch['status']); // nothing to confirm
         $this->postJson("/api/super-admin/student-data/imports/{$batch['id']}/confirm")->assertStatus(422);
         $this->assertEquals($hashes, User::pluck('password', 'id'));
@@ -300,7 +300,7 @@ class StudentDataImportTest extends TestCase
         $this->assertTrue($batch['can_rollback']);
 
         $this->postJson("/api/super-admin/student-data/imports/{$batch['id']}/rollback")->assertOk()
-            ->assertJsonPath('data.result.removed', 13)
+            ->assertJsonPath('data.result.removed', 11)
             ->assertJsonPath('data.batch.status', 'ROLLED_BACK');
         $this->assertDatabaseCount('students', 0);
         $this->assertSame(1, User::count()); // just the Super Admin
@@ -312,7 +312,7 @@ class StudentDataImportTest extends TestCase
         $this->getJson("/api/super-admin/student-data/imports/{$second['id']}")->assertJsonPath('data.can_rollback', false)
             ->assertJsonPath('data.rollback_blocker', '1 student(s) from this import have already signed in or applied, so it can no longer be rolled back.');
         $this->postJson("/api/super-admin/student-data/imports/{$second['id']}/rollback")->assertStatus(422);
-        $this->assertDatabaseCount('students', 13);
+        $this->assertDatabaseCount('students', 11);
     }
 
     public function test_recheck_picks_up_a_newly_added_department_alias(): void
@@ -323,8 +323,8 @@ class StudentDataImportTest extends TestCase
 
         $rechecked = $this->postJson("/api/super-admin/student-data/imports/{$batch['id']}/recheck")->assertOk()->json('data');
 
-        $this->assertSame(14, $rechecked['counts']['new']);
-        $this->assertSame(4, $rechecked['counts']['error']);
+        $this->assertSame(12, $rechecked['counts']['new']);
+        $this->assertSame(6, $rechecked['counts']['error']);
         $this->assertSame([], $rechecked['unknown_departments']);
     }
 
@@ -338,7 +338,7 @@ class StudentDataImportTest extends TestCase
 
         $this->assertSame(['Sheet', 'Row', 'JNTU No', 'Name', 'Type', 'Problem'], $sheet->rangeToArray('A1:F1')[0]);
         $rows = collect($sheet->toArray())->slice(1);
-        $this->assertCount(5, $rows->where(4, 'Error (row skipped)'));
+        $this->assertCount(7, $rows->where(4, 'Error (row skipped)'));
         $this->assertTrue($rows->contains(fn ($r) => $r[0] === 'Lateral & MTech' && $r[1] == 6 && $r[5] === 'Section is #N/A.'));
     }
 
@@ -378,10 +378,11 @@ class StudentDataImportTest extends TestCase
             ['23341A6601', 'Chirag Test', 8.9, null, '3-2', null],       // unchanged
             ['23341A0101', 'Eshan Test', 9.2, 2, '3-2', null],           // +2.3 -> flagged
             ['99999A9999', 'Nobody', 7.0, 0, '3-2', null],               // unknown student
+            ['24341D5701', 'Om Test', 8.1, 0, '3-2', null],              // M.Tech - not imported
         ]);
 
         $batch = $this->upload($file, 'academic_update');
-        $this->assertSame(['new' => 0, 'updated' => 3, 'unchanged' => 1, 'error' => 1, 'warning' => 1], $batch['counts']);
+        $this->assertSame(['new' => 0, 'updated' => 3, 'unchanged' => 1, 'error' => 2, 'warning' => 1], $batch['counts']);
 
         $flagged = $this->getJson("/api/super-admin/student-data/imports/{$batch['id']}/rows?tab=flagged")->json('data.items');
         $this->assertSame('23341A0101', $flagged[0]['roll_number']);
