@@ -14,7 +14,7 @@ import { useCompanyOptions } from '@/hooks/useAdminOptions'
 import { useApiList } from '@/hooks/useApiList'
 import { adminService } from '@/services/adminService'
 import { formatDate } from '@/utils/dateFormat'
-import { labelForApplicationStatus } from '@/components/ui/StatusBadge'
+import { labelForApplicationStatus, StatusBadge } from '@/components/ui/StatusBadge'
 import type { AdminApplicationRow } from '@/types/admin'
 import type { ApplicationStatus } from '@/types/application'
 
@@ -26,6 +26,20 @@ const STATUSES = ['APPLIED', 'UNDER_REVIEW', 'SHORTLISTED', 'ASSESSMENT', 'INTER
  * (status changes, scheduling an interview) in the detail drawer.
  * The status buttons offered follow ApplicationStatus::canTransitionTo().
  */
+/** Status, plus a warning when the student's current CGPA/backlogs no longer meet the opportunity's enforced criteria. */
+function StatusCell({ row }: { row: AdminApplicationRow }) {
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <ApplicationBadge status={row.status} />
+      {row.criteria && !row.criteria.meets && (
+        <span title={row.criteria.reasons.join(' ')}>
+          <StatusBadge tone="warning">No longer meets criteria</StatusBadge>
+        </span>
+      )}
+    </div>
+  )
+}
+
 export function AdminApplicationsPage() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
@@ -53,7 +67,7 @@ export function AdminApplicationsPage() {
     { key: 'student', header: 'Student', render: (row: AdminApplicationRow) => <PersonCell student={row.student} subtitle={row.student ? `${row.student.roll_number} · ${row.student.department ?? ''}` : undefined} /> },
     { key: 'opportunity', header: 'Applied to', render: (row: AdminApplicationRow) => <InternshipCell internship={row.opportunity} /> },
     { key: 'type', header: 'Type', render: (row: AdminApplicationRow) => (row.opportunity?.type === 'internship' ? 'Internship' : 'Job') },
-    { key: 'status', header: 'Status', render: (row: AdminApplicationRow) => <ApplicationBadge status={row.status} /> },
+    { key: 'status', header: 'Status', render: (row: AdminApplicationRow) => <StatusCell row={row} /> },
     { key: 'applied', header: 'Applied', render: (row: AdminApplicationRow) => <span className="text-sm text-ink-soft">{formatDate(row.applied_at)}</span> },
   ]
 
@@ -92,7 +106,7 @@ export function AdminApplicationsPage() {
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <PersonCell student={row.student} />
-                <ApplicationBadge status={row.status} />
+                <StatusCell row={row} />
               </div>
               <InternshipCell internship={row.opportunity} />
             </div>

@@ -245,6 +245,7 @@ Route::middleware(['auth:sanctum', 'password.changed'])->group(function () {
         Route::get('/{student}', [AdminStudentController::class, 'show']);
         Route::get('/{student}/resume', [AdminStudentController::class, 'resume']);
         Route::post('/{student}/corrections/{correction}/resolve', [AdminStudentController::class, 'resolveCorrection']);
+        Route::post('/{student}/academics', [AdminStudentController::class, 'updateAcademics']);
     });
 
     Route::prefix('admin/companies')->middleware('role:PLACEMENT_ADMIN,SUPER_ADMIN')->group(function () {

@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Http\Resources\Concerns\FormatsOpportunitySummary;
+use App\Services\OpportunityEligibilityService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -33,8 +34,31 @@ class AdminApplicationListResource extends JsonResource
                 'department' => $this->student->department?->name,
             ]),
             'opportunity' => $this->opportunitySummary($this->applicable),
+            'criteria' => $this->criteriaCheck(),
             'applied_at' => $this->applied_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * Applications are never withdrawn when a student's academics change -
+     * an open one is just re-checked against the opportunity's enforced
+     * criteria so the placement office can see who no longer qualifies.
+     *
+     * @return array{meets: bool, reasons: list<string>}|null null when there is nothing to check
+     */
+    private function criteriaCheck(): ?array
+    {
+        if ($this->status->isTerminal() || ! $this->relationLoaded('student') || $this->student === null || $this->applicable === null) {
+            return null;
+        }
+
+        $result = app(OpportunityEligibilityService::class)->evaluate($this->student, $this->applicable);
+
+        if (! $result['eligibility_enforced']) {
+            return null;
+        }
+
+        return ['meets' => $result['eligible'], 'reasons' => array_column($result['reasons'], 'message')];
     }
 }

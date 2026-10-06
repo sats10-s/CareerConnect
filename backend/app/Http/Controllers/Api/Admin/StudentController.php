@@ -8,7 +8,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StudentDirectoryRequest;
 use App\Http\Resources\AdminStudentListResource;
 use App\Http\Resources\AdminStudentResource;
+use App\Enums\AcademicRecordSource;
+use App\Http\Requests\Admin\UpdateStudentAcademicsRequest;
 use App\Models\CorrectionRequest;
+use App\Services\Student\AcademicRecordService;
 use App\Models\Student;
 use App\Services\Student\CorrectionRequestService;
 use Illuminate\Http\Request;
@@ -123,6 +126,34 @@ class StudentController extends Controller
         ]);
 
         return $this->success(data: new AdminStudentResource($student));
+    }
+
+    /**
+     * POST /api/admin/students/{student}/academics - a single CGPA/backlogs
+     * change with a reason. Written to the history, audited, and the
+     * student is notified; eligibility uses the new numbers at once.
+     */
+    public function updateAcademics(UpdateStudentAcademicsRequest $request, Student $student, AcademicRecordService $academics): JsonResponse
+    {
+        Gate::authorize('viewAsAdmin', $student);
+        $data = $request->validated();
+
+        $record = $academics->apply(
+            $student,
+            isset($data['cgpa']) ? round((float) $data['cgpa'], 2) : null,
+            isset($data['backlogs']) ? (int) $data['backlogs'] : null,
+            AcademicRecordSource::MANUAL,
+            $request->user(),
+            trim($data['reason']),
+            $data['semester_label'] ?? null,
+        );
+
+        $student->refresh();
+
+        return $this->success(
+            data: ['cgpa' => $student->cgpa === null ? null : (float) $student->cgpa, 'backlogs' => $student->backlogs, 'changed' => $record !== null],
+            message: $record ? 'Academics updated. The student has been notified.' : 'Those are already the current values - nothing changed.',
+        );
     }
 
     public function resolveCorrection(Request $request, Student $student, CorrectionRequest $correction, CorrectionRequestService $service): JsonResponse

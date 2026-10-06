@@ -81,12 +81,14 @@ export interface AdminApplicationRow {
   opportunity: OpportunitySummary | null
   applied_at: string | null
   updated_at: string | null
+  /** Open applications re-checked against enforced criteria with the student's current academics; null when nothing to check. */
+  criteria?: { meets: boolean; reasons: string[] } | null
 }
 
 export interface AdminApplicationDetail extends AdminApplicationRow {
   student:
     | (NonNullable<AdminApplicationRow['student']> & {
-        email: string
+        email: string | null
         batch: string | null
         year: number | null
         cgpa: number | null

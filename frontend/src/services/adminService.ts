@@ -213,6 +213,8 @@ export const adminService = {
       unwrap(api.get<ApiEnvelope<PaginatedList<AdminStudentRow>>>('/admin/students', { params })),
     show: (id: number) => unwrap(api.get<ApiEnvelope<AdminStudentDetail>>(`/admin/students/${id}`)),
     resume: (id: number) => api.get<Blob>(`/admin/students/${id}/resume`, { responseType: 'blob' }).then((r) => r.data),
+    updateAcademics: (id: number, payload: { cgpa: number | null; backlogs: number | null; semester_label: string | null; reason: string }) =>
+      api.post<ApiEnvelope<{ cgpa: number | null; backlogs: number | null; changed: boolean }>>(`/admin/students/${id}/academics`, payload).then((r) => ({ ...r.data.data, message: r.data.message })),
     resolveCorrection: (id: number, correctionId: number) => unwrap(api.post<ApiEnvelope<{ id: number; status: string }>>(`/admin/students/${id}/corrections/${correctionId}/resolve`)),
   },
 

@@ -46,7 +46,14 @@ class ApplicationController extends Controller
     {
         Gate::authorize('viewAny', Application::class);
 
-        $query = Application::query()->with(['student.user', 'student.department', 'applicable.company']);
+        // Eligibility relations too: each open application is re-checked
+        // against the student's current CGPA/backlogs for the "no longer
+        // meets criteria" badge (see AdminApplicationListResource).
+        $query = Application::query()->with([
+            'student.user', 'student.department', 'student.skills', 'applicable.company',
+            'applicable.eligibilityCriteria', 'applicable.eligibleDepartments', 'applicable.eligibleBatches',
+            'applicable.eligibleYears', 'applicable.requiredSkills',
+        ]);
 
         if ($status = $request->input('status')) {
             $query->where('status', $status);

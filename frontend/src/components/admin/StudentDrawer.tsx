@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Download, KeyRound } from 'lucide-react'
+import { Download, KeyRound, PencilLine } from 'lucide-react'
+import { UpdateAcademicsModal } from './UpdateAcademicsModal'
 import { Button } from '@/components/ui/Button'
 import { Drawer } from '@/components/ui/Drawer'
 import { ErrorState } from '@/components/ui/ErrorState'
@@ -37,6 +38,7 @@ export function StudentDrawer({ id, onClose }: { id: number | null; onClose: () 
   const [askReset, setAskReset] = useState(false)
   const [resetting, setResetting] = useState(false)
   const [oneTimePassword, setOneTimePassword] = useState<string | null>(null)
+  const [editingAcademics, setEditingAcademics] = useState(false)
   const p = data?.profile
 
   async function downloadResume() {
@@ -108,6 +110,12 @@ export function StudentDrawer({ id, onClose }: { id: number | null; onClose: () 
               )}
             </div>
           )}
+
+          <div className="flex justify-end">
+            <Button variant="secondary" onClick={() => setEditingAcademics(true)}>
+              <PencilLine className="h-4 w-4" /> Update academics
+            </Button>
+          </div>
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
             <AcademicCard profile={p} />
@@ -207,6 +215,17 @@ export function StudentDrawer({ id, onClose }: { id: number | null; onClose: () 
           </section>
         </div>
       ) : null}
+      {editingAcademics && id && p && (
+        <UpdateAcademicsModal
+          studentId={id}
+          current={{ cgpa: p.cgpa, backlogs: p.backlogs }}
+          onClose={() => setEditingAcademics(false)}
+          onSaved={() => {
+            setEditingAcademics(false)
+            reload()
+          }}
+        />
+      )}
       <ConfirmDialog
         open={askReset}
         onClose={() => setAskReset(false)}
