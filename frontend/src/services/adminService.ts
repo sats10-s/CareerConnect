@@ -128,6 +128,7 @@ export type ExportFilters = {
   batch_id?: number
   year?: number
   section?: string
+  student_status?: string
   company_id?: number
   faculty_id?: number
   status?: string

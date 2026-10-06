@@ -16,6 +16,20 @@ import type { ExcelExportType } from '@/types/admin'
 const GROUPS = ['Records', 'Internships', 'Reports']
 const YEARS = [1, 2, 3, 4].map((y) => ({ value: y, label: `Year ${y}` }))
 const SECTIONS = ['A', 'B', 'C', 'D'].map((x) => ({ value: x, label: `Section ${x}` }))
+// "Shortlisted"/"Interviewed" mean ever reached that stage, even if the student later moved on.
+const STUDENT_STATUSES = [
+  { value: 'applied', label: 'Applied' },
+  { value: 'not_applied', label: 'Not applied' },
+  { value: 'shortlisted', label: 'Shortlisted' },
+  { value: 'not_shortlisted', label: 'Never shortlisted' },
+  { value: 'interviewed', label: 'Interviewed' },
+  { value: 'not_interviewed', label: 'Never interviewed' },
+  { value: 'placed', label: 'Placed' },
+  { value: 'unplaced', label: 'Not placed' },
+]
+const APPLICATION_STATUSES = ['APPLIED', 'UNDER_REVIEW', 'SHORTLISTED', 'ASSESSMENT', 'INTERVIEW', 'SELECTED', 'REJECTED', 'WITHDRAWN']
+  .map((x) => ({ value: x, label: x.charAt(0) + x.slice(1).toLowerCase().replace('_', ' ') }))
+const STUDENT_STATUS_TYPES = ['STUDENTS', 'STUDENT_APPLICATION_REPORT']
 
 /**
  * Downloads a live .xlsx from GET /admin/excel/exports/{type}. Nothing is
@@ -27,6 +41,8 @@ export function ExcelExportTab() {
   const [batchId, setBatchId] = useState('')
   const [year, setYear] = useState('')
   const [section, setSection] = useState('')
+  const [studentStatus, setStudentStatus] = useState('')
+  const [applicationStatus, setApplicationStatus] = useState('')
   const [applicableType, setApplicableType] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
@@ -47,6 +63,8 @@ export function ExcelExportTab() {
     if (batchId) filters.batch_id = Number(batchId)
     if (year) filters.year = Number(year)
     if (section) filters.section = section
+    if (studentStatus && STUDENT_STATUS_TYPES.includes(type)) filters.student_status = studentStatus
+    if (applicationStatus && type === 'APPLICATIONS') filters.status = applicationStatus
     if (applicableType) filters.applicable_type = applicableType as 'job' | 'internship'
     if (dateFrom) filters.date_from = dateFrom
     if (dateTo) filters.date_to = dateTo
@@ -82,6 +100,12 @@ export function ExcelExportTab() {
             <FilterSelect label="Batch" value={batchId} onChange={setBatchId} options={(batches.data ?? []).map((b) => ({ value: b.id, label: b.name }))} allLabel="All batches" />
             <FilterSelect label="Year" value={year} onChange={setYear} options={YEARS} allLabel="All years" />
             <FilterSelect label="Section" value={section} onChange={setSection} options={SECTIONS} allLabel="All sections" />
+            {STUDENT_STATUS_TYPES.includes(type) && (
+              <FilterSelect label="Student status" value={studentStatus} onChange={setStudentStatus} options={STUDENT_STATUSES} allLabel="All students" />
+            )}
+            {type === 'APPLICATIONS' && (
+              <FilterSelect label="Application status" value={applicationStatus} onChange={setApplicationStatus} options={APPLICATION_STATUSES} allLabel="Any status" />
+            )}
             <div className="w-full sm:w-44">
               <Select aria-label="Job or internship" value={applicableType} onChange={(e) => setApplicableType(e.target.value)}>
                 <option value="">Jobs &amp; internships</option>

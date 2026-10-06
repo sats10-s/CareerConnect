@@ -72,6 +72,15 @@ class ExcelExportService
     /** The college placement of a student, in every export that lists students. */
     private const STUDENT_HEADERS = ['Department', 'Batch', 'Year', 'Section'];
 
+    /**
+     * The `student_status` filter's values, each paired with its
+     * opposite. "shortlisted"/"interviewed" mean EVER reached that
+     * stage (status history / Interview rows), the same definition
+     * PlacementReportService uses, so a student who was shortlisted and
+     * later selected still counts as shortlisted.
+     */
+    public const STUDENT_STATUSES = ['applied', 'not_applied', 'shortlisted', 'not_shortlisted', 'interviewed', 'not_interviewed', 'placed', 'unplaced'];
+
     private const HEADER_FILL = 'FFE2E8F0';
 
     /**
@@ -137,7 +146,7 @@ class ExcelExportService
     }
 
     /**
-     * Supports: department_id, batch_id, year, section.
+     * Supports: department_id, batch_id, year, section, student_status.
      *
      * A blank CGPA (the 2024-28 batch has none yet) or blank backlogs
      * cell is written as text, never 0, so it cannot be read as a real
@@ -152,6 +161,7 @@ class ExcelExportService
 
         $query = Student::query()->with(['user', 'department', 'batch', 'facultyMentor.user']);
         $this->applyStudentOwnScope($query, $filters);
+        $this->applyStudentOutcome($query, $filters);
 
         $this->streamRows($sheet, $query, fn (Student $s) => [
             $s->roll_number,
@@ -742,6 +752,7 @@ class ExcelExportService
     {
         $studentQuery = Student::query()->with(['user', 'department', 'batch']);
         $this->applyStudentOwnScope($studentQuery, $filters);
+        $this->applyStudentOutcome($studentQuery, $filters);
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -873,6 +884,32 @@ class ExcelExportService
     // =========================================================================
     // shared filter / write helpers
     // =========================================================================
+
+    /**
+     * Narrows a Student query by `student_status` (see STUDENT_STATUSES).
+     *
+     * @param array<string, mixed> $filters
+     */
+    private function applyStudentOutcome(Builder $query, array $filters): void
+    {
+        $status = $filters['student_status'] ?? null;
+
+        if (! $status) {
+            return;
+        }
+
+        $negate = str_starts_with($status, 'not_') || $status === 'unplaced';
+        $condition = match ($status) {
+            'applied', 'not_applied' => null,
+            'shortlisted', 'not_shortlisted' => fn (Builder $q) => $q->whereHas('statusHistory', fn (Builder $h) => $h->where('to_status', 'SHORTLISTED')),
+            'interviewed', 'not_interviewed' => fn (Builder $q) => $q->has('interviews'),
+            'placed', 'unplaced' => fn (Builder $q) => $q->where('status', 'SELECTED'),
+        };
+
+        $negate
+            ? $query->whereDoesntHave('applications', $condition)
+            : $query->whereHas('applications', $condition);
+    }
 
     /**
      * The STUDENT_HEADERS cells for one student (blank when the record

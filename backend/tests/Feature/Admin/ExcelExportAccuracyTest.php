@@ -300,6 +300,57 @@ class ExcelExportAccuracyTest extends TestCase
         $this->assertSame(['B'], collect($rows)->pluck('Section')->unique()->values()->all());
     }
 
+    public function test_student_status_filters_match_the_database_and_split_every_student(): void
+    {
+        $everShortlisted = \App\Models\ApplicationStatusHistory::where('to_status', 'SHORTLISTED')->pluck('application_id');
+        $sets = [
+            'applied' => Application::pluck('student_id'),
+            'shortlisted' => Application::whereIn('id', $everShortlisted)->pluck('student_id'),
+            'interviewed' => Application::has('interviews')->pluck('student_id'),
+            'placed' => Application::where('status', 'SELECTED')->pluck('student_id'),
+        ];
+        $all = Student::pluck('roll_number')->sort()->values()->all();
+
+        foreach ($sets as $status => $ids) {
+            $opposite = $status === 'placed' ? 'unplaced' : 'not_'.$status;
+            $expectedIn = Student::whereIn('id', $ids->unique())->pluck('roll_number')->sort()->values()->all();
+            $expectedOut = Student::whereNotIn('id', $ids->unique())->pluck('roll_number')->sort()->values()->all();
+
+            $in = collect($this->exportRows('STUDENTS', ['student_status' => $status]))->pluck('JNTU No')->sort()->values()->all();
+            $out = collect($this->exportRows('STUDENTS', ['student_status' => $opposite]))->pluck('JNTU No')->sort()->values()->all();
+
+            $this->assertSame($expectedIn, $in, $status);
+            $this->assertSame($expectedOut, $out, $opposite);
+            $this->assertSame($all, collect([...$in, ...$out])->sort()->values()->all(), $status.' + '.$opposite);
+        }
+
+        // Unplaced in the Students export = the Unplaced Student Report.
+        $this->assertCount(count($this->exportRows('UNPLACED_STUDENT_REPORT')), $this->exportRows('STUDENTS', ['student_status' => 'unplaced']));
+
+        // Combines with department/year/section.
+        $filtered = $this->exportRows('STUDENT_APPLICATION_REPORT', ['student_status' => 'placed', 'year' => 3]);
+        $this->assertCount(Student::where('year', 3)->whereIn('id', $sets['placed'])->count(), $filtered);
+
+        Sanctum::actingAs($this->admin, ['*']);
+        $this->getJson('/api/admin/excel/exports/STUDENTS?student_status=famous')->assertUnprocessable()->assertJsonValidationErrors('student_status');
+    }
+
+    public function test_application_status_filter_matches_the_database(): void
+    {
+        $sum = 0;
+
+        foreach (\App\Enums\ApplicationStatus::values() as $status) {
+            $rows = $this->exportRows('APPLICATIONS', ['status' => $status]);
+            $this->assertCount(Application::where('status', $status)->count(), $rows, $status);
+            $sum += count($rows);
+
+            $sectionA = $this->exportRows('APPLICATIONS', ['status' => $status, 'section' => 'A']);
+            $this->assertCount(Application::where('status', $status)->whereIn('student_id', $this->studentIdsWhere(['section' => 'A']))->count(), $sectionA, $status.' A');
+        }
+
+        $this->assertSame(Application::count(), $sum);
+    }
+
     public function test_section_and_year_filters_are_validated(): void
     {
         Sanctum::actingAs($this->admin, ['*']);

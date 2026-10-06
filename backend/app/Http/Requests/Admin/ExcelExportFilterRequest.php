@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Services\ExcelExportService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -33,6 +34,9 @@ class ExcelExportFilterRequest extends FormRequest
             'company_id' => ['sometimes', 'nullable', 'integer', 'exists:companies,id'],
             'faculty_id' => ['sometimes', 'nullable', 'integer', 'exists:faculty,id'],
             'status' => ['sometimes', 'nullable', 'string', 'max:40'],
+            // Student-level outcome for exports that list students (see
+            // ExcelExportService::applyStudentOutcome()).
+            'student_status' => ['sometimes', 'nullable', Rule::in(ExcelExportService::STUDENT_STATUSES)],
             'applicable_type' => ['sometimes', 'nullable', Rule::in(['job', 'internship'])],
             'date_from' => ['sometimes', 'nullable', 'date'],
             'date_to' => ['sometimes', 'nullable', 'date', 'after_or_equal:date_from'],
