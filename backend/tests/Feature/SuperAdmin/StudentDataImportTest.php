@@ -342,6 +342,26 @@ class StudentDataImportTest extends TestCase
         $this->assertTrue($rows->contains(fn ($r) => $r[0] === 'Lateral & MTech' && $r[1] == 6 && $r[5] === 'Section is #N/A.'));
     }
 
+    public function test_a_cgpa_column_full_of_percentages_is_one_sheet_note_not_a_warning_per_row(): void
+    {
+        $rows = $this->regularSheetRows();
+        foreach ($rows as $i => $row) {
+            $rows[$i][7] = 60 + $i * 2.5; // the college's 2024 sheet: percentages in the CGPA column
+        }
+
+        $batch = $this->upload($this->collegeStudentFile($rows));
+
+        $sheet = collect($batch['sheets'])->firstWhere('name', '2023 Batch');
+        $this->assertSame('The CGPA column looks like percentages (12 of 12 values are above 10), so those CGPAs were left empty. Send real CGPAs later as a Results update.', $sheet['note']);
+        $this->assertNull(collect($batch['sheets'])->firstWhere('name', 'Lateral & MTech')['note']);
+        // Only the other problems remain as warnings: Eshan (mobile), Isha (section), Sita (no mobile).
+        $this->assertSame(3, $batch['counts']['warning']);
+        $this->assertSame(11, $batch['counts']['new']);
+
+        $this->confirm($batch['id']);
+        $this->assertNull(Student::where('roll_number', '23341A0501')->value('cgpa'));
+    }
+
     public function test_audit_entries_carry_counts_only(): void
     {
         $this->importFixture();

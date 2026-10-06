@@ -147,6 +147,7 @@ export function ImportPreview({ batch: initial, onChanged }: { batch: StudentImp
                     {sheet.rows} rows · {isResults ? '' : `${sheet.new} new · `}{sheet.updated} updated · {sheet.unchanged} unchanged · {sheet.error} errors
                   </p>
                 )}
+                {sheet.note && <p className="mt-1.5 flex items-start gap-1.5 text-xs text-warning"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />{sheet.note}</p>}
               </div>
             ))}
           </div>

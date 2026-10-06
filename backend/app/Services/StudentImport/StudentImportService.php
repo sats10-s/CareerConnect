@@ -166,6 +166,8 @@ class StudentImportService
             }
         }
 
+        $sheetNotes = $this->collapseSheetWideCgpaProblems($cleaned);
+
         $existing = $this->existingStudents($rolls);
         $semesterDefault = $batch->summary['semester_label'] ?? null;
 
@@ -233,14 +235,16 @@ class StudentImportService
             ];
         }
 
-        DB::transaction(function () use ($batch, $rowsToInsert, $parsed, $sheetCounts, $counts, $validRows, $unknownDepartments) {
+        DB::transaction(function () use ($batch, $rowsToInsert, $parsed, $sheetCounts, $sheetNotes, $counts, $validRows, $unknownDepartments) {
             $batch->rows()->delete();
 
             foreach (array_chunk($rowsToInsert, self::CHUNK) as $chunk) {
                 ExcelImportRow::insert($chunk);
             }
 
-            $sheets = array_map(fn ($sheet) => $sheet + ($sheetCounts[$sheet['name']] ?? ['new' => 0, 'updated' => 0, 'unchanged' => 0, 'error' => 0, 'warning' => 0]), $parsed['sheets']);
+            $sheets = array_map(fn ($sheet) => $sheet
+                + ($sheetCounts[$sheet['name']] ?? ['new' => 0, 'updated' => 0, 'unchanged' => 0, 'error' => 0, 'warning' => 0])
+                + ['note' => $sheetNotes[$sheet['name']] ?? null], $parsed['sheets']);
             $confirmable = $counts['new'] + $counts['updated'];
 
             $batch->update([
@@ -258,6 +262,51 @@ class StudentImportService
                 ]),
             ]);
         });
+    }
+
+    /**
+     * When most of a sheet's CGPA values are above 10, the column holds
+     * percentages, not CGPAs (the college's 2024 sheet does this). That is
+     * one sheet-level problem, not a warning on every row: the per-row
+     * warnings are dropped and the sheet gets a single note. The CGPAs are
+     * still left empty - never guessed from a percentage.
+     *
+     * @param  list<array{0: array, 1: array}>  $cleaned  rows, modified in place
+     * @return array<string, string> sheet name => note
+     */
+    private function collapseSheetWideCgpaProblems(array &$cleaned): array
+    {
+        $isOutOfRange = fn (string $warning) => str_starts_with($warning, 'CGPA ') && str_contains($warning, 'is outside 0-10');
+        $perSheet = [];
+
+        foreach ($cleaned as [$entry, $result]) {
+            $raw = $entry['data']['cgpa'] ?? null;
+            if ($raw === null || $raw === '') {
+                continue;
+            }
+            $perSheet[$entry['sheet']]['filled'] = ($perSheet[$entry['sheet']]['filled'] ?? 0) + 1;
+            if (collect($result['warnings'])->contains($isOutOfRange)) {
+                $perSheet[$entry['sheet']]['out'] = ($perSheet[$entry['sheet']]['out'] ?? 0) + 1;
+            }
+        }
+
+        $notes = [];
+        foreach ($perSheet as $sheet => $tally) {
+            $out = $tally['out'] ?? 0;
+            if ($out >= 10 && $out / $tally['filled'] >= 0.5) {
+                $notes[$sheet] = "The CGPA column looks like percentages ({$out} of {$tally['filled']} values are above 10), so those CGPAs were left empty. Send real CGPAs later as a Results update.";
+            }
+        }
+
+        if ($notes !== []) {
+            foreach ($cleaned as $i => [$entry, $result]) {
+                if (isset($notes[$entry['sheet']])) {
+                    $cleaned[$i][1]['warnings'] = array_values(array_filter($result['warnings'], fn ($w) => ! $isOutOfRange($w)));
+                }
+            }
+        }
+
+        return $notes;
     }
 
     /**

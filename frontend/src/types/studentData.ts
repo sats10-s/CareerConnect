@@ -18,6 +18,8 @@ export interface StudentImportSheet extends StudentImportCounts {
   skipped: boolean
   reason: string | null
   columns: string[]
+  /** A sheet-wide problem reported once instead of on every row (e.g. a CGPA column holding percentages). */
+  note?: string | null
 }
 
 export interface StudentImportBatch {
