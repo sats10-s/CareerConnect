@@ -59,6 +59,7 @@ class PlacementDriveResource extends JsonResource
                 'name' => $this->company?->name,
                 'industry' => $this->company?->industry,
                 'logo_path' => $this->company?->logo_path,
+                'status' => $this->company?->status?->value,
             ]),
 
             'opportunities' => $this->relationLoaded('opportunities')

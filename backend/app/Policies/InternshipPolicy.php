@@ -23,7 +23,10 @@ class InternshipPolicy
             return true;
         }
 
-        return $internship->status === OpportunityStatus::PUBLISHED;
+        // Students only see postings from APPROVED companies: a pending,
+        // rejected or suspended company's postings stay hidden even when published.
+        return $internship->status === OpportunityStatus::PUBLISHED
+            && $internship->company()->approved()->exists();
     }
 
     public function create(User $user): bool
@@ -34,6 +37,14 @@ class InternshipPolicy
     public function update(User $user, Internship $internship): bool
     {
         return $this->isAdmin($user);
+    }
+
+    /** A recruiter managing a posting from the company portal: its own company's only. */
+    public function manageAsCompany(User $user, Internship $internship): bool
+    {
+        return $user->roleName() === RoleName::COMPANY
+            && $user->company_id !== null
+            && $internship->company_id === $user->company_id;
     }
 
     private function isAdmin(User $user): bool

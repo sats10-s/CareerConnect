@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Enums\CompanyStatus;
 use App\Enums\PlacementDriveStatus;
 use App\Events\PlacementDriveStatusChanged;
 use App\Exceptions\PlacementDriveException;
+use App\Models\Company;
 use App\Models\Internship;
 use App\Models\JobPosting;
 use App\Models\PlacementDrive;
@@ -60,6 +62,7 @@ class PlacementDriveService
      */
     public function create(array $data, User $actingUser): PlacementDrive
     {
+        $this->assertCompanyCanRunDrives(Company::find($data['company_id']));
         $this->assertDeadlineNotAfterSchedule($data['application_deadline'] ?? null, $data['scheduled_at'] ?? null);
 
         return DB::transaction(function () use ($data, $actingUser) {
@@ -113,6 +116,11 @@ class PlacementDriveService
             throw new PlacementDriveException('The company cannot be changed once a drive has left DRAFT.');
         }
 
+        $this->assertCompanyCanRunDrives($drive->company);
+        if (array_key_exists('company_id', $data) && (int) $data['company_id'] !== $drive->company_id) {
+            $this->assertCompanyCanRunDrives(Company::find($data['company_id']));
+        }
+
         $mergedScheduledAt = array_key_exists('scheduled_at', $data) ? $data['scheduled_at'] : $drive->scheduled_at;
         $mergedDeadline = array_key_exists('application_deadline', $data) ? $data['application_deadline'] : $drive->application_deadline;
         $this->assertDeadlineNotAfterSchedule($mergedDeadline, $mergedScheduledAt);
@@ -148,6 +156,13 @@ class PlacementDriveService
 
         if ($drive->company === null) {
             throw new PlacementDriveException('This drive has no valid company.');
+        }
+
+        // Students only ever see drives of APPROVED companies, so a drive
+        // for a pending company stays a draft until the company is approved.
+        if ($drive->company->status !== CompanyStatus::APPROVED) {
+            $this->assertCompanyCanRunDrives($drive->company);
+            throw new PlacementDriveException("{$drive->company->name} is still waiting for Super Admin approval, so its drive can't be published yet.");
         }
 
         if ($drive->opportunities()->count() === 0) {
@@ -214,6 +229,8 @@ class PlacementDriveService
         if ($drive->status->isTerminal()) {
             throw new PlacementDriveException('Opportunities cannot be attached to a closed or cancelled drive.');
         }
+
+        $this->assertCompanyCanRunDrives($drive->company);
 
         $modelClass = self::OPPORTUNITY_TYPES[$opportunityType] ?? null;
 
@@ -301,6 +318,22 @@ class PlacementDriveService
             'changed_by' => $actingUser->id,
             'remarks' => $remarks,
         ]);
+    }
+
+    /**
+     * A REJECTED or SUSPENDED company can't have drives created, edited,
+     * published or extended. Closing and cancelling (and detaching) stay
+     * available so the placement office can wind its existing drives down.
+     */
+    private function assertCompanyCanRunDrives(?Company $company): void
+    {
+        if ($company && in_array($company->status, [CompanyStatus::REJECTED, CompanyStatus::SUSPENDED], true)) {
+            throw new PlacementDriveException(sprintf(
+                '%s is %s, so its placement drives can only be closed or cancelled.',
+                $company->name,
+                strtolower($company->status->label()),
+            ));
+        }
     }
 
     private function assertDeadlineNotAfterSchedule(mixed $deadline, mixed $scheduledAt): void

@@ -40,7 +40,12 @@ class JobPosting extends Model
         'work_mode',
         'application_deadline',
         'openings',
+        'source',
+        'submitted_for_review_at',
     ];
+
+    /** Mirrors the column default (ADMIN = posted by the placement office). */
+    protected $attributes = ['source' => 'ADMIN'];
 
     protected function casts(): array
     {
@@ -51,6 +56,7 @@ class JobPosting extends Model
             'work_mode' => WorkMode::class,
             'application_deadline' => 'date',
             'openings' => 'integer',
+            'submitted_for_review_at' => 'datetime',
         ];
     }
 

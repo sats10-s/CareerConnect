@@ -1,3 +1,5 @@
+import type { CompanyStatus } from './auth'
+import type { CompanyRecord } from './admin'
 import type { Role } from './auth'
 
 export interface ManagedUser {
@@ -112,6 +114,8 @@ export interface InstitutionSettings {
   support_email: string | null
   academic_year: string | null
   allow_student_registration: boolean
+  allow_company_registration: boolean
+  company_postings_require_review: boolean
   attendance_threshold: number
 }
 
@@ -119,4 +123,12 @@ export interface PublicSettings {
   institution_name: string
   support_email: string | null
   allow_student_registration: boolean
+  allow_company_registration: boolean
 }
+
+/** A row in Super Admin > Company Approvals: the company plus reviewer hints. */
+export interface CompanyApprovalRecord extends CompanyRecord {
+  possible_duplicates: { id: number; name: string; status: CompanyStatus | null; reasons: ('name' | 'website')[] }[]
+}
+
+export type CompanyStatusCounts = Record<CompanyStatus, number>

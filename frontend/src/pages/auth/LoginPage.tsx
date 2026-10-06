@@ -10,7 +10,8 @@ import { parseApiError } from '@/utils/apiError'
 /**
  * Students sign in with their JNTU No (first time: the mobile number the
  * college has on record, then they must choose their own password); staff
- * sign in with their email.
+ * sign in with their email. Companies sign in by email too, and register
+ * through /company/register.
  */
 export function LoginPage() {
   const { login } = useAuth()
@@ -110,6 +111,12 @@ export function LoginPage() {
           </Link>
         </p>
       )}
+      <p className={`${registrationOpen ? 'mt-2' : 'mt-6'} text-center text-sm text-muted`}>
+        Recruiter?{' '}
+        <Link to="/company/register" className="font-semibold text-primary hover:text-primary-hov">
+          Register your company
+        </Link>
+      </p>
     </div>
   )
 }

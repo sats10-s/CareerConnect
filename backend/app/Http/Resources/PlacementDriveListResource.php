@@ -44,6 +44,7 @@ class PlacementDriveListResource extends JsonResource
                 'id' => $this->company?->id,
                 'name' => $this->company?->name,
                 'logo_path' => $this->company?->logo_path,
+                'status' => $this->company?->status?->value,
             ]),
 
             'opportunity_count' => $this->opportunities_count === null ? null : (int) $this->opportunities_count,

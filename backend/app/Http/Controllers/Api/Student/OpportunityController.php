@@ -10,6 +10,7 @@ use App\Http\Resources\ApplicationResource;
 use App\Http\Resources\InternshipResource;
 use App\Http\Resources\JobPostingResource;
 use App\Http\Resources\OpportunityListResource;
+use App\Models\Company;
 use App\Models\Internship;
 use App\Models\JobPosting;
 use App\Services\ApplicationService;
@@ -210,7 +211,10 @@ class OpportunityController extends Controller
     {
         $query
             ->select('id', DB::raw("'{$type}' as opportunity_type"), 'created_at')
-            ->where('status', OpportunityStatus::PUBLISHED->value);
+            ->where('status', OpportunityStatus::PUBLISHED->value)
+            // Hide postings of companies that are not APPROVED (pending,
+            // rejected or suspended self-registrations).
+            ->whereIn('company_id', Company::query()->approved()->select('id'));
 
         if ($search) {
             $query->where('title', 'like', "%{$search}%");

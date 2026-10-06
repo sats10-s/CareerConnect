@@ -9,7 +9,22 @@ import { adminService } from '@/services/adminService'
 import { formBanner, parseApiError } from '@/utils/apiError'
 import { fromLocalInput, toLocalInput } from '@/utils/dateFormat'
 import { INTERVIEW_MODE_LABEL } from '@/utils/statusMeta'
-import type { InterviewDetail, InterviewMode } from '@/types/admin'
+import type { InterviewDetail, InterviewMode, InterviewPayload } from '@/types/admin'
+
+type ReschedulePayload = Parameters<typeof adminService.interviews.reschedule>[1]
+
+/** The writes this form makes. Defaults to the placement office's endpoints; the company portal passes its own. */
+export interface InterviewWriteService {
+  schedule: (applicationId: number, payload: InterviewPayload) => Promise<unknown>
+  update?: (interviewId: number, payload: Partial<Omit<InterviewPayload, 'scheduled_at'>>) => Promise<unknown>
+  reschedule: (interviewId: number, payload: ReschedulePayload) => Promise<unknown>
+}
+
+const ADMIN_INTERVIEW_WRITES: InterviewWriteService = {
+  schedule: adminService.applications.scheduleInterview,
+  update: adminService.interviews.update,
+  reschedule: adminService.interviews.reschedule,
+}
 
 export type InterviewFormVariant =
   | { kind: 'schedule'; applicationId: number; who: string }
@@ -26,7 +41,7 @@ export type InterviewFormVariant =
  * is entered as local wall-clock time and sent as an unambiguous UTC
  * instant.
  */
-export function InterviewFormModal({ variant, onClose, onSaved }: { variant: InterviewFormVariant; onClose: () => void; onSaved: () => void }) {
+export function InterviewFormModal({ variant, onClose, onSaved, service = ADMIN_INTERVIEW_WRITES }: { variant: InterviewFormVariant; onClose: () => void; onSaved: () => void; service?: InterviewWriteService }) {
   const existing = variant.kind === 'schedule' ? null : variant.interview
   const showTime = variant.kind !== 'edit'
   const showPanel = variant.kind !== 'reschedule'
@@ -71,7 +86,7 @@ export function InterviewFormModal({ variant, onClose, onSaved }: { variant: Int
         venue: needsVenue && venue.trim() ? venue.trim() : null,
       }
       if (variant.kind === 'schedule') {
-        await adminService.applications.scheduleInterview(variant.applicationId, {
+        await service.schedule(variant.applicationId, {
           round: Number(round) || 1,
           title: title.trim() || null,
           scheduled_at: fromLocalInput(when),
@@ -81,8 +96,8 @@ export function InterviewFormModal({ variant, onClose, onSaved }: { variant: Int
           panel_notes: notes.trim() || null,
         })
         toast('success', 'Interview scheduled.')
-      } else if (variant.kind === 'edit') {
-        await adminService.interviews.update(variant.interview.id, {
+      } else if (variant.kind === 'edit' && service.update) {
+        await service.update(variant.interview.id, {
           round: Number(round) || 1,
           title: title.trim() || null,
           ...shared,
@@ -92,7 +107,7 @@ export function InterviewFormModal({ variant, onClose, onSaved }: { variant: Int
         })
         toast('success', 'Interview details saved.')
       } else {
-        await adminService.interviews.reschedule(variant.interview.id, { scheduled_at: fromLocalInput(when), ...shared, remarks: remarks.trim() || null })
+        await service.reschedule(variant.interview.id, { scheduled_at: fromLocalInput(when), ...shared, remarks: remarks.trim() || null })
         toast('success', 'Interview rescheduled.')
       }
       onSaved()

@@ -28,7 +28,10 @@ class JobPostingPolicy
             return true;
         }
 
-        return $jobPosting->status === OpportunityStatus::PUBLISHED;
+        // Students only see postings from APPROVED companies: a pending,
+        // rejected or suspended company's postings stay hidden even when published.
+        return $jobPosting->status === OpportunityStatus::PUBLISHED
+            && $jobPosting->company()->approved()->exists();
     }
 
     public function create(User $user): bool
@@ -39,6 +42,14 @@ class JobPostingPolicy
     public function update(User $user, JobPosting $jobPosting): bool
     {
         return $this->isAdmin($user);
+    }
+
+    /** A recruiter managing a posting from the company portal: its own company's only. */
+    public function manageAsCompany(User $user, JobPosting $jobPosting): bool
+    {
+        return $user->roleName() === RoleName::COMPANY
+            && $user->company_id !== null
+            && $jobPosting->company_id === $user->company_id;
     }
 
     private function isAdmin(User $user): bool

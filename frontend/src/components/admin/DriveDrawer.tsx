@@ -17,7 +17,7 @@ import { useApiResource } from '@/hooks/useApiResource'
 import { adminService } from '@/services/adminService'
 import { formBanner, parseApiError } from '@/utils/apiError'
 import { formatDateTime } from '@/utils/dateFormat'
-import { DRIVE_STATUS, DRIVE_TYPE_LABEL, metaFor } from '@/utils/statusMeta'
+import { COMPANY_STATUS, DRIVE_STATUS, DRIVE_TYPE_LABEL, metaFor } from '@/utils/statusMeta'
 import type { DriveDetail } from '@/types/admin'
 
 type Dialog = 'edit' | 'attach' | 'publish' | 'close' | 'cancel' | null
@@ -84,6 +84,15 @@ export function DriveDrawer({ id, onClose, onChanged }: { id: number | null; onC
               </div>
               <MetaBadge map={DRIVE_STATUS} value={data.status} />
             </div>
+
+            {data.company?.status && data.company.status !== 'APPROVED' && (
+              <div role="status" className="rounded-lg bg-warning-bg px-3.5 py-2.5 text-sm text-warning">
+                <span className="mr-2 align-middle"><MetaBadge map={COMPANY_STATUS} value={data.company.status} /></span>
+                {data.company.status === 'PENDING'
+                  ? `${data.company.name} is awaiting Super Admin approval. This drive can be prepared but not published, and students can't see it yet.`
+                  : `${data.company.name} is ${COMPANY_STATUS[data.company.status].label.toLowerCase()}. This drive is hidden from students and can only be closed or cancelled.`}
+              </div>
+            )}
 
             {actionError && <div role="alert" className="rounded-lg border border-error-line bg-error-bg px-3.5 py-2.5 text-sm text-error">{actionError}</div>}
 

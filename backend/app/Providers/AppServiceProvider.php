@@ -21,7 +21,10 @@ use App\Listeners\SendInterviewStatusNotification;
 use App\Listeners\SendPpoRecordNotification;
 use App\Listeners\SendWeeklyReportReviewedNotification;
 use App\Listeners\SendWeeklyReportSubmittedNotification;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -55,5 +58,11 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(InternshipDocumentStatusChanged::class, SendInternshipDocumentNotification::class);
         Event::listen(InternshipCompletionStatusChanged::class, SendInternshipCompletionNotification::class);
         Event::listen(PpoRecordStatusChanged::class, SendPpoRecordNotification::class);
+
+        // Public POST /api/company/register: a handful of attempts per IP.
+        RateLimiter::for('company-registration', fn (Request $request) => [
+            Limit::perMinute(5)->by($request->ip()),
+            Limit::perHour(20)->by($request->ip()),
+        ]);
     }
 }

@@ -38,6 +38,9 @@ enum NotificationType: string
     case PPO_UPDATED = 'PPO_UPDATED';
     case ACADEMIC_RECORD_UPDATED = 'ACADEMIC_RECORD_UPDATED';
     case CORRECTION_REQUESTED = 'CORRECTION_REQUESTED';
+    case COMPANY_STATUS_CHANGED = 'COMPANY_STATUS_CHANGED';
+    case COMPANY_POSTING_SUBMITTED = 'COMPANY_POSTING_SUBMITTED';
+    case COMPANY_POSTING_PUBLISHED = 'COMPANY_POSTING_PUBLISHED';
     case ANNOUNCEMENT = 'ANNOUNCEMENT';
     case SYSTEM = 'SYSTEM';
 
@@ -67,6 +70,9 @@ enum NotificationType: string
             self::PPO_UPDATED => 'PPO Updated',
             self::ACADEMIC_RECORD_UPDATED => 'Academic Record Updated',
             self::CORRECTION_REQUESTED => 'Correction Requested',
+            self::COMPANY_STATUS_CHANGED => 'Company Status Changed',
+            self::COMPANY_POSTING_SUBMITTED => 'Company Posting Submitted',
+            self::COMPANY_POSTING_PUBLISHED => 'Company Posting Published',
             self::ANNOUNCEMENT => 'Announcement',
             self::SYSTEM => 'System',
         };

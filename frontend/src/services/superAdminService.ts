@@ -4,6 +4,8 @@ import type {
   AuditLogEntry,
   AuditLogParams,
   BatchRecord,
+  CompanyApprovalRecord,
+  CompanyStatusCounts,
   CreateUserPayload,
   DepartmentRecord,
   InstitutionSettings,
@@ -53,5 +55,14 @@ export const superAdminService = {
   /** Back to "registered mobile + forced change"; returns a one-time password only when there was no valid mobile. */
   resetStudentPassword: (studentId: number) =>
     api.post<ApiEnvelope<{ one_time_password: string | null }>>(`/super-admin/students/${studentId}/reset-password`).then((r) => ({ message: r.data.message, one_time_password: r.data.data.one_time_password })),
+  companies: {
+    list: (params: { status?: string; search?: string; page?: number; per_page?: number } = {}) =>
+      unwrap(api.get<ApiEnvelope<PaginatedList<CompanyApprovalRecord> & { counts: CompanyStatusCounts }>>('/super-admin/companies', { params })),
+    show: (id: number) => unwrap(api.get<ApiEnvelope<CompanyApprovalRecord>>(`/super-admin/companies/${id}`)),
+    approve: (id: number, note?: string) => unwrap(api.post<ApiEnvelope<CompanyApprovalRecord>>(`/super-admin/companies/${id}/approve`, { note })),
+    reject: (id: number, reason: string) => unwrap(api.post<ApiEnvelope<CompanyApprovalRecord>>(`/super-admin/companies/${id}/reject`, { reason })),
+    suspend: (id: number, reason: string) => unwrap(api.post<ApiEnvelope<CompanyApprovalRecord>>(`/super-admin/companies/${id}/suspend`, { reason })),
+    reactivate: (id: number, note?: string) => unwrap(api.post<ApiEnvelope<CompanyApprovalRecord>>(`/super-admin/companies/${id}/reactivate`, { note })),
+  },
   publicSettings: () => api.get<PublicSettings>('/meta/settings').then((r) => r.data),
 }

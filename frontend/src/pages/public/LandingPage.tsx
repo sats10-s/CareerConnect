@@ -42,6 +42,7 @@ export function LandingPage() {
           </span>
 
           <nav className="flex items-center gap-3">
+            <Link to="/company/register" className="hidden text-sm font-medium text-ink-soft transition-colors hover:text-ink md:inline">For recruiters</Link>
             <Link to="/login" className="btn-secondary">Sign in</Link>
             <Link to="/register" className="btn-primary hidden sm:inline-flex">Create account</Link>
           </nav>

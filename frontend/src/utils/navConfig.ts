@@ -24,6 +24,7 @@ import {
   Layers,
   Lock,
   History,
+  BadgeCheck,
   type LucideIcon,
   FileSpreadsheet,
 } from 'lucide-react'
@@ -82,12 +83,22 @@ export const NAV_ITEMS: Record<Role, NavItem[]> = {
     { label: 'Users', path: '/super-admin/users', icon: Users, implemented: true },
     { label: 'Students', path: '/super-admin/students', icon: GraduationCap, implemented: true },
     { label: 'Student Data', path: '/super-admin/student-data', icon: FileSpreadsheet, implemented: true },
+    { label: 'Company Approvals', path: '/super-admin/company-approvals', icon: BadgeCheck, implemented: true },
     { label: 'Roles', path: '/super-admin/roles', icon: Network, implemented: true },
     { label: 'Departments', path: '/super-admin/departments', icon: Landmark, implemented: true },
     { label: 'Batches', path: '/super-admin/batches', icon: Layers, implemented: true },
     { label: 'Security', path: '/super-admin/security', icon: Lock, implemented: true },
     { label: 'Audit Logs', path: '/super-admin/audit-logs', icon: History, implemented: true },
     { label: 'Settings', path: '/super-admin/settings', icon: Settings, implemented: true },
+  ],
+  COMPANY: [
+    { label: 'Dashboard', path: '/company/dashboard', icon: LayoutDashboard, implemented: true },
+    { label: 'Postings', path: '/company/postings', icon: Briefcase, implemented: true },
+    { label: 'Applicants', path: '/company/applicants', icon: FileText, implemented: true },
+    { label: 'Interviews', path: '/company/interviews', icon: MessagesSquare, implemented: true },
+    { label: 'Team', path: '/company/team', icon: Users, implemented: true },
+    { label: 'Company Profile', path: '/company/profile', icon: Building2, implemented: true },
+    { label: 'Notifications', path: '/company/notifications', icon: Bell, implemented: true },
   ],
 }
 
@@ -110,4 +121,5 @@ export const ROLE_ICON: Record<Role, LucideIcon> = {
   FACULTY: Users,
   PLACEMENT_ADMIN: ShieldCheck,
   SUPER_ADMIN: Lock,
+  COMPANY: Building2,
 }

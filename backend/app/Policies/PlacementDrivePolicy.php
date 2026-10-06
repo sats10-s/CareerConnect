@@ -34,7 +34,9 @@ class PlacementDrivePolicy
             return true;
         }
 
-        return $placementDrive->status === PlacementDriveStatus::PUBLISHED;
+        // Students: published drives of APPROVED companies only.
+        return $placementDrive->status === PlacementDriveStatus::PUBLISHED
+            && $placementDrive->company()->approved()->exists();
     }
 
     public function create(User $user): bool

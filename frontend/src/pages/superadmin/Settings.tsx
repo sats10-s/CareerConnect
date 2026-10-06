@@ -14,6 +14,8 @@ interface FormValues {
   support_email: string
   academic_year: string
   allow_student_registration: boolean
+  allow_company_registration: boolean
+  company_postings_require_review: boolean
   attendance_threshold: string
 }
 
@@ -22,6 +24,8 @@ const toForm = (s: InstitutionSettings): FormValues => ({
   support_email: s.support_email ?? '',
   academic_year: s.academic_year ?? '',
   allow_student_registration: s.allow_student_registration,
+  allow_company_registration: s.allow_company_registration,
+  company_postings_require_review: s.company_postings_require_review,
   attendance_threshold: String(s.attendance_threshold),
 })
 
@@ -105,6 +109,8 @@ export function SuperAdminSettingsPage() {
       if (key === 'support_email') payload.support_email = form.support_email.trim() || null
       if (key === 'academic_year') payload.academic_year = form.academic_year.trim() || null
       if (key === 'allow_student_registration') payload.allow_student_registration = form.allow_student_registration
+      if (key === 'allow_company_registration') payload.allow_company_registration = form.allow_company_registration
+      if (key === 'company_postings_require_review') payload.company_postings_require_review = form.company_postings_require_review
       if (key === 'attendance_threshold') payload.attendance_threshold = threshold
     }
     setBusy(true)
@@ -155,6 +161,23 @@ export function SuperAdminSettingsPage() {
             onChange={(v) => set('allow_student_registration', v)}
             label="Allow student self-registration"
             description={form.allow_student_registration ? 'Anyone with a college email can create a student account.' : 'The sign-up page is closed; new students must contact the placement office.'}
+          />
+        </SettingsSection>
+
+        <SettingsSection title="Companies" description="Recruiters can register themselves; a Super Admin approves each one under Company Approvals. The posting review rule applies once recruiters can post from their portal.">
+          <Switch
+            id="s-company-reg"
+            checked={form.allow_company_registration}
+            onChange={(v) => set('allow_company_registration', v)}
+            label="Allow company self-registration"
+            description={form.allow_company_registration ? 'Recruiters can register from the public site; new companies wait for approval.' : 'The company sign-up page is closed; the placement office adds companies itself.'}
+          />
+          <Switch
+            id="s-company-review"
+            checked={form.company_postings_require_review}
+            onChange={(v) => set('company_postings_require_review', v)}
+            label="Company postings need Placement Admin review"
+            description={form.company_postings_require_review ? 'Jobs a recruiter creates stay unpublished until a Placement Admin publishes them.' : 'Approved companies can publish their own jobs directly.'}
           />
         </SettingsSection>
 

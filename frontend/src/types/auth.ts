@@ -1,4 +1,16 @@
-export type Role = 'STUDENT' | 'FACULTY' | 'PLACEMENT_ADMIN' | 'SUPER_ADMIN'
+export type Role = 'STUDENT' | 'FACULTY' | 'PLACEMENT_ADMIN' | 'SUPER_ADMIN' | 'COMPANY'
+
+/** Approval state of a company (App\Enums\CompanyStatus). */
+export type CompanyStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED'
+
+/** The company a COMPANY-role login belongs to, as /auth/me returns it. */
+export interface CompanyMembership {
+  id: number
+  name: string
+  status: CompanyStatus
+  review_note: string | null
+  member_role: 'OWNER' | 'RECRUITER' | null
+}
 
 export interface StudentProfile {
   roll_number: string
@@ -33,6 +45,7 @@ export interface AuthUser {
   must_change_password: boolean
   student?: StudentProfile
   faculty?: FacultyProfile
+  company?: CompanyMembership
   created_at: string
 }
 
@@ -58,6 +71,22 @@ export interface RegisterPayload {
   batch_id: number
   year: number
   phone?: string
+}
+
+/** POST /company/register - public company self-registration. */
+export interface CompanyRegisterPayload {
+  company_name: string
+  industry?: string | null
+  website?: string | null
+  description?: string | null
+  headquarters?: string | null
+  company_size?: string | null
+  registration_number?: string | null
+  contact_name: string
+  email: string
+  contact_phone?: string | null
+  password: string
+  password_confirmation: string
 }
 
 /** Payload for PUT /student/profile - what a student can edit about themselves. */

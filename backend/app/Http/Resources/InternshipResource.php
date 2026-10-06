@@ -31,6 +31,9 @@ class InternshipResource extends JsonResource
             'openings' => $this->openings,
             'status' => $this->status?->value,
             'is_active' => (bool) $this->is_active,
+            // ADMIN (placement office) or COMPANY (created from the company portal).
+            'source' => $this->source,
+            'submitted_for_review_at' => $this->submitted_for_review_at?->toIso8601String(),
 
             'company' => $this->whenLoaded('company', fn () => [
                 'id' => $this->company->id,

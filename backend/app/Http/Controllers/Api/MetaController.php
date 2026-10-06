@@ -40,6 +40,7 @@ class MetaController extends Controller
             'institution_name' => $all['institution_name'],
             'support_email' => $all['support_email'],
             'allow_student_registration' => (bool) $all['allow_student_registration'],
+            'allow_company_registration' => (bool) $all['allow_company_registration'],
         ]);
     }
 }

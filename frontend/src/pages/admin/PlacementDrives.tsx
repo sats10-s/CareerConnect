@@ -17,7 +17,7 @@ import { useCompanyOptions } from '@/hooks/useAdminOptions'
 import { useApiList } from '@/hooks/useApiList'
 import { adminService, type AdminDriveParams } from '@/services/adminService'
 import { formatDateTime } from '@/utils/dateFormat'
-import { DRIVE_STATUS, DRIVE_TYPE_LABEL, optionsFor } from '@/utils/statusMeta'
+import { COMPANY_STATUS, DRIVE_STATUS, DRIVE_TYPE_LABEL, optionsFor } from '@/utils/statusMeta'
 import type { DriveRow, DriveStatus, DriveType } from '@/types/admin'
 
 /** Placement Admin > Placement Drives - /api/admin/placement-drives: college recruitment events that group a company's jobs/internships. */
@@ -62,7 +62,16 @@ export function AdminPlacementDrivesPage() {
         </div>
       ),
     },
-    { key: 'status', header: 'Status', render: (row: DriveRow) => <MetaBadge map={DRIVE_STATUS} value={row.status} /> },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (row: DriveRow) => (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <MetaBadge map={DRIVE_STATUS} value={row.status} />
+          <CompanyStatusFlag row={row} />
+        </div>
+      ),
+    },
     { key: 'when', header: 'Drive date', render: (row: DriveRow) => <span className="whitespace-nowrap">{formatDateTime(row.scheduled_at)}</span> },
     { key: 'openings', header: 'Openings', render: (row: DriveRow) => row.opportunity_count },
     { key: 'apps', header: 'Applications', render: (row: DriveRow) => row.application_count },
@@ -120,7 +129,10 @@ export function AdminPlacementDrivesPage() {
                     <p className="truncate text-xs text-ink-faint">{row.company?.name}</p>
                   </div>
                 </div>
-                <MetaBadge map={DRIVE_STATUS} value={row.status} />
+                <div className="flex flex-wrap justify-end gap-1.5">
+                  <MetaBadge map={DRIVE_STATUS} value={row.status} />
+                  <CompanyStatusFlag row={row} />
+                </div>
               </div>
               <p className="text-xs text-ink-faint">{row.scheduled_at ? formatDateTime(row.scheduled_at) : 'Date not set'} · {row.opportunity_count} opening{row.opportunity_count === 1 ? '' : 's'} · {row.application_count} application{row.application_count === 1 ? '' : 's'}</p>
             </div>
@@ -135,4 +147,11 @@ export function AdminPlacementDrivesPage() {
       <DriveDrawer id={openId} onClose={() => setOpenId(null)} onChanged={list.reload} />
     </div>
   )
+}
+
+/** Flags a drive whose company isn't approved - its drives are hidden from students (see PlacementDriveService). */
+function CompanyStatusFlag({ row }: { row: DriveRow }) {
+  const status = row.company?.status
+  if (!status || status === 'APPROVED') return null
+  return <span title={`Company ${COMPANY_STATUS[status].label.toLowerCase()} - hidden from students`}><MetaBadge map={COMPANY_STATUS} value={status} /></span>
 }

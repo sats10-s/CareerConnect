@@ -9,18 +9,34 @@ import { Textarea } from '@/components/ui/Textarea'
 import { Timeline, type TimelineItem } from '@/components/ui/Timeline'
 import { toast } from '@/components/ui/Toast'
 import { ApplicationBadge, DetailItem, InternshipCell, MetaBadge, PersonCell } from '@/components/common/Cells'
-import { InterviewFormModal } from './InterviewFormModal'
+import { InterviewFormModal, type InterviewWriteService } from './InterviewFormModal'
 import { useApiResource } from '@/hooks/useApiResource'
 import { adminService } from '@/services/adminService'
 import { formBanner, parseApiError } from '@/utils/apiError'
 import { formatDateTime } from '@/utils/dateFormat'
 import { INTERVIEW_MODE_LABEL, INTERVIEW_STATUS, metaFor } from '@/utils/statusMeta'
+import type { InterviewDetail } from '@/types/admin'
 
 type Dialog = 'edit' | 'reschedule' | 'complete' | 'cancel' | null
 
+/** Reads and final transitions this drawer uses. Defaults to the placement office's endpoints; the company portal passes its own. */
+export interface InterviewDrawerService {
+  show: (id: number) => Promise<InterviewDetail>
+  complete: (id: number, remarks?: string) => Promise<unknown>
+  cancel: (id: number, reason: string) => Promise<unknown>
+  writes?: InterviewWriteService
+}
+
+const ADMIN_INTERVIEWS: InterviewDrawerService = {
+  show: adminService.interviews.show,
+  complete: adminService.interviews.complete,
+  cancel: adminService.interviews.cancel,
+}
+
 /** Interview detail with the lifecycle InterviewStatus allows: SCHEDULED/RESCHEDULED -> COMPLETED | CANCELLED | RESCHEDULED; completed/cancelled are final. */
-export function InterviewDrawer({ id, onClose, onChanged }: { id: number | null; onClose: () => void; onChanged: () => void }) {
-  const { data, isLoading, error, reload } = useApiResource(() => adminService.interviews.show(id as number), id)
+export function InterviewDrawer({ id, onClose, onChanged, service = ADMIN_INTERVIEWS }: { id: number | null; onClose: () => void; onChanged: () => void; service?: InterviewDrawerService }) {
+  const { data, isLoading, error, reload } = useApiResource(() => service.show(id as number), id)
+  const canEdit = !service.writes || Boolean(service.writes.update)
   const [dialog, setDialog] = useState<Dialog>(null)
   const changed = () => {
     reload()
@@ -62,7 +78,7 @@ export function InterviewDrawer({ id, onClose, onChanged }: { id: number | null;
               <div className="flex flex-wrap gap-2">
                 <Button onClick={() => setDialog('complete')}><CheckCircle2 className="h-4 w-4" />Mark completed</Button>
                 <Button variant="secondary" onClick={() => setDialog('reschedule')}><CalendarClock className="h-4 w-4" />Reschedule</Button>
-                <Button variant="secondary" onClick={() => setDialog('edit')}><Pencil className="h-4 w-4" />Edit details</Button>
+                {canEdit && <Button variant="secondary" onClick={() => setDialog('edit')}><Pencil className="h-4 w-4" />Edit details</Button>}
                 <Button variant="danger" onClick={() => setDialog('cancel')}><XCircle className="h-4 w-4" />Cancel</Button>
               </div>
             ) : (
@@ -92,14 +108,14 @@ export function InterviewDrawer({ id, onClose, onChanged }: { id: number | null;
         ) : null}
       </Drawer>
 
-      {dialog === 'edit' && data && <InterviewFormModal variant={{ kind: 'edit', interview: data }} onClose={() => setDialog(null)} onSaved={changed} />}
-      {dialog === 'reschedule' && data && <InterviewFormModal variant={{ kind: 'reschedule', interview: data }} onClose={() => setDialog(null)} onSaved={changed} />}
-      {(dialog === 'complete' || dialog === 'cancel') && data && <ReasonModal kind={dialog} interviewId={data.id} onClose={() => setDialog(null)} onDone={changed} />}
+      {dialog === 'edit' && data && <InterviewFormModal variant={{ kind: 'edit', interview: data }} service={service.writes} onClose={() => setDialog(null)} onSaved={changed} />}
+      {dialog === 'reschedule' && data && <InterviewFormModal variant={{ kind: 'reschedule', interview: data }} service={service.writes} onClose={() => setDialog(null)} onSaved={changed} />}
+      {(dialog === 'complete' || dialog === 'cancel') && data && <ReasonModal kind={dialog} interviewId={data.id} service={service} onClose={() => setDialog(null)} onDone={changed} />}
     </>
   )
 }
 
-function ReasonModal({ kind, interviewId, onClose, onDone }: { kind: 'complete' | 'cancel'; interviewId: number; onClose: () => void; onDone: () => void }) {
+function ReasonModal({ kind, interviewId, service, onClose, onDone }: { kind: 'complete' | 'cancel'; interviewId: number; service: InterviewDrawerService; onClose: () => void; onDone: () => void }) {
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -116,8 +132,8 @@ function ReasonModal({ kind, interviewId, onClose, onDone }: { kind: 'complete' 
     setFieldError(undefined)
     setBusy(true)
     try {
-      if (isCancel) await adminService.interviews.cancel(interviewId, text.trim())
-      else await adminService.interviews.complete(interviewId, text.trim() || undefined)
+      if (isCancel) await service.cancel(interviewId, text.trim())
+      else await service.complete(interviewId, text.trim() || undefined)
       toast('success', isCancel ? 'Interview cancelled.' : 'Interview marked completed.')
       onDone()
       onClose()
@@ -144,7 +160,7 @@ function ReasonModal({ kind, interviewId, onClose, onDone }: { kind: 'complete' 
     >
       <form id="iv-reason" onSubmit={submit} noValidate className="space-y-4">
         {error && <div role="alert" className="rounded-lg border border-error-line bg-error-bg px-3.5 py-2.5 text-sm text-error">{error}</div>}
-        <p className="text-sm text-ink-soft">{isCancel ? 'A cancelled interview is final.' : 'A completed interview is final. Move the application forward from the Applications page.'}</p>
+        <p className="text-sm text-ink-soft">{isCancel ? 'A cancelled interview is final.' : 'A completed interview is final. Move the application forward from the application itself.'}</p>
         <div>
           <label className="label" htmlFor="ivr-text">{isCancel ? 'Reason' : 'Remarks (optional)'}</label>
           <Textarea id="ivr-text" rows={3} maxLength={1000} value={text} onChange={(e) => setText(e.target.value)} error={fieldError} />

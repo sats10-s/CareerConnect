@@ -18,6 +18,8 @@ function notificationsPathForRole(role: Role): string | null {
     case 'PLACEMENT_ADMIN':
     case 'SUPER_ADMIN':
       return '/admin/notifications'
+    case 'COMPANY':
+      return '/company/notifications'
     case 'FACULTY':
       return null
   }

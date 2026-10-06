@@ -1,3 +1,4 @@
+import type { CompanyStatus } from './auth'
 import type { ApplicationStatus, OpportunitySummary } from './application'
 import type { InternshipAssignmentStatus } from './internshipAssignment'
 import type { StatusChange } from './coordination'
@@ -14,6 +15,8 @@ export interface CompanyRef {
   name: string
   industry?: string | null
   logo_path: string | null
+  /** Sent on placement-drive payloads so admins can see when a drive's company isn't approved. */
+  status?: CompanyStatus
 }
 
 export interface OpportunityEligibility {
@@ -39,6 +42,9 @@ export interface AdminOpportunity {
   openings: number | null
   status: OpportunityLifecycle
   is_active: boolean
+  /** ADMIN = posted by the placement office, COMPANY = created by a recruiter in the company portal. */
+  source: 'ADMIN' | 'COMPANY'
+  submitted_for_review_at: string | null
   salary_range?: string | null
   employment_type?: EmploymentTypeValue | null
   duration_months?: number | null
@@ -402,6 +408,19 @@ export interface CompanyRecord {
   website: string | null
   description: string | null
   logo_path: string | null
+  status: CompanyStatus
+  status_label: string
+  source: 'ADMIN' | 'SELF_REGISTERED'
+  headquarters: string | null
+  company_size: string | null
+  registration_number: string | null
+  contact_name: string | null
+  contact_email: string | null
+  contact_phone: string | null
+  reviewed_at: string | null
+  review_note: string | null
+  reviewed_by?: { id: number; name: string } | null
+  owner?: { id: number; name: string; email: string; is_active: boolean; last_login_at: string | null } | null
   job_postings_count?: number
   internships_count?: number
   postings?: { id: number; type: 'job' | 'internship'; title: string; status: string | null; created_at: string | null }[]
