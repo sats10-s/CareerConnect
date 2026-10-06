@@ -50,5 +50,8 @@ export const superAdminService = {
     update: (payload: Partial<InstitutionSettings>) =>
       api.patch<ApiEnvelope<{ values: InstitutionSettings }>>('/super-admin/settings', payload).then((r) => ({ values: r.data.data.values, message: r.data.message })),
   },
+  /** Back to "registered mobile + forced change"; returns a one-time password only when there was no valid mobile. */
+  resetStudentPassword: (studentId: number) =>
+    api.post<ApiEnvelope<{ one_time_password: string | null }>>(`/super-admin/students/${studentId}/reset-password`).then((r) => ({ message: r.data.message, one_time_password: r.data.data.one_time_password })),
   publicSettings: () => api.get<PublicSettings>('/meta/settings').then((r) => r.data),
 }

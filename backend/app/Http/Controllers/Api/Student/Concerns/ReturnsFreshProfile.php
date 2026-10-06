@@ -29,6 +29,7 @@ trait ReturnsFreshProfile
             'student.certifications',
             'student.experiences',
             'student.academicRecords.changedBy',
+            'student.correctionRequests',
         ]);
 
         return new StudentProfileResource($user);

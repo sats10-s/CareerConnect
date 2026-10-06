@@ -343,6 +343,10 @@ export interface AdminStudentRow {
   department: string | null
   batch: string | null
   year: number | null
+  section: string | null
+  entry_type: 'regular' | 'lateral' | null
+  program: 'btech' | 'mtech' | null
+  year_of_joining: number | null
   cgpa: number | null
   backlogs: number | null
   applications_count: number
@@ -354,6 +358,8 @@ export interface AdminStudentRow {
 export interface AdminStudentDetail {
   profile: StudentProfileData
   is_active: boolean
+  must_change_password: boolean
+  last_login_at: string | null
   applications: { id: number; status: ApplicationStatus; applied_at: string | null; opportunity: OpportunitySummary | null }[]
   internship_assignments: {
     id: number
@@ -372,7 +378,14 @@ export interface StudentDirectoryParams {
   batch_id?: number
   year?: number
   placement?: 'placed' | 'unplaced'
-  sort?: 'name' | 'roll_number' | 'cgpa'
+  section?: string
+  backlogs?: 'none' | 'some' | 'many' | 'not_reported'
+  cgpa_min?: number
+  cgpa_max?: number
+  entry_type?: 'regular' | 'lateral'
+  year_of_joining?: number
+  skill?: string
+  sort?: 'name' | 'roll_number' | 'cgpa' | 'backlogs'
   direction?: 'asc' | 'desc'
   page?: number
   per_page?: number

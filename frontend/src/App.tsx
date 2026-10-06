@@ -161,6 +161,7 @@ export default function App() {
             <Route path="batches" element={<SuperAdminBatchesPage />} />
             <Route path="users" element={<SuperAdminUsersPage />} />
             <Route path="student-data" element={<SuperAdminStudentDataPage />} />
+            <Route path="students" element={<AdminStudentsPage />} />
             <Route path="roles" element={<SuperAdminRolesPage />} />
             <Route path="security" element={<SuperAdminSecurityPage />} />
             <Route path="audit-logs" element={<SuperAdminAuditLogsPage />} />

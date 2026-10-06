@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Download, ExternalLink } from 'lucide-react'
+import { Download, KeyRound } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Drawer } from '@/components/ui/Drawer'
 import { ErrorState } from '@/components/ui/ErrorState'
@@ -8,18 +8,35 @@ import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { toast } from '@/components/ui/Toast'
-import { ApplicationBadge, DetailItem, InternshipCell, MetaBadge } from '@/components/common/Cells'
+import { ApplicationBadge, InternshipCell, MetaBadge } from '@/components/common/Cells'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Modal } from '@/components/ui/Modal'
+import { ProfileHeader } from '@/components/profile/ProfileHeader'
+import { MyProfileCard } from '@/components/profile/MyProfileCard'
+import { AcademicCard, AcademicHistoryCard, EducationCard, PersonalCard } from '@/components/profile/college/CollegeCards'
+import { useAuth } from '@/hooks/useAuth'
+import { superAdminService } from '@/services/superAdminService'
 import { useApiResource } from '@/hooks/useApiResource'
 import { adminService } from '@/services/adminService'
-import { parseBlobApiError } from '@/utils/apiError'
+import { parseApiError, parseBlobApiError } from '@/utils/apiError'
 import { formatDate, formatFileSize } from '@/utils/dateFormat'
 import { saveBlob } from '@/utils/downloadBlob'
 import { ASSIGNMENT_STATUS } from '@/utils/statusMeta'
 
-/** GET /admin/students/{id}: the student's profile, every application and every internship assignment. Read-only. */
+/**
+ * GET /admin/students/{id}: the student's college record (same cards the
+ * student sees, plus who changed what), their own profile fields, reported
+ * corrections, every application and every internship assignment. Super
+ * Admins can also reset the student to "mobile number + forced change".
+ */
 export function StudentDrawer({ id, onClose }: { id: number | null; onClose: () => void }) {
   const { data, isLoading, error, reload } = useApiResource(() => adminService.students.show(id as number), id)
   const [downloading, setDownloading] = useState(false)
+  const { user } = useAuth()
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN'
+  const [askReset, setAskReset] = useState(false)
+  const [resetting, setResetting] = useState(false)
+  const [oneTimePassword, setOneTimePassword] = useState<string | null>(null)
   const p = data?.profile
 
   async function downloadResume() {
@@ -34,7 +51,31 @@ export function StudentDrawer({ id, onClose }: { id: number | null; onClose: () 
     }
   }
 
-  const links = p ? ([['LinkedIn', p.linkedin_url], ['GitHub', p.github_url], ['Portfolio', p.portfolio_url]] as const).filter(([, url]) => url) : []
+  async function resolve(correctionId: number) {
+    if (!id) return
+    try {
+      await adminService.students.resolveCorrection(id, correctionId)
+      reload()
+    } catch (err) {
+      toast('error', parseApiError(err, 'Unable to update this request.').message)
+    }
+  }
+
+  async function resetPassword() {
+    if (!id) return
+    setResetting(true)
+    try {
+      const result = await superAdminService.resetStudentPassword(id)
+      toast('success', result.message)
+      if (result.one_time_password) setOneTimePassword(result.one_time_password)
+      setAskReset(false)
+      reload()
+    } catch (err) {
+      toast('error', parseApiError(err, 'Unable to reset the password.').message)
+    } finally {
+      setResetting(false)
+    }
+  }
 
   return (
     <Drawer open={id !== null} onClose={onClose} title={p?.name ?? 'Student'} width="lg">
@@ -49,21 +90,33 @@ export function StudentDrawer({ id, onClose }: { id: number | null; onClose: () 
       ) : data && p ? (
         <div className="space-y-7">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-ink-soft">{p.roll_number}</span>
             {!data.is_active && <StatusBadge tone="error">Account inactive</StatusBadge>}
             {data.applications.some((a) => a.status === 'SELECTED') && <StatusBadge tone="success">Placed</StatusBadge>}
           </div>
 
-          <dl className="grid grid-cols-2 gap-4">
-            <DetailItem label="College email">{p.college_email}</DetailItem>
-            <DetailItem label="Phone">{p.phone}</DetailItem>
-            <DetailItem label="Personal email">{p.personal_email}</DetailItem>
-            <DetailItem label="Department">{p.department}</DetailItem>
-            <DetailItem label="Batch">{p.batch}</DetailItem>
-            <DetailItem label="Year">{p.year ? `Year ${p.year}` : null}</DetailItem>
-            <DetailItem label="CGPA">{p.cgpa !== null ? p.cgpa.toFixed(2) : null}</DetailItem>
-            <DetailItem label="Backlogs">{p.backlogs !== null ? String(p.backlogs) : null}</DetailItem>
-          </dl>
+          <ProfileHeader profile={p} showCompletion={false} />
+
+          {(data.must_change_password || isSuperAdmin) && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-hairline px-4 py-3 text-sm">
+              <span className="text-ink-soft">
+                {data.must_change_password ? 'Has not set their own password yet (first-time password in use).' : `Signed in ${data.last_login_at ? formatDate(data.last_login_at) : 'never'}.`}
+              </span>
+              {isSuperAdmin && (
+                <Button variant="secondary" onClick={() => setAskReset(true)}>
+                  <KeyRound className="h-4 w-4" /> Reset password
+                </Button>
+              )}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <AcademicCard profile={p} />
+            <EducationCard profile={p} />
+            <PersonalCard profile={p} />
+            <AcademicHistoryCard profile={p} showAuthor />
+          </div>
+
+          <MyProfileCard profile={p} />
 
           <div>
             <div className="mb-1.5 flex items-center justify-between text-xs">
@@ -72,6 +125,27 @@ export function StudentDrawer({ id, onClose }: { id: number | null; onClose: () 
             </div>
             <ProgressBar value={p.profile_completion} label="Profile completion" />
           </div>
+
+          {p.correction_requests.length > 0 && (
+            <section>
+              <h4 className="mb-3 text-sm font-semibold text-ink">Corrections reported by the student</h4>
+              <ul className="card divide-y divide-hairline">
+                {p.correction_requests.map((c) => (
+                  <li key={c.id} className="flex flex-wrap items-start justify-between gap-3 px-4 py-3 text-sm">
+                    <div className="min-w-0">
+                      <p className="font-medium text-ink">{c.field_label} <span className="text-xs font-normal text-ink-faint">· {formatDate(c.created_at)}</span></p>
+                      <p className="mt-0.5 whitespace-pre-line text-ink-soft">{c.note}</p>
+                    </div>
+                    {c.status === 'open' ? (
+                      <Button variant="secondary" onClick={() => resolve(c.id)}>Mark resolved</Button>
+                    ) : (
+                      <StatusBadge tone="success">Resolved</StatusBadge>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <section className="space-y-2">
             <h4 className="text-sm font-semibold text-ink">Resume</h4>
@@ -90,29 +164,6 @@ export function StudentDrawer({ id, onClose }: { id: number | null; onClose: () 
               <p className="text-sm text-ink-faint">No resume uploaded yet.</p>
             )}
           </section>
-
-          {(p.skills.length > 0 || links.length > 0) && (
-            <section className="space-y-3">
-              {p.skills.length > 0 && (
-                <div>
-                  <h4 className="mb-2 text-sm font-semibold text-ink">Skills</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {p.skills.map((s) => <span key={s.id} className="rounded-full border border-hairline px-3 py-1 text-xs text-ink-soft">{s.skill_name}</span>)}
-                  </div>
-                </div>
-              )}
-              {links.length > 0 && (
-                <div className="flex flex-wrap gap-4">
-                  {links.map(([label, url]) => (
-                    <a key={label} href={url as string} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
-                      {label}
-                      <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                    </a>
-                  ))}
-                </div>
-              )}
-            </section>
-          )}
 
           <section>
             <h4 className="mb-3 text-sm font-semibold text-ink">Applications ({data.applications.length})</h4>
@@ -156,6 +207,20 @@ export function StudentDrawer({ id, onClose }: { id: number | null; onClose: () 
           </section>
         </div>
       ) : null}
+      <ConfirmDialog
+        open={askReset}
+        onClose={() => setAskReset(false)}
+        onConfirm={resetPassword}
+        isConfirming={resetting}
+        tone="danger"
+        title="Reset this student's password?"
+        confirmLabel="Reset password"
+        description="Their password goes back to the registered mobile number (or a one-time password if there is none), they are signed out everywhere, and they must choose a new password at next sign-in."
+      />
+      <Modal open={oneTimePassword !== null} onClose={() => setOneTimePassword(null)} title="One-time password" footer={<Button onClick={() => setOneTimePassword(null)}>Done</Button>}>
+        <p className="text-sm text-ink-soft">No valid mobile number is on record. Give the student this password privately - it will not be shown again.</p>
+        <p className="mt-4 rounded-xl border border-hairline bg-sidebar px-4 py-3 text-center font-mono text-lg text-ink">{oneTimePassword}</p>
+      </Modal>
     </Drawer>
   )
 }

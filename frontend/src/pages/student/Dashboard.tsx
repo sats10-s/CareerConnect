@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { WelcomeHeader } from '@/components/dashboard/WelcomeHeader'
+import { AcademicStrip } from '@/components/dashboard/AcademicStrip'
 import { MetricBand, type Metric } from '@/components/dashboard/MetricBand'
 import { JourneyProgress, type JourneyStep } from '@/components/dashboard/JourneyProgress'
 import { ApplicationActivity } from '@/components/dashboard/ApplicationActivity'
@@ -112,7 +113,10 @@ export function StudentDashboardPage() {
 
   return (
     <div className="animate-fade-in space-y-8">
-      <WelcomeHeader name={user?.name ?? ''} department={user?.student?.department} batch={user?.student?.batch} />
+      <div className="space-y-3">
+        <WelcomeHeader name={user?.name ?? ''} department={user?.student?.department} batch={user?.student?.batch} />
+        {data.academics && <AcademicStrip academics={data.academics} />}
+      </div>
 
       <MetricBand metrics={metrics} />
 

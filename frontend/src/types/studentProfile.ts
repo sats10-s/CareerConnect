@@ -86,6 +86,7 @@ export interface StudentProfileData {
   academic_history: AcademicHistoryEntry[]
 
   address: string | null
+  correction_requests: CorrectionRequestEntry[]
 
   skills: StudentSkill[]
   projects: StudentProject[]
@@ -116,6 +117,16 @@ export interface AcademicHistoryEntry {
   reason: string | null
   changed_by: string | null
   created_at: string
+}
+
+export interface CorrectionRequestEntry {
+  id: number
+  field: string
+  field_label: string
+  note: string
+  status: 'open' | 'resolved'
+  created_at: string
+  resolved_at: string | null
 }
 
 export interface ProfileChecklistItem {

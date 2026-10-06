@@ -1,3 +1,4 @@
+import type { StudentProfileData } from '@/types/studentProfile'
 import { api } from './api'
 import type { ApiEnvelope, PaginatedList } from '@/types/common'
 import type { AttendanceStatus } from '@/types/attendance'
@@ -114,6 +115,8 @@ export interface PpoPayload {
 export const facultyService = {
   students: (params: FacultyStudentParams = {}): List<FacultyStudentItem> =>
     unwrap(api.get<ApiEnvelope<PaginatedList<FacultyStudentItem>>>('/faculty/students', { params })),
+  /** An assigned student's profile without the personal college record. */
+  studentProfile: (studentId: number) => unwrap(api.get<ApiEnvelope<StudentProfileData>>(`/faculty/students/${studentId}`)),
 
   assignments: (params: FacultyAssignmentParams = {}): List<AssignmentListItem> =>
     unwrap(api.get<ApiEnvelope<PaginatedList<AssignmentListItem>>>('/faculty/internship-assignments', { params })),

@@ -2,14 +2,31 @@
 
 namespace App\Http\Requests\Student;
 
+use App\Models\StudentSkill;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
+/**
+ * One skill tag: up to 40 characters, at most 30 per student, and no
+ * duplicates regardless of case ("react" and "React" are the same skill).
+ * Whitespace is trimmed and collapsed before any of that is checked.
+ */
 class StoreSkillRequest extends FormRequest
 {
+    public const MAX_SKILLS = 30;
+
+    public const MAX_LENGTH = 40;
+
     public function authorize(): bool
     {
         return true;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->input('skill_name'))) {
+            $this->merge(['skill_name' => trim((string) preg_replace('/\s+/u', ' ', $this->input('skill_name')))]);
+        }
     }
 
     public function rules(): array
@@ -20,8 +37,16 @@ class StoreSkillRequest extends FormRequest
             'skill_name' => [
                 'required',
                 'string',
-                'max:100',
-                Rule::unique('student_skills', 'skill_name')->where('student_id', $studentId),
+                'max:'.self::MAX_LENGTH,
+                function (string $attribute, mixed $value, Closure $fail) use ($studentId) {
+                    $existing = StudentSkill::query()->where('student_id', $studentId)->pluck('skill_name');
+
+                    if ($existing->count() >= self::MAX_SKILLS) {
+                        $fail('You can list up to '.self::MAX_SKILLS.' skills. Remove one to add another.');
+                    } elseif ($existing->contains(fn ($name) => mb_strtolower($name) === mb_strtolower((string) $value))) {
+                        $fail('This skill is already on your profile.');
+                    }
+                },
             ],
         ];
     }
@@ -29,7 +54,7 @@ class StoreSkillRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'skill_name.unique' => 'This skill is already on your profile.',
+            'skill_name.max' => 'Keep each skill to '.self::MAX_LENGTH.' characters.',
         ];
     }
 }

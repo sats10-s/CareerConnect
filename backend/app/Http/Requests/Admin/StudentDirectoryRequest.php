@@ -8,7 +8,8 @@ use Illuminate\Validation\Rule;
 /**
  * Filters for GET /api/admin/students. `placement` is derived from the
  * student's applications: `placed` = at least one SELECTED application,
- * `unplaced` = none.
+ * `unplaced` = none. CGPA range filters never match a student whose CGPA
+ * is not on record yet.
  */
 class StudentDirectoryRequest extends FormRequest
 {
@@ -25,7 +26,15 @@ class StudentDirectoryRequest extends FormRequest
             'batch_id' => ['sometimes', 'nullable', 'integer', 'exists:batches,id'],
             'year' => ['sometimes', 'nullable', 'integer', 'between:1,6'],
             'placement' => ['sometimes', 'nullable', Rule::in(['placed', 'unplaced'])],
-            'sort' => ['sometimes', 'nullable', Rule::in(['name', 'roll_number', 'cgpa'])],
+            'section' => ['sometimes', 'nullable', 'string', 'max:10'],
+            // none = 0, some = 1-2, many = 3+, not_reported = blank in the college file
+            'backlogs' => ['sometimes', 'nullable', Rule::in(['none', 'some', 'many', 'not_reported'])],
+            'cgpa_min' => ['sometimes', 'nullable', 'numeric', 'between:0,10'],
+            'cgpa_max' => ['sometimes', 'nullable', 'numeric', 'between:0,10', ...($this->filled('cgpa_min') ? ['gte:cgpa_min'] : [])],
+            'entry_type' => ['sometimes', 'nullable', Rule::in(['regular', 'lateral'])],
+            'year_of_joining' => ['sometimes', 'nullable', 'integer', 'between:2000,2100'],
+            'skill' => ['sometimes', 'nullable', 'string', 'max:40'],
+            'sort' => ['sometimes', 'nullable', Rule::in(['name', 'roll_number', 'cgpa', 'backlogs'])],
             'direction' => ['sometimes', 'nullable', Rule::in(['asc', 'desc'])],
             'page' => ['sometimes', 'integer', 'min:1'],
             'per_page' => ['sometimes', 'integer', 'between:1,100'],

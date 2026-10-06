@@ -80,6 +80,7 @@ export const NAV_ITEMS: Record<Role, NavItem[]> = {
   SUPER_ADMIN: [
     { label: 'Dashboard', path: '/super-admin/dashboard', icon: LayoutDashboard, implemented: true },
     { label: 'Users', path: '/super-admin/users', icon: Users, implemented: true },
+    { label: 'Students', path: '/super-admin/students', icon: GraduationCap, implemented: true },
     { label: 'Student Data', path: '/super-admin/student-data', icon: FileSpreadsheet, implemented: true },
     { label: 'Roles', path: '/super-admin/roles', icon: Network, implemented: true },
     { label: 'Departments', path: '/super-admin/departments', icon: Landmark, implemented: true },

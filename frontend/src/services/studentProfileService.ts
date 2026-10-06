@@ -38,6 +38,17 @@ export const studentProfileService = {
     return data.data as StudentProfileData
   },
 
+  async suggestSkills(q: string): Promise<string[]> {
+    const { data } = await api.get('/student/profile/skills/suggestions', { params: { q } })
+    return data.data as string[]
+  },
+
+  /** "Report a correction" on a locked college-record field - notifies the placement office. */
+  async reportCorrection(field: string, note: string): Promise<StudentProfileData> {
+    const { data } = await api.post('/student/profile/corrections', { field, note })
+    return data.data as StudentProfileData
+  },
+
   async deleteSkill(skillId: number): Promise<StudentProfileData> {
     const { data } = await api.delete(`/student/profile/skills/${skillId}`)
     return data.data as StudentProfileData

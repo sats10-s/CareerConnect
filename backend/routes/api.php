@@ -39,6 +39,7 @@ use App\Http\Controllers\Api\Student\AnnouncementController as StudentAnnounceme
 use App\Http\Controllers\Api\Student\ApplicationController as StudentApplicationController;
 use App\Http\Controllers\Api\Student\AttendanceController as StudentAttendanceController;
 use App\Http\Controllers\Api\Student\CertificationController;
+use App\Http\Controllers\Api\Student\CorrectionRequestController as StudentCorrectionRequestController;
 use App\Http\Controllers\Api\Student\ExperienceController;
 use App\Http\Controllers\Api\Student\InternshipAssignmentController as StudentInternshipAssignmentController;
 use App\Http\Controllers\Api\Student\InternshipCompletionController as StudentInternshipCompletionController;
@@ -111,6 +112,8 @@ Route::middleware(['auth:sanctum', 'password.changed'])->group(function () {
         Route::match(['put', 'patch'], '/', [StudentProfileController::class, 'update']);
 
         Route::post('/skills', [SkillController::class, 'store']);
+        Route::get('/skills/suggestions', [SkillController::class, 'suggestions']);
+        Route::post('/corrections', [StudentCorrectionRequestController::class, 'store']);
         Route::delete('/skills/{skill}', [SkillController::class, 'destroy']);
 
         Route::post('/projects', [ProjectController::class, 'store']);
@@ -241,6 +244,7 @@ Route::middleware(['auth:sanctum', 'password.changed'])->group(function () {
         Route::get('/', [AdminStudentController::class, 'index']);
         Route::get('/{student}', [AdminStudentController::class, 'show']);
         Route::get('/{student}/resume', [AdminStudentController::class, 'resume']);
+        Route::post('/{student}/corrections/{correction}/resolve', [AdminStudentController::class, 'resolveCorrection']);
     });
 
     Route::prefix('admin/companies')->middleware('role:PLACEMENT_ADMIN,SUPER_ADMIN')->group(function () {
@@ -280,6 +284,8 @@ Route::middleware(['auth:sanctum', 'password.changed'])->group(function () {
     });
 
     Route::get('/faculty/students', [FacultyStudentController::class, 'index'])
+        ->middleware('role:FACULTY');
+    Route::get('/faculty/students/{student}', [FacultyStudentController::class, 'show'])
         ->middleware('role:FACULTY');
 
     // Attendance Management - scoped exclusively through

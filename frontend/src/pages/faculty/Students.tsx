@@ -12,6 +12,7 @@ import { ListState } from '@/components/common/ListState'
 import { InternshipCell, MetaBadge } from '@/components/common/Cells'
 import { Avatar } from '@/components/ui/Avatar'
 import { AssignmentDrawer } from '@/components/faculty/AssignmentDrawer'
+import { StudentProfileDrawer } from '@/components/faculty/StudentProfileDrawer'
 import { FacultyAssignmentLinks } from '@/components/faculty/AssignmentLinks'
 import { useApiList } from '@/hooks/useApiList'
 import { facultyService } from '@/services/facultyService'
@@ -34,6 +35,7 @@ export function FacultyStudentsPage() {
   const [status, setStatus] = useState('')
   const [year, setYear] = useState('')
   const [departmentId, setDepartmentId] = useState('')
+  const [profileId, setProfileId] = useState<number | null>(null)
   const [departments, setDepartments] = useState<Department[]>([])
   const [openAssignmentId, setOpenAssignmentId] = useState<number | null>(null)
 
@@ -65,7 +67,7 @@ export function FacultyStudentsPage() {
           <Avatar name={row.name} size="sm" />
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-ink">{row.name}</p>
-            <p className="truncate text-xs text-ink-faint">{row.roll_number} · {row.email}</p>
+            <p className="truncate text-xs text-ink-faint">{[row.roll_number, row.email].filter(Boolean).join(' · ')}</p>
           </div>
         </div>
       ),
@@ -74,6 +76,15 @@ export function FacultyStudentsPage() {
     { key: 'year', header: 'Year', render: (row: FacultyStudentItem) => (row.year ? `Year ${row.year}` : '—') },
     { key: 'internship', header: 'Internship', render: (row: FacultyStudentItem) => <InternshipCell internship={row.assignment?.internship} /> },
     { key: 'status', header: 'Status', render: (row: FacultyStudentItem) => <MetaBadge map={ASSIGNMENT_STATUS} value={row.assignment?.status} /> },
+    {
+      key: 'profile',
+      header: '',
+      render: (row: FacultyStudentItem) => (
+        <button type="button" className="text-sm font-medium text-primary hover:underline" onClick={(e) => { e.stopPropagation(); setProfileId(row.id) }}>
+          Profile
+        </button>
+      ),
+    },
   ]
 
   return (
@@ -139,6 +150,9 @@ export function FacultyStudentsPage() {
                 <MetaBadge map={ASSIGNMENT_STATUS} value={row.assignment?.status} />
               </div>
               <InternshipCell internship={row.assignment?.internship} />
+              <button type="button" className="text-sm font-medium text-primary" onClick={(e) => { e.stopPropagation(); setProfileId(row.id) }}>
+                View profile
+              </button>
             </div>
           )}
         />
@@ -147,6 +161,7 @@ export function FacultyStudentsPage() {
         </div>
       </ListState>
 
+      <StudentProfileDrawer id={profileId} onClose={() => setProfileId(null)} />
       <AssignmentDrawer
         assignmentId={openAssignmentId}
         onClose={() => setOpenAssignmentId(null)}

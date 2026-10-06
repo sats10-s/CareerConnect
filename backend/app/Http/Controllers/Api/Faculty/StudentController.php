@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Faculty;
 use App\Http\Controllers\Concerns\FormatsApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\FacultyStudentListResource;
+use App\Http\Resources\StudentProfileResource;
 use App\Models\Student;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -76,5 +77,24 @@ class StudentController extends Controller
             ],
             message: 'Students retrieved successfully.',
         );
+    }
+
+    /**
+     * GET /api/faculty/students/{student} - an assigned student's academic,
+     * education and "My Profile" cards. Faculty never see the personal
+     * college record (gender, mobile).
+     */
+    public function show(Request $request, Student $student): JsonResponse
+    {
+        $faculty = $request->user()->faculty;
+        $assigned = $faculty !== null && $student->internshipAssignments()->where('faculty_id', $faculty->id)->exists();
+
+        if (! $assigned) {
+            return $this->failure('This student is not assigned to you.', [], 403);
+        }
+
+        $student->load(['user.student.department', 'user.student.batch', 'user.student.skills', 'user.student.academicRecords']);
+
+        return $this->success(data: (new StudentProfileResource($student->user))->withoutPersonal());
     }
 }

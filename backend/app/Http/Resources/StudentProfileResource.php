@@ -94,6 +94,18 @@ class StudentProfileResource extends JsonResource
                 ])->values()
                 : [],
 
+            'correction_requests' => $student->relationLoaded('correctionRequests')
+                ? $student->correctionRequests->sortByDesc('id')->values()->map(fn ($c) => [
+                    'id' => $c->id,
+                    'field' => $c->field,
+                    'field_label' => \App\Models\CorrectionRequest::FIELDS[$c->field] ?? $c->field,
+                    'note' => $c->note,
+                    'status' => $c->status?->value,
+                    'created_at' => $c->created_at?->toIso8601String(),
+                    'resolved_at' => $c->resolved_at?->toIso8601String(),
+                ])
+                : [],
+
             // --- Student-owned ("My Profile"). ---
             'personal_email' => $student->personal_email,
             'address' => $student->address,

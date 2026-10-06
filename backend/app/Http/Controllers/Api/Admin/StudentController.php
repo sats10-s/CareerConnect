@@ -8,7 +8,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StudentDirectoryRequest;
 use App\Http\Resources\AdminStudentListResource;
 use App\Http\Resources\AdminStudentResource;
+use App\Models\CorrectionRequest;
 use App\Models\Student;
+use App\Services\Student\CorrectionRequestService;
+use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
@@ -51,10 +54,33 @@ class StudentController extends Controller
             });
         }
 
-        foreach (['department_id', 'batch_id', 'year'] as $column) {
+        foreach (['department_id', 'batch_id', 'year', 'entry_type', 'year_of_joining'] as $column) {
             if (! empty($filters[$column])) {
                 $query->where("students.{$column}", $filters[$column]);
             }
+        }
+
+        if (! empty($filters['section'])) {
+            $query->where('students.section', mb_strtoupper(trim($filters['section'])));
+        }
+
+        match ($filters['backlogs'] ?? null) {
+            'none' => $query->where('students.backlogs', 0),
+            'some' => $query->whereBetween('students.backlogs', [1, 2]),
+            'many' => $query->where('students.backlogs', '>=', 3),
+            'not_reported' => $query->whereNull('students.backlogs'),
+            default => null,
+        };
+
+        if (isset($filters['cgpa_min']) && $filters['cgpa_min'] !== null) {
+            $query->where('students.cgpa', '>=', $filters['cgpa_min']);
+        }
+        if (isset($filters['cgpa_max']) && $filters['cgpa_max'] !== null) {
+            $query->where('students.cgpa', '<=', $filters['cgpa_max']);
+        }
+
+        if ($skill = trim((string) ($filters['skill'] ?? ''))) {
+            $query->whereHas('skills', fn ($q) => $q->whereRaw('LOWER(skill_name) LIKE ?', ['%'.addcslashes(mb_strtolower($skill), '%_\\').'%']));
         }
 
         if (($filters['placement'] ?? null) === 'placed') {
@@ -66,6 +92,7 @@ class StudentController extends Controller
         $sortColumn = match ($filters['sort'] ?? 'name') {
             'roll_number' => 'students.roll_number',
             'cgpa' => 'students.cgpa',
+            'backlogs' => 'students.backlogs',
             default => 'users.name',
         };
         $query->orderBy($sortColumn, ($filters['direction'] ?? 'asc') === 'desc' ? 'desc' : 'asc')->orderBy('students.id');
@@ -90,11 +117,22 @@ class StudentController extends Controller
         $student->load([
             'user.student.department', 'user.student.batch', 'user.student.skills', 'user.student.projects',
             'user.student.certifications', 'user.student.experiences', 'user.student.academicRecords.changedBy',
+            'user.student.correctionRequests.resolvedBy',
             'applications.applicable.company',
             'internshipAssignments.internship.company', 'internshipAssignments.faculty.user',
         ]);
 
         return $this->success(data: new AdminStudentResource($student));
+    }
+
+    public function resolveCorrection(Request $request, Student $student, CorrectionRequest $correction, CorrectionRequestService $service): JsonResponse
+    {
+        Gate::authorize('viewAsAdmin', $student);
+        abort_unless($correction->student_id === $student->id, 404);
+
+        $correction = $service->resolve($correction, $request->user());
+
+        return $this->success(data: ['id' => $correction->id, 'status' => $correction->status->value, 'resolved_at' => $correction->resolved_at?->toIso8601String()], message: 'Marked as resolved.');
     }
 
     public function resume(Student $student): StreamedResponse|JsonResponse

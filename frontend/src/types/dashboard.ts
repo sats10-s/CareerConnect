@@ -6,6 +6,8 @@ export interface StudentDashboardData {
     selected: number
     profile_completion: number
   }
+  /** College record for the header strip; null = not reported. */
+  academics?: { cgpa: number | null; backlogs: number | null; year: number | null; section: string | null }
   recent_applications: Array<{
     id: number
     title: string | null

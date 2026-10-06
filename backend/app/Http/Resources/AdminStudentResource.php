@@ -23,6 +23,8 @@ class AdminStudentResource extends JsonResource
         return [
             'profile' => new StudentProfileResource($this->user),
             'is_active' => (bool) $this->user?->is_active,
+            'must_change_password' => (bool) $this->user?->must_change_password,
+            'last_login_at' => $this->user?->last_login_at?->toIso8601String(),
             'applications' => $this->applications
                 ->sortByDesc('applied_at')
                 ->values()
