@@ -21,6 +21,7 @@ use App\Services\AuditLogger;
 use App\Services\Auth\PasswordService;
 use App\Services\Student\AcademicCalendar;
 use App\Services\Student\AcademicRecordService;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -491,6 +492,17 @@ class StudentImportService
             throw new ExcelImportException('This import is not ready to confirm.');
         }
 
+        // One at a time: two imports previewed against the same data would
+        // both try to create the same students.
+        $running = ExcelImportBatch::query()
+            ->whereIn('import_type', [ExcelImportType::STUDENTS->value, ExcelImportType::ACADEMIC_UPDATE->value])
+            ->where('status', ExcelImportBatchStatus::PROCESSING->value)
+            ->whereKeyNot($batch->id)
+            ->exists();
+        if ($running) {
+            throw new ExcelImportException('Another student import is running. Wait for it to finish, then click Re-check on this one before confirming.');
+        }
+
         $total = $batch->rows()->whereIn('category', ['new', 'updated'])->count();
 
         $batch->update([
@@ -528,15 +540,24 @@ class StudentImportService
                     DB::transaction(function () use ($rows, $batch, $actor, $isStudents, $studentRoleId, &$oneTimePasswords, &$applied, &$failed) {
                         foreach ($rows as $row) {
                             try {
-                                if ($isStudents && $row->category === 'new') {
-                                    $otp = $this->createStudent($row, $batch, $actor, $studentRoleId);
-                                    if ($otp !== null) {
-                                        $oneTimePasswords[] = $otp;
+                                // Each row in its own savepoint: a row that fails
+                                // part-way never leaves half a student behind.
+                                $otp = DB::transaction(function () use ($row, $batch, $actor, $isStudents, $studentRoleId) {
+                                    try {
+                                        if ($isStudents && $row->category === 'new') {
+                                            return $this->createStudent($row, $batch, $actor, $studentRoleId);
+                                        }
+                                        $isStudents ? $this->updateStudent($row, $batch, $actor) : $this->applyAcademicUpdate($row, $batch, $actor);
+
+                                        return null;
+                                    } catch (UniqueConstraintViolationException) {
+                                        // Another import (or a registration) saved this JNTU No
+                                        // between the preview and now.
+                                        throw new ExcelImportException('A student with this JNTU No was added by another import while this one was running; re-upload the file to update them.');
                                     }
-                                } elseif ($isStudents) {
-                                    $this->updateStudent($row, $batch, $actor);
-                                } else {
-                                    $this->applyAcademicUpdate($row, $batch, $actor);
+                                });
+                                if ($otp !== null) {
+                                    $oneTimePasswords[] = $otp;
                                 }
 
                                 $row->update(['applied' => true, 'applied_at' => now()]);

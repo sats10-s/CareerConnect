@@ -362,6 +362,58 @@ class StudentDataImportTest extends TestCase
         $this->assertNull(Student::where('roll_number', '23341A0501')->value('cgpa'));
     }
 
+    /**
+     * Regression (Tempo's MySQL, import #3): two imports previewed against
+     * the same empty table both treated every student as new; the second
+     * hit a duplicate JNTU No mid-way and the whole import failed.
+     */
+    public function test_a_second_import_cannot_start_while_one_is_running(): void
+    {
+        \Illuminate\Support\Facades\Queue::fake();
+        $first = $this->upload($this->collegeStudentFile());
+        $second = $this->upload($this->collegeStudentFile());
+
+        $this->postJson("/api/super-admin/student-data/imports/{$first['id']}/confirm")->assertOk()->assertJsonPath('data.status', 'PROCESSING');
+        $this->postJson("/api/super-admin/student-data/imports/{$second['id']}/confirm")->assertStatus(422)
+            ->assertJsonPath('message', 'Another student import is running. Wait for it to finish, then click Re-check on this one before confirming.');
+        $this->getJson("/api/super-admin/student-data/imports/{$second['id']}")->assertJsonPath('data.status', 'READY_FOR_CONFIRMATION');
+    }
+
+    public function test_a_jntu_no_saved_by_someone_else_mid_import_fails_only_that_row(): void
+    {
+        $batch = $this->upload($this->collegeStudentFile());
+
+        // Another writer saves Aarav's JNTU No after the "already exists" check
+        // but before this import's insert - the race that broke import #3.
+        $raced = false;
+        Student::creating(function (Student $student) use (&$raced) {
+            if (! $raced && $student->roll_number === '23341A0501') {
+                $raced = true;
+                $other = User::create(['name' => 'Other import', 'email' => null, 'password' => 'x', 'role_id' => Role::where('name', 'STUDENT')->value('id')]);
+                \Illuminate\Support\Facades\DB::table('students')->insert([
+                    'user_id' => $other->id, 'roll_number' => '23341A0501', 'department_id' => $student->department_id,
+                    'batch_id' => $student->batch_id, 'created_at' => now(), 'updated_at' => now(),
+                ]);
+            }
+        });
+
+        try {
+            $result = $this->confirm($batch['id']);
+        } finally {
+            Student::flushEventListeners();
+        }
+
+        $this->assertSame('CONFIRMED', $result['status']);
+        $this->assertSame(['created' => 10, 'updated' => 0, 'failed' => 1, 'one_time_passwords' => 2], $result['result']);
+        $failed = \App\Models\ExcelImportRow::where('import_batch_id', $batch['id'])->whereNotNull('apply_error')->sole();
+        $this->assertStringContainsString('added by another import', $failed->apply_error);
+        // No half-created account was left behind for the failed row.
+        $this->assertSame(0, User::whereHas('role', fn ($q) => $q->where('name', 'STUDENT'))->doesntHave('student')->count());
+        // The 10 other new students were saved (the simulated rival insert ran
+        // inside the failed row's savepoint, so it was rolled back with it).
+        $this->assertDatabaseCount('students', 10);
+    }
+
     public function test_audit_entries_carry_counts_only(): void
     {
         $this->importFixture();
