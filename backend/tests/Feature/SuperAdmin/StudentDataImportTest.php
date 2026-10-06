@@ -414,6 +414,24 @@ class StudentDataImportTest extends TestCase
         $this->assertDatabaseCount('students', 10);
     }
 
+    public function test_an_unexpected_failure_says_exactly_how_much_was_saved(): void
+    {
+        $batch = $this->upload($this->collegeStudentFile());
+        Student::creating(fn () => throw new \RuntimeException('disk full'));
+
+        try {
+            $this->postJson("/api/super-admin/student-data/imports/{$batch['id']}/confirm");
+        } finally {
+            Student::flushEventListeners();
+        }
+
+        $this->getJson("/api/super-admin/student-data/imports/{$batch['id']}")
+            ->assertJsonPath('data.status', 'FAILED')
+            ->assertJsonPath('data.error_message', 'The import stopped because of an unexpected error before anything was saved. Nothing changed - upload the file again.');
+        $this->assertDatabaseCount('students', 0);
+        $this->assertSame(1, User::count());
+    }
+
     public function test_audit_entries_carry_counts_only(): void
     {
         $this->importFixture();

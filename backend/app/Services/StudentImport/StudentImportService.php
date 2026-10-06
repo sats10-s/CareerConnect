@@ -576,7 +576,10 @@ class StudentImportService
             report($e);
             $batch->update([
                 'status' => ExcelImportBatchStatus::FAILED,
-                'error_message' => 'The import stopped part-way because of an unexpected error. Rows saved before the error are kept; roll back this import or re-upload the file.',
+                // Chunks commit one at a time, so progress_done is exactly what was saved.
+                'error_message' => $done === 0
+                    ? 'The import stopped because of an unexpected error before anything was saved. Nothing changed - upload the file again.'
+                    : "The import stopped part-way because of an unexpected error after saving {$done} of {$batch->progress_total} rows. Those are kept; roll back this import or re-upload the file.",
                 'secret' => $oneTimePasswords === [] ? null : $oneTimePasswords,
             ]);
 
