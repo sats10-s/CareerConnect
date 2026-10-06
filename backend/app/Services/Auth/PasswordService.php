@@ -22,7 +22,21 @@ use Illuminate\Validation\ValidationException;
  */
 class PasswordService
 {
+    /**
+     * bcrypt cost for first-time passwords (mobile number / one-time
+     * password). They are temporary - forced change at first sign-in, dead
+     * after 30 days - and an import hashes thousands at once: cost 12 took
+     * ~10 minutes for the college's 2,500 students, cost 10 about a quarter
+     * of that. Passwords students choose themselves keep the app default.
+     */
+    public const FIRST_PASSWORD_ROUNDS = 10;
+
     public function __construct(private readonly AuditLogger $audit) {}
+
+    public static function hashFirstPassword(string $plain): string
+    {
+        return Hash::make($plain, ['rounds' => min(self::FIRST_PASSWORD_ROUNDS, (int) config('hashing.bcrypt.rounds', 12))]);
+    }
 
     /**
      * A new password may not be the mobile number or the JNTU No - those are
@@ -72,7 +86,7 @@ class PasswordService
         $oneTimePassword = $phone && preg_match('/^\d{10}$/', $phone) ? null : Str::password(10, symbols: false);
 
         $user->forceFill([
-            'password' => Hash::make($oneTimePassword ?? $phone),
+            'password' => self::hashFirstPassword($oneTimePassword ?? $phone),
             'must_change_password' => true,
             'credentials_issued_at' => now(),
             'password_changed_at' => null,

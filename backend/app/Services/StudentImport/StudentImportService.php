@@ -18,12 +18,12 @@ use App\Models\Student;
 use App\Models\StudentAcademicRecord;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\Auth\PasswordService;
 use App\Services\Student\AcademicCalendar;
 use App\Services\Student\AcademicRecordService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Throwable;
@@ -566,7 +566,7 @@ class StudentImportService
             'is_active' => true,
         ]);
         // Mobile number (or a one-time password) as the first password - only ever stored hashed.
-        $user->password = Hash::make($oneTimePassword ?? $values['phone']);
+        $user->password = PasswordService::hashFirstPassword($oneTimePassword ?? $values['phone']);
         $user->forceFill(['must_change_password' => true, 'credentials_issued_at' => now()])->save();
 
         $student = Student::create([
@@ -649,7 +649,7 @@ class StudentImportService
         // A new mobile number for a student who hasn't signed in yet also
         // becomes their first password. A password they set is never touched.
         if (isset($studentUpdates['phone']) && $student->user && $student->user->must_change_password && $student->user->password_changed_at === null) {
-            $student->user->forceFill(['password' => Hash::make($studentUpdates['phone'])])->save();
+            $student->user->forceFill(['password' => PasswordService::hashFirstPassword($studentUpdates['phone'])])->save();
         }
 
         if ($academic['cgpa'] !== null || $academic['backlogs'] !== null) {
