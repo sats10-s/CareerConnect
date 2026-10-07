@@ -41,7 +41,8 @@ class AuthService
         $identifier = trim($identifier);
 
         if (str_contains($identifier, '@')) {
-            return User::with('role')->where('email', $identifier)->first();
+            // Case-insensitive on every database (MySQL's collation already is; SQLite isn't).
+            return User::with('role')->whereRaw('LOWER(email) = ?', [mb_strtolower($identifier)])->first();
         }
 
         $student = Student::query()->where('roll_number', JntuNumber::normalize($identifier))->first();

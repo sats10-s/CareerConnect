@@ -74,7 +74,7 @@ export function FirstLoginPage() {
         <div>
           <label className="label" htmlFor="new-password">New password</label>
           <Input id="new-password" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} error={errors.password} />
-          {!errors.password && <p className="mt-1 text-xs text-ink-faint">At least 8 characters, and not your mobile number or JNTU No.</p>}
+          {!errors.password && <p className="mt-1 text-xs text-ink-faint">{isStudent ? 'At least 8 characters, and not your mobile number or JNTU No.' : 'At least 8 characters.'}</p>}
         </div>
         <div>
           <label className="label" htmlFor="confirm-password">Confirm password</label>

@@ -24,6 +24,9 @@ class SuperAdminUserResource extends JsonResource
             'email' => $this->email,
             'role' => $role?->value,
             'role_label' => $role?->label(),
+            // Placement Admins imported from Excel carry a department.
+            'department' => $this->department_id ? $this->department?->name : null,
+            'must_change_password' => (bool) $this->must_change_password,
             'is_active' => (bool) $this->is_active,
             'is_self' => $request->user()?->id === $this->id,
             'last_login_at' => $this->last_login_at?->toIso8601String(),

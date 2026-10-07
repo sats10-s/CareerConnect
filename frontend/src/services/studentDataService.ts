@@ -42,6 +42,8 @@ export const studentDataService = {
     oneTimePasswords: (id: number) => unwrap(api.post<ApiEnvelope<{ items: OneTimePassword[] }>>(`${base}/imports/${id}/one-time-passwords`)).then((d) => d.items),
     issues: (id: number) => api.get(`${base}/imports/${id}/issues`, { responseType: 'blob' }).then((r) => r.data as Blob),
   },
+  /** Name, Department, College Email, Password. */
+  placementAdminTemplate: () => api.get(`${base}/templates/placement-admins`, { responseType: 'blob' }).then((r) => r.data as Blob),
   aliases: {
     list: () => unwrap(api.get<ApiEnvelope<DepartmentAliasRecord[]>>(`${base}/department-aliases`)),
     create: (alias: string, department_id: number) => unwrap(api.post<ApiEnvelope<DepartmentAliasRecord>>(`${base}/department-aliases`, { alias, department_id })),

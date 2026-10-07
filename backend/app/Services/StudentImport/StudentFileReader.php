@@ -44,6 +44,9 @@ class StudentFileReader
         'ssc' => ['10thpercentage', '10th', 'ssc', 'sscpercentage', 'tenthpercentage', '10thmarks', 'tenth', 'sscmarks'],
         'inter' => ['interpercentagediploma', 'interpercentage', 'interdiploma', 'interordiploma', 'diploma', 'intermediate', 'inter', '12thpercentage', 'intermediatepercentage', 'diplomapercentage'],
         'semester' => ['semester', 'sem', 'semesterlabel'],
+        // Placement Admin accounts
+        'email' => ['collegeemail', 'collegemail', 'clgmail', 'clgemail', 'collegemailid', 'collegeemailid', 'email', 'emailid', 'mail', 'mailid', 'officialemail'],
+        'password' => ['password', 'pwd', 'pass', 'initialpassword', 'firstpassword'],
     ];
 
     public static function normalizeHeader(?string $header): string
@@ -75,7 +78,7 @@ class StudentFileReader
      *     rows: list<array{sheet: string, sheet_row: int, data: array<string, int|float|string|null>}>
      * }
      */
-    public function read(string $absolutePath, array $requiredKeys): array
+    public function read(string $absolutePath, array $requiredKeys, string $anchorKey = 'roll_number'): array
     {
         if (! is_file($absolutePath)) {
             throw new ExcelImportException('The uploaded file could not be found.', status: 500);
@@ -93,7 +96,7 @@ class StudentFileReader
         $rows = [];
 
         foreach ($spreadsheet->getWorksheetIterator() as $sheet) {
-            $result = $this->readSheet($sheet, $requiredKeys);
+            $result = $this->readSheet($sheet, $requiredKeys, $anchorKey);
             $sheets[] = $result['summary'];
             array_push($rows, ...$result['rows']);
 
@@ -120,7 +123,10 @@ class StudentFileReader
     /**
      * @param  list<string>  $requiredKeys
      */
-    private function readSheet(Worksheet $sheet, array $requiredKeys): array
+    /**
+     * @param  string  $anchorKey  the column that marks the header row (JNTU No for students, College Email for staff)
+     */
+    private function readSheet(Worksheet $sheet, array $requiredKeys, string $anchorKey): array
     {
         $name = $sheet->getTitle();
         $highestRow = $sheet->getHighestDataRow();
@@ -138,7 +144,7 @@ class StudentFileReader
                 }
             }
 
-            if (in_array('roll_number', $candidate, true)) {
+            if (in_array($anchorKey, $candidate, true)) {
                 $headerRow = $row;
                 $columns = $candidate;
 
@@ -147,7 +153,7 @@ class StudentFileReader
         }
 
         if ($headerRow === null) {
-            return ['summary' => ['name' => $name, 'rows' => 0, 'skipped' => true, 'reason' => 'No "JNTU No" column found, so this sheet was skipped.', 'columns' => []], 'rows' => []];
+            return ['summary' => ['name' => $name, 'rows' => 0, 'skipped' => true, 'reason' => 'No "'.self::label($anchorKey).'" column found, so this sheet was skipped.', 'columns' => []], 'rows' => []];
         }
 
         $missing = array_values(array_diff($requiredKeys, $columns));
@@ -218,6 +224,8 @@ class StudentFileReader
             'ssc' => '10th Percentage',
             'inter' => 'Inter Percentage/Diploma',
             'semester' => 'Semester',
+            'email' => 'College Email',
+            'password' => 'Password',
             default => $key,
         };
     }

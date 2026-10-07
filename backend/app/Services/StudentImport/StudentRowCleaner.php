@@ -252,6 +252,67 @@ class StudentRowCleaner
         ];
     }
 
+    /**
+     * A Placement Admin row: Name, Department, College Email, Password.
+     * All four are required; a bad one skips the row. The password is the
+     * account's first password (changed at first sign-in), so it is checked
+     * for length only and never echoed back in a message.
+     *
+     * @param  array<string, int|float|string|null>  $data
+     * @return array{skip: bool, errors: list<string>, warnings: list<string>, unknown_department: ?string, values: array<string, mixed>, password: ?string}
+     */
+    public function cleanPlacementAdmin(array $data): array
+    {
+        $errors = [];
+
+        $name = self::text($data['name'] ?? null);
+        $name = $name === null ? null : (string) preg_replace('/\s+/u', ' ', $name);
+        if ($name === null) {
+            $errors[] = 'Name is blank.';
+        }
+
+        $email = self::text($data['email'] ?? null);
+        $email = $email === null ? null : mb_strtolower($email);
+        if ($email === null) {
+            $errors[] = 'College email is blank.';
+        } elseif (! filter_var($email, FILTER_VALIDATE_EMAIL) || mb_strlen($email) > 255) {
+            $errors[] = "\"{$email}\" is not a valid email address.";
+        }
+
+        $rawDepartment = self::text($data['department'] ?? null);
+        $department = $rawDepartment === null || self::isExcelError($rawDepartment) ? null : ($this->departments[DepartmentAlias::normalize($rawDepartment)] ?? null);
+        $unknownDepartment = null;
+        if ($rawDepartment === null || self::isExcelError($rawDepartment)) {
+            $errors[] = 'Department is blank.';
+        } elseif ($department === null) {
+            $errors[] = "Unknown department \"{$rawDepartment}\". Add it (or an alias for it) in Student Data settings, then re-check.";
+            $unknownDepartment = $rawDepartment;
+        }
+
+        $password = self::text($data['password'] ?? null);
+        if ($password === null) {
+            $errors[] = 'Password is blank.';
+        } elseif (mb_strlen($password) < 6) {
+            $errors[] = 'Password is shorter than 6 characters.';
+        } elseif (mb_strlen($password) > 255) {
+            $errors[] = 'Password is too long.';
+        }
+
+        return [
+            'skip' => $errors !== [],
+            'errors' => $errors,
+            'warnings' => [],
+            'unknown_department' => $unknownDepartment,
+            'values' => [
+                'name' => $name,
+                'email' => $email,
+                'department_id' => $department['id'] ?? null,
+                'department' => $department['name'] ?? $rawDepartment,
+            ],
+            'password' => $password,
+        ];
+    }
+
     /** The portal covers B.Tech only (the 2023-27 and 2024-28 batches); M.Tech ("1D") rows are skipped. */
     private static function mtechError(string $roll): ?string
     {

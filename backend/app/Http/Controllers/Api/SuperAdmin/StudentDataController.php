@@ -32,7 +32,7 @@ class StudentDataController extends Controller
     public function index(Request $request): JsonResponse
     {
         $filters = $request->validate([
-            'type' => ['sometimes', 'nullable', Rule::in(['students', 'academic_update'])],
+            'type' => ['sometimes', 'nullable', Rule::in(['students', 'academic_update', 'placement_admins'])],
             'page' => ['sometimes', 'integer', 'min:1'],
             'per_page' => ['sometimes', 'integer', 'between:1,100'],
         ]);
@@ -40,7 +40,8 @@ class StudentDataController extends Controller
         $types = match ($filters['type'] ?? null) {
             'students' => [ExcelImportType::STUDENTS->value],
             'academic_update' => [ExcelImportType::ACADEMIC_UPDATE->value],
-            default => [ExcelImportType::STUDENTS->value, ExcelImportType::ACADEMIC_UPDATE->value],
+            'placement_admins' => [ExcelImportType::PLACEMENT_ADMINS->value],
+            default => [ExcelImportType::STUDENTS->value, ExcelImportType::ACADEMIC_UPDATE->value, ExcelImportType::PLACEMENT_ADMINS->value],
         };
 
         $batches = ExcelImportBatch::query()->with(['uploadedBy', 'confirmedBy', 'rolledBackBy'])
@@ -150,6 +151,24 @@ class StudentDataController extends Controller
             (new Xlsx($spreadsheet))->save('php://output');
             $spreadsheet->disconnectWorksheets();
         }, "student-import-{$batch->id}-issues.xlsx", ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']);
+    }
+
+    /** The Placement Admin template: Name, Department, College Email, Password. */
+    public function placementAdminTemplate(): StreamedResponse
+    {
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Placement Admins');
+        $sheet->fromArray(['Name', 'Department', 'College Email', 'Password'], null, 'A1');
+        $sheet->getStyle('A1:D1')->getFont()->setBold(true);
+        foreach (['A' => 28, 'B' => 18, 'C' => 34, 'D' => 18] as $column => $width) {
+            $sheet->getColumnDimension($column)->setWidth($width);
+        }
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            (new Xlsx($spreadsheet))->save('php://output');
+            $spreadsheet->disconnectWorksheets();
+        }, 'placement-admins-template.xlsx', ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']);
     }
 
     private function ensureStudentData(ExcelImportBatch $batch): void

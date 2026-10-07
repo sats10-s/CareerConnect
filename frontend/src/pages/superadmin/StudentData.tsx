@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Trash2, Upload, Undo2 } from 'lucide-react'
+import { Download, Trash2, Upload, Undo2 } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Tabs } from '@/components/ui/Tabs'
 import { Button } from '@/components/ui/Button'
@@ -18,29 +18,32 @@ import { useApiResource } from '@/hooks/useApiResource'
 import { studentDataService } from '@/services/studentDataService'
 import { superAdminService } from '@/services/superAdminService'
 import { formatDateTime } from '@/utils/dateFormat'
-import { formBanner, parseApiError } from '@/utils/apiError'
+import { formBanner, parseApiError, parseBlobApiError } from '@/utils/apiError'
+import { saveBlob } from '@/utils/downloadBlob'
 import type { StudentImportBatch, StudentImportType } from '@/types/studentData'
 
 const TABS = [
   { key: 'import', label: 'Import' },
   { key: 'results', label: 'Results update' },
+  { key: 'admins', label: 'Placement admins' },
   { key: 'history', label: 'History' },
   { key: 'settings', label: 'Settings' },
 ]
 
-type TabKey = 'import' | 'results' | 'history' | 'settings'
+type TabKey = 'import' | 'results' | 'admins' | 'history' | 'settings'
 
 const MAX_BYTES = 10 * 1024 * 1024
 
 /**
  * Super Admin > Student Data: the college's student file (Import), semester
- * CGPA/backlog updates (Results update), every past import (History) and the
+ * CGPA/backlog updates (Results update), Placement Admin accounts (Placement
+ * admins), every past import (History) and the
  * department spellings + academic year the import relies on (Settings).
  */
 export function SuperAdminStudentDataPage() {
   const [params, setParams] = useSearchParams()
   const raw = params.get('tab')
-  const tab: TabKey = raw === 'results' || raw === 'history' || raw === 'settings' ? raw : 'import'
+  const tab: TabKey = raw === 'results' || raw === 'admins' || raw === 'history' || raw === 'settings' ? raw : 'import'
   const batchParam = Number(params.get('batch'))
   const openBatchId = Number.isInteger(batchParam) && batchParam > 0 ? batchParam : null
 
@@ -59,6 +62,7 @@ export function SuperAdminStudentDataPage() {
       </div>
       {tab === 'import' && <ImportPanel key="students" type="students" batchId={openBatchId} onBatch={(id) => go('import', id)} />}
       {tab === 'results' && <ImportPanel key="results" type="academic_update" batchId={openBatchId} onBatch={(id) => go('results', id)} />}
+      {tab === 'admins' && <ImportPanel key="admins" type="placement_admins" batchId={openBatchId} onBatch={(id) => go('admins', id)} />}
       {tab === 'history' && <HistoryPanel openBatchId={openBatchId} onOpen={(id) => go('history', id)} />}
       {tab === 'settings' && <SettingsPanel />}
     </div>
@@ -73,6 +77,19 @@ function ImportPanel({ type, batchId, onBatch }: { type: StudentImportType; batc
   const [progress, setProgress] = useState(0)
   const current = useApiResource(() => studentDataService.imports.show(batchId as number), batchId)
   const isResults = type === 'academic_update'
+  const isAdmins = type === 'placement_admins'
+  const [downloading, setDownloading] = useState(false)
+
+  async function downloadTemplate() {
+    setDownloading(true)
+    try {
+      saveBlob(await studentDataService.placementAdminTemplate(), 'placement-admins-template.xlsx')
+    } catch (err) {
+      toast('error', (await parseBlobApiError(err, 'Unable to download the template.')).message)
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   function pick(next: File | null) {
     setError(null)
@@ -115,7 +132,7 @@ function ImportPanel({ type, batchId, onBatch }: { type: StudentImportType; batc
     <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
       <div className="card space-y-5 p-5">
         <div>
-          <p className="label">{isResults ? 'Results file' : "College's student file"}</p>
+          <p className="label">{isResults ? 'Results file' : isAdmins ? 'Placement admins file' : "College's student file"}</p>
           <FileUpload accept=".xlsx,.xls" selectedFile={file} onFileSelected={pick} disabled={uploading} helperText="Excel (.xlsx or .xls), up to 10 MB. Every sheet is read." />
           {error && <p role="alert" className="mt-2 text-sm text-error">{error}</p>}
         </div>
@@ -135,14 +152,29 @@ function ImportPanel({ type, batchId, onBatch }: { type: StudentImportType; batc
           </div>
         )}
 
-        <Button onClick={upload} isLoading={uploading}>
-          <Upload className="h-4 w-4" /> Upload and preview
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={upload} isLoading={uploading}>
+            <Upload className="h-4 w-4" /> Upload and preview
+          </Button>
+          {isAdmins && (
+            <Button variant="secondary" onClick={downloadTemplate} isLoading={downloading}>
+              <Download className="h-4 w-4" /> Download template
+            </Button>
+          )}
+        </div>
       </div>
 
       <aside className="card space-y-3 p-5 text-sm text-ink-soft">
-        <h3 className="text-sm font-semibold text-ink">{isResults ? 'Results update' : 'Full student list'}</h3>
-        {isResults ? (
+        <h3 className="text-sm font-semibold text-ink">{isResults ? 'Results update' : isAdmins ? 'Placement admin accounts' : 'Full student list'}</h3>
+        {isAdmins ? (
+          <ul className="list-disc space-y-2 pl-5">
+            <li>Columns: <strong className="text-ink">Name, Department, College Email, Password</strong> - start from the template.</li>
+            <li>Each new admin signs in with their college email and the password from the file, then must choose their own.</li>
+            <li>Department uses the same spellings as the student file (Settings → Department spellings).</li>
+            <li>Re-importing updates name and department only - a password is never reset. An email that belongs to a student or other account is rejected.</li>
+            <li>The password column is never stored; only a secure hash is kept.</li>
+          </ul>
+        ) : isResults ? (
           <ul className="list-disc space-y-2 pl-5">
             <li>Columns: <strong className="text-ink">JNTU No, CGPA, No. of Backlogs</strong>, optional Semester. Other columns are ignored.</li>
             <li>Only students whose numbers changed are shown, old → new. Big jumps are highlighted.</li>
@@ -213,7 +245,7 @@ function HistoryPanel({ openBatchId, onOpen }: { openBatchId: number | null; onO
                   {formatDateTime(batch.created_at)} · {batch.uploaded_by?.name ?? 'Unknown'} · {batch.original_filename}
                 </p>
                 <p className="mt-1 text-xs text-ink-soft">
-                  {batch.type === 'students' ? `${batch.counts.new} new · ` : ''}{batch.counts.updated} updated · {batch.counts.unchanged} unchanged · {batch.counts.error} errors
+                  {batch.type !== 'academic_update' ? `${batch.counts.new} new · ` : ''}{batch.counts.updated} updated · {batch.counts.unchanged} unchanged · {batch.counts.error} errors
                 </p>
               </button>
               {batch.status === 'CONFIRMED' && (
@@ -239,7 +271,9 @@ function HistoryPanel({ openBatchId, onOpen }: { openBatchId: number | null; onO
         title="Roll back this import?"
         confirmLabel="Roll back"
         description={
-          rollbackFor?.type === 'students'
+          rollbackFor?.type === 'placement_admins'
+            ? 'Placement Admin accounts this import created are deleted, and names or departments it changed go back to their old values.'
+            : rollbackFor?.type === 'students'
             ? 'Students this import created are deleted, and fields it changed go back to their old values (unless they have changed again since).'
             : 'CGPA and backlogs this import changed go back to their previous values. Each reversal is kept in the students’ history.'
         }

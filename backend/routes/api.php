@@ -550,6 +550,7 @@ Route::middleware(['auth:sanctum', 'password.changed'])->group(function () {
 
         // Student Data: the college's student file and semester results.
         Route::get('/student-data/imports', [SuperAdminStudentDataController::class, 'index']);
+        Route::get('/student-data/templates/placement-admins', [SuperAdminStudentDataController::class, 'placementAdminTemplate']);
         Route::post('/student-data/imports', [SuperAdminStudentDataController::class, 'store']);
         Route::get('/student-data/imports/{batch}', [SuperAdminStudentDataController::class, 'show']);
         Route::get('/student-data/imports/{batch}/rows', [SuperAdminStudentDataController::class, 'rows']);

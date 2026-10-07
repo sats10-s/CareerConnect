@@ -42,6 +42,7 @@ enum ExcelImportType: string
     // same batch/row/change tables, its own routes, never the Excel Sync Center's.
     case STUDENTS = 'STUDENTS';
     case ACADEMIC_UPDATE = 'ACADEMIC_UPDATE';
+    case PLACEMENT_ADMINS = 'PLACEMENT_ADMINS';
 
     /**
      * @return array<int, string>
@@ -63,7 +64,7 @@ enum ExcelImportType: string
 
     public function isStudentData(): bool
     {
-        return $this === self::STUDENTS || $this === self::ACADEMIC_UPDATE;
+        return in_array($this, [self::STUDENTS, self::ACADEMIC_UPDATE, self::PLACEMENT_ADMINS], true);
     }
 
     public function label(): string
@@ -79,6 +80,7 @@ enum ExcelImportType: string
             self::ATTENDANCE => 'Attendance',
             self::STUDENTS => 'Full student list',
             self::ACADEMIC_UPDATE => 'Results update',
+            self::PLACEMENT_ADMINS => 'Placement admins',
         };
     }
 

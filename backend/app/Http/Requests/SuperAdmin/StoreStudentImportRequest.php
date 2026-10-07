@@ -17,7 +17,7 @@ class StoreStudentImportRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'type' => ['required', Rule::in(['students', 'academic_update'])],
+            'type' => ['required', Rule::in(['students', 'academic_update', 'placement_admins'])],
             'file' => ['required', 'file', 'mimes:xlsx,xls', 'max:10240'],
             'semester_label' => ['sometimes', 'nullable', 'string', 'max:40'],
         ];
@@ -33,6 +33,10 @@ class StoreStudentImportRequest extends FormRequest
 
     public function importType(): ExcelImportType
     {
-        return $this->validated('type') === 'students' ? ExcelImportType::STUDENTS : ExcelImportType::ACADEMIC_UPDATE;
+        return match ($this->validated('type')) {
+            'students' => ExcelImportType::STUDENTS,
+            'placement_admins' => ExcelImportType::PLACEMENT_ADMINS,
+            default => ExcelImportType::ACADEMIC_UPDATE,
+        };
     }
 }

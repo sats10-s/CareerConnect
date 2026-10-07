@@ -23,7 +23,11 @@ class StudentImportBatchResource extends JsonResource
 
         return [
             'id' => $this->id,
-            'type' => $this->import_type === \App\Enums\ExcelImportType::STUDENTS ? 'students' : 'academic_update',
+            'type' => match ($this->import_type) {
+                \App\Enums\ExcelImportType::STUDENTS => 'students',
+                \App\Enums\ExcelImportType::PLACEMENT_ADMINS => 'placement_admins',
+                default => 'academic_update',
+            },
             'type_label' => $this->import_type?->label(),
             'status' => $this->status?->value,
             'original_filename' => $this->original_filename,

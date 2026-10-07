@@ -1,6 +1,6 @@
 /** Super Admin > Student Data - mirrors StudentImportBatchResource / StudentImportRowResource. */
 
-export type StudentImportType = 'students' | 'academic_update'
+export type StudentImportType = 'students' | 'academic_update' | 'placement_admins'
 
 export type StudentImportStatus = 'UPLOADED' | 'VALIDATED' | 'READY_FOR_CONFIRMATION' | 'PROCESSING' | 'CONFIRMED' | 'FAILED' | 'ROLLED_BACK' | 'CANCELLED'
 

@@ -142,6 +142,12 @@ class StudentImportService
 
     private function analyse(ExcelImportBatch $batch): void
     {
+        if ($batch->import_type === ExcelImportType::PLACEMENT_ADMINS) {
+            $this->analysePlacementAdmins($batch);
+
+            return;
+        }
+
         $isStudents = $batch->import_type === ExcelImportType::STUDENTS;
         $required = $isStudents ? ['roll_number', 'name', 'department', 'section'] : ['roll_number'];
 
@@ -263,6 +269,160 @@ class StudentImportService
                 ]),
             ]);
         });
+    }
+
+    /**
+     * Placement Admin accounts: Name, Department, College Email, Password.
+     * Matched on the email. The password from the file is hashed here, at
+     * preview time, and blanked out of the stored row - plaintext never
+     * reaches the database. Re-importing an existing admin only updates
+     * name and department; their password is never touched.
+     */
+    private function analysePlacementAdmins(ExcelImportBatch $batch): void
+    {
+        $parsed = $this->reader->read(Storage::disk(self::DISK)->path($batch->storage_path), ['name', 'email', 'department', 'password'], 'email');
+        $cleaner = new StudentRowCleaner;
+
+        $cleaned = array_map(fn ($entry) => [$entry, $cleaner->cleanPlacementAdmin($entry['data'])], $parsed['rows']);
+        $emails = array_values(array_filter(array_map(fn ($c) => $c[1]['values']['email'], $cleaned)));
+        $existing = User::query()->with('role')->whereIn(DB::raw('LOWER(email)'), $emails ?: ['__none__'])->get()
+            ->keyBy(fn (User $u) => mb_strtolower((string) $u->email));
+
+        $seen = [];
+        $rows = [];
+        $counts = ['new' => 0, 'updated' => 0, 'unchanged' => 0, 'error' => 0, 'warning' => 0];
+        $sheetCounts = [];
+        $unknownDepartments = [];
+        $validRows = 0;
+        $now = now();
+
+        foreach ($cleaned as $index => [$entry, $result]) {
+            $values = $result['values'];
+            $errors = $result['errors'];
+            $email = $values['email'];
+            $user = $email ? $existing->get($email) : null;
+            $changes = [];
+            $context = ['values' => $values];
+
+            if (! $result['skip'] && isset($seen[$email])) {
+                $errors[] = "Duplicate college email - already on {$seen[$email]}.";
+            }
+            if (! $result['skip'] && ! isset($seen[$email])) {
+                $seen[$email] = "{$entry['sheet']} row {$entry['sheet_row']}";
+            }
+            if ($errors === [] && $user && $user->roleName() !== RoleName::PLACEMENT_ADMIN) {
+                $errors[] = "This email already belongs to a {$user->roleName()?->label()} account, so it can't become a Placement Admin.";
+            }
+            if ($result['unknown_department']) {
+                $key = mb_strtoupper($result['unknown_department']);
+                $unknownDepartments[$key] = ($unknownDepartments[$key] ?? 0) + 1;
+                $context['unknown_department'] = $result['unknown_department'];
+            }
+
+            if ($errors !== []) {
+                $category = 'error';
+            } elseif ($user) {
+                if ($values['name'] !== $user->name) {
+                    $changes[] = ['field' => 'name', 'label' => 'Name', 'old_value' => $user->name, 'new_value' => $values['name']];
+                }
+                if ((int) $values['department_id'] !== (int) $user->department_id) {
+                    $changes[] = ['field' => 'department_id', 'label' => 'Department', 'old_value' => $user->department?->name, 'new_value' => $values['department']];
+                }
+                $category = $changes === [] ? 'unchanged' : 'updated';
+            } else {
+                $category = 'new';
+                $context['password_hash'] = PasswordService::hashFirstPassword($result['password']);
+            }
+
+            $outcome = $category === 'error' ? ExcelRowOutcome::ERROR : ExcelRowOutcome::VALID;
+            $counts[$category]++;
+            $validRows += $outcome === ExcelRowOutcome::VALID ? 1 : 0;
+            $sheetCounts[$entry['sheet']] ??= ['new' => 0, 'updated' => 0, 'unchanged' => 0, 'error' => 0, 'warning' => 0];
+            $sheetCounts[$entry['sheet']][$category]++;
+
+            // The password column is never stored, even as raw data.
+            $raw = $entry['data'];
+            $raw['password'] = $raw['password'] === null || $raw['password'] === '' ? null : '(hidden)';
+
+            $rows[] = [
+                'import_batch_id' => $batch->id,
+                'row_number' => $index + 1,
+                'raw_row' => json_encode(['sheet' => $entry['sheet'], 'sheet_row' => $entry['sheet_row'], 'data' => $raw]),
+                'entity_type' => $user ? User::class : null,
+                'entity_id' => $user?->id,
+                'confirm_context' => json_encode($context),
+                'outcome' => $outcome->value,
+                'category' => $category,
+                'messages' => json_encode(array_values($errors)),
+                'changes' => json_encode($changes),
+                'applied' => false,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        DB::transaction(function () use ($batch, $rows, $parsed, $sheetCounts, $counts, $validRows, $unknownDepartments) {
+            $batch->rows()->delete();
+            foreach (array_chunk($rows, self::CHUNK) as $chunk) {
+                ExcelImportRow::insert($chunk);
+            }
+
+            $confirmable = $counts['new'] + $counts['updated'];
+            $batch->update([
+                'status' => $confirmable > 0 ? ExcelImportBatchStatus::READY_FOR_CONFIRMATION : ExcelImportBatchStatus::VALIDATED,
+                'total_rows' => count($rows),
+                'matched_rows' => $counts['updated'] + $counts['unchanged'],
+                'valid_rows' => $validRows,
+                'warning_rows' => 0,
+                'error_rows' => $counts['error'],
+                'error_message' => null,
+                'summary' => array_merge($batch->summary ?? [], [
+                    'counts' => $counts,
+                    'sheets' => array_map(fn ($sheet) => $sheet + ($sheetCounts[$sheet['name']] ?? ['new' => 0, 'updated' => 0, 'unchanged' => 0, 'error' => 0, 'warning' => 0]) + ['note' => null], $parsed['sheets']),
+                    'unknown_departments' => collect($unknownDepartments)->map(fn ($count, $value) => ['value' => $value, 'rows' => $count])->values()->all(),
+                ]),
+            ]);
+        });
+    }
+
+    private function createPlacementAdmin(ExcelImportRow $row, ExcelImportBatch $batch, User $actor): void
+    {
+        $values = $row->confirm_context['values'];
+
+        if (User::query()->whereRaw('LOWER(email) = ?', [$values['email']])->exists()) {
+            throw new ExcelImportException("An account with {$values['email']} was added after this preview; re-upload the file to update it.");
+        }
+
+        $user = new User([
+            'name' => $values['name'],
+            'email' => $values['email'],
+            'role_id' => Role::where('name', RoleName::PLACEMENT_ADMIN->value)->value('id'),
+            'department_id' => $values['department_id'],
+            'is_active' => true,
+        ]);
+        // Hashed at preview time; the plaintext from the file was never stored.
+        $user->password = $row->confirm_context['password_hash'];
+        $user->forceFill(['must_change_password' => true, 'credentials_issued_at' => now()])->save();
+
+        $row->update(['entity_type' => User::class, 'entity_id' => $user->id]);
+        $this->recordChange($batch, $row, User::class, $user->id, '__created', null, $values['email'], $actor, isCreation: true);
+    }
+
+    private function updatePlacementAdmin(ExcelImportRow $row, ExcelImportBatch $batch, User $actor): void
+    {
+        $user = User::find($row->entity_id);
+
+        if ($user === null || $user->roleName() !== RoleName::PLACEMENT_ADMIN) {
+            throw new ExcelImportException('This Placement Admin account no longer exists.');
+        }
+
+        $values = $row->confirm_context['values'];
+        foreach ($row->changes as $change) {
+            $field = $change['field'];
+            $this->recordChange($batch, $row, User::class, $user->id, $field, $user->{$field}, $values[$field], $actor);
+            $user->{$field} = $values[$field];
+        }
+        $user->save();
     }
 
     /**
@@ -495,7 +655,7 @@ class StudentImportService
         // One at a time: two imports previewed against the same data would
         // both try to create the same students.
         $running = ExcelImportBatch::query()
-            ->whereIn('import_type', [ExcelImportType::STUDENTS->value, ExcelImportType::ACADEMIC_UPDATE->value])
+            ->whereIn('import_type', [ExcelImportType::STUDENTS->value, ExcelImportType::ACADEMIC_UPDATE->value, ExcelImportType::PLACEMENT_ADMINS->value])
             ->where('status', ExcelImportBatchStatus::PROCESSING->value)
             ->whereKeyNot($batch->id)
             ->exists();
@@ -544,6 +704,11 @@ class StudentImportService
                                 // part-way never leaves half a student behind.
                                 $otp = DB::transaction(function () use ($row, $batch, $actor, $isStudents, $studentRoleId) {
                                     try {
+                                        if ($batch->import_type === ExcelImportType::PLACEMENT_ADMINS) {
+                                            $row->category === 'new' ? $this->createPlacementAdmin($row, $batch, $actor) : $this->updatePlacementAdmin($row, $batch, $actor);
+
+                                            return null;
+                                        }
                                         if ($isStudents && $row->category === 'new') {
                                             return $this->createStudent($row, $batch, $actor, $studentRoleId);
                                         }
@@ -551,9 +716,11 @@ class StudentImportService
 
                                         return null;
                                     } catch (UniqueConstraintViolationException) {
-                                        // Another import (or a registration) saved this JNTU No
-                                        // between the preview and now.
-                                        throw new ExcelImportException('A student with this JNTU No was added by another import while this one was running; re-upload the file to update them.');
+                                        // Another import (or a registration) saved this JNTU No /
+                                        // email between the preview and now.
+                                        throw new ExcelImportException($batch->import_type === ExcelImportType::PLACEMENT_ADMINS
+                                            ? 'An account with this email was added by someone else while this import was running; re-upload the file to update it.'
+                                            : 'A student with this JNTU No was added by another import while this one was running; re-upload the file to update them.');
                                     }
                                 });
                                 if ($otp !== null) {
@@ -792,6 +959,14 @@ class StudentImportService
             return 'Only a confirmed import can be rolled back.';
         }
 
+        if ($batch->import_type === ExcelImportType::PLACEMENT_ADMINS) {
+            $createdIds = $batch->changes()->where('is_creation', true)->whereNull('rolled_back_at')->pluck('entity_id');
+            $active = User::query()->whereIn('id', $createdIds)
+                ->where(fn ($q) => $q->whereNotNull('last_login_at')->orWhereNotNull('password_changed_at'))->count();
+
+            return $active > 0 ? "{$active} Placement Admin(s) from this import have already signed in, so it can no longer be rolled back." : null;
+        }
+
         if ($batch->import_type !== ExcelImportType::STUDENTS) {
             return null;
         }
@@ -827,9 +1002,9 @@ class StudentImportService
 
             foreach ($changes as $change) {
                 if ($change->is_creation) {
-                    $student = Student::find($change->entity_id);
-                    if ($student) {
-                        User::whereKey($student->user_id)->delete(); // cascades to the student and their history
+                    $userId = $change->entity_type === User::class ? $change->entity_id : Student::find($change->entity_id)?->user_id;
+                    if ($userId && User::whereKey($userId)->exists()) {
+                        User::whereKey($userId)->delete(); // cascades to a student's record and history
                         $removed++;
                     }
                     $change->update(['rolled_back_at' => now()]);

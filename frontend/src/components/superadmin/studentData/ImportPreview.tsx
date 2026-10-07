@@ -32,6 +32,7 @@ function display(value: string | number | null | undefined): string {
 export function ImportPreview({ batch: initial, onChanged }: { batch: StudentImportBatch; onChanged?: (batch: StudentImportBatch) => void }) {
   const [batch, setBatch] = useState(initial)
   const isResults = batch.type === 'academic_update'
+  const isAdmins = batch.type === 'placement_admins'
   const [tab, setTab] = useState<StudentImportTab>(isResults ? 'updated' : 'new')
   const [page, setPage] = useState(1)
   const [busy, setBusy] = useState<'confirm' | 'cancel' | 'recheck' | 'issues' | null>(null)
@@ -80,7 +81,7 @@ export function ImportPreview({ batch: initial, onChanged }: { batch: StudentImp
   const status = STATUS_META[batch.status] ?? { label: batch.status, tone: 'neutral' as StatusTone }
   const percent = batch.progress.total ? Math.round((batch.progress.done / batch.progress.total) * 100) : 0
   const editable = batch.status === 'READY_FOR_CONFIRMATION' || batch.status === 'VALIDATED'
-  const noun = isResults ? 'student result' : 'student'
+  const noun = isResults ? 'student result' : isAdmins ? 'placement admin' : 'student'
 
   async function run(kind: 'confirm' | 'cancel' | 'recheck') {
     setBusy(kind)
@@ -189,7 +190,9 @@ export function ImportPreview({ batch: initial, onChanged }: { batch: StudentImp
           <div className="flex flex-wrap items-center gap-3 rounded-xl bg-success-bg px-4 py-3 text-sm text-success">
             <CheckCircle2 className="h-4 w-4" />
             <span>
-              {isResults ? `${batch.result.updated} students updated` : `${batch.result.created} students created, ${batch.result.updated} updated`}
+              {isResults
+                ? `${batch.result.updated} students updated`
+                : `${batch.result.created} ${isAdmins ? 'placement admin accounts' : 'students'} created, ${batch.result.updated} updated`}
               {batch.result.failed > 0 ? `, ${batch.result.failed} could not be applied` : ''}.
             </span>
           </div>
@@ -236,7 +239,7 @@ export function ImportPreview({ batch: initial, onChanged }: { batch: StudentImp
         <div className="overflow-x-auto px-2 pt-1">
           <Tabs items={tabs} active={tab} onChange={(key) => { setTab(key as StudentImportTab); setPage(1) }} />
         </div>
-        <RowList rows={rows.data?.items ?? []} isLoading={rows.isLoading} error={rows.error} isResults={isResults} tab={tab} />
+        <RowList rows={rows.data?.items ?? []} isLoading={rows.isLoading} error={rows.error} isResults={isResults} isAdmins={isAdmins} tab={tab} />
         {rows.data && rows.data.meta.last_page > 1 && (
           <div className="border-t border-hairline px-4 py-3">
             <Pagination page={page} totalPages={rows.data.meta.last_page} onChange={setPage} />
@@ -254,7 +257,9 @@ export function ImportPreview({ batch: initial, onChanged }: { batch: StudentImp
         description={
           isResults
             ? `${batch.counts.updated} students get new CGPA/backlog figures and a notification. Rows with errors are skipped.`
-            : `${batch.counts.new} new student accounts will be created (first password: their mobile number) and ${batch.counts.updated} existing students updated. Rows with errors are skipped.`
+            : isAdmins
+              ? `${batch.counts.new} Placement Admin accounts will be created (first password: the one in the file, changed at first sign-in) and ${batch.counts.updated} existing ones get their name or department updated. Rows with errors are skipped.`
+              : `${batch.counts.new} new student accounts will be created (first password: their mobile number) and ${batch.counts.updated} existing students updated. Rows with errors are skipped.`
         }
       />
 
@@ -286,7 +291,7 @@ export function ImportPreview({ batch: initial, onChanged }: { batch: StudentImp
   )
 }
 
-function RowList({ rows, isLoading, error, isResults, tab }: { rows: StudentImportRow[]; isLoading: boolean; error: string | null; isResults: boolean; tab: StudentImportTab }) {
+function RowList({ rows, isLoading, error, isResults, isAdmins, tab }: { rows: StudentImportRow[]; isLoading: boolean; error: string | null; isResults: boolean; isAdmins: boolean; tab: StudentImportTab }) {
   if (error) return <p className="px-5 py-6 text-sm text-error">{error}</p>
   if (isLoading && rows.length === 0) return <p className="px-5 py-6 text-sm text-ink-faint">Loading rows…</p>
   if (rows.length === 0) return <p className="px-5 py-8 text-center text-sm text-ink-faint">Nothing in this tab.</p>
@@ -297,12 +302,19 @@ function RowList({ rows, isLoading, error, isResults, tab }: { rows: StudentImpo
         <li key={row.id} className={`px-5 py-3.5 ${row.flagged ? 'bg-warning-bg' : ''}`}>
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
             <p className="text-sm font-medium text-ink">
-              {row.name ?? 'No name'} <span className="font-mono text-xs text-ink-soft">{row.roll_number || 'no JNTU No'}</span>
+              {row.name ?? 'No name'}{' '}
+              <span className="font-mono text-xs text-ink-soft">
+                {isAdmins ? (row.values.email ?? 'no email') : row.roll_number || 'no JNTU No'}
+              </span>
             </p>
             <p className="text-xs text-ink-faint">{row.sheet} · row {row.sheet_row}</p>
           </div>
 
-          {row.category === 'new' && tab !== 'errors' && (
+          {isAdmins && row.category !== 'error' && (
+            <p className="mt-1 text-xs text-ink-soft">{display(row.values.department)}</p>
+          )}
+
+          {!isAdmins && row.category === 'new' && tab !== 'errors' && (
             <p className="mt-1 text-xs text-ink-soft">
               {[row.values.department, row.values.section && `Section ${row.values.section}`, row.values.batch && `Batch ${row.values.batch}`, row.values.entry_type === 'lateral' && 'Lateral', row.values.program === 'mtech' && 'M.Tech',
                 `CGPA ${display(row.values.cgpa)}`, `Backlogs ${display(row.values.backlogs)}`].filter(Boolean).join(' · ')}
