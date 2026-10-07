@@ -673,7 +673,6 @@ Route::middleware(['auth:sanctum', 'password.changed'])->group(function () {
     Route::prefix('admin/reports')->middleware('role:PLACEMENT_ADMIN,SUPER_ADMIN')->group(function () {
         Route::get('/dashboard', [AdminReportController::class, 'dashboard']);
         Route::get('/placements', [AdminReportController::class, 'placements']);
-        Route::get('/classes', [AdminReportController::class, 'classes']);
         Route::get('/applications', [AdminReportController::class, 'applications']);
         Route::get('/internships', [AdminReportController::class, 'internships']);
         Route::get('/attendance', [AdminReportController::class, 'attendance']);
@@ -685,7 +684,6 @@ Route::middleware(['auth:sanctum', 'password.changed'])->group(function () {
     Route::prefix('super-admin/reports')->middleware('role:SUPER_ADMIN')->group(function () {
         Route::get('/dashboard', [AdminReportController::class, 'dashboard']);
         Route::get('/placements', [AdminReportController::class, 'placements']);
-        Route::get('/classes', [AdminReportController::class, 'classes']);
         Route::get('/applications', [AdminReportController::class, 'applications']);
         Route::get('/internships', [AdminReportController::class, 'internships']);
         Route::get('/attendance', [AdminReportController::class, 'attendance']);

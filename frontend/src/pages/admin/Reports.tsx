@@ -14,7 +14,6 @@ import { FilterBar, FilterDate, FilterSelect } from '@/components/common/FilterB
 import { ReportPanel } from '@/components/admin/reports/ReportPanel'
 import { FunnelChart } from '@/components/admin/reports/FunnelChart'
 import { TrendChart } from '@/components/admin/reports/TrendChart'
-import { ClassPlacementChart } from '@/components/admin/reports/ClassPlacementChart'
 import { useApiResource } from '@/hooks/useApiResource'
 import { useCompanyOptions } from '@/hooks/useAdminOptions'
 import { adminService } from '@/services/adminService'
@@ -51,8 +50,6 @@ const GRANULARITY = [
   { value: 'month', label: 'Per month' },
 ]
 const THRESHOLD_STEPS = [50, 60, 70, 75, 80, 90]
-const YEARS = [1, 2, 3, 4].map((y) => ({ value: y, label: `Year ${y}` }))
-const SECTIONS = ['A', 'B', 'C', 'D'].map((x) => ({ value: x, label: `Section ${x}` }))
 
 /**
  * Placement Admin > Reports: the institution-wide analytics from
@@ -65,8 +62,6 @@ const SECTIONS = ['A', 'B', 'C', 'D'].map((x) => ({ value: x, label: `Section ${
 export function AdminReportsPage() {
   const [department, setDepartment] = useState('')
   const [batch, setBatch] = useState('')
-  const [year, setYear] = useState('')
-  const [section, setSection] = useState('')
   const [company, setCompany] = useState('')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
@@ -81,15 +76,13 @@ export function AdminReportsPage() {
     const f: ReportFilters = {}
     if (department) f.department_id = Number(department)
     if (batch) f.batch_id = Number(batch)
-    if (year) f.year = Number(year)
-    if (section) f.section = section
     if (company) f.company_id = Number(company)
     if (from) f.date_from = from
     if (to && !dateRangeInvalid) f.date_to = to
     return f
-  }, [department, batch, year, section, company, from, to, dateRangeInvalid])
+  }, [department, batch, company, from, to, dateRangeInvalid])
   const fkey = JSON.stringify(filters)
-  const hasFilters = Boolean(department || batch || year || section || company || from || to)
+  const hasFilters = Boolean(department || batch || company || from || to)
 
   const companies = useCompanyOptions()
   const departments = useApiResource(() => metaService.departments(), 'dept-options')
@@ -97,7 +90,6 @@ export function AdminReportsPage() {
 
   const dashboard = useApiResource(() => adminService.reports.dashboard(filters), `dash:${fkey}`)
   const breakdown = useApiResource(() => adminService.reports.placements({ ...filters, dimension, sort, direction: 'desc' }), `bd:${dimension}:${sort}:${fkey}`)
-  const classes = useApiResource(() => adminService.reports.classes(filters), `cl:${fkey}`)
   const trends = useApiResource(() => adminService.reports.trends({ ...filters, granularity }), `tr:${granularity}:${fkey}`)
   const attendance = useApiResource(
     () => adminService.reports.attendance(pickedThreshold === null ? filters : { ...filters, threshold: pickedThreshold }),
@@ -108,7 +100,7 @@ export function AdminReportsPage() {
   const faculty = useApiResource(() => adminService.reports.faculty(filters), `fa:${fkey}`)
 
   function clear() {
-    setDepartment(''); setBatch(''); setYear(''); setSection(''); setCompany(''); setFrom(''); setTo('')
+    setDepartment(''); setBatch(''); setCompany(''); setFrom(''); setTo('')
   }
 
   const p = dashboard.data?.placements
@@ -166,8 +158,6 @@ export function AdminReportsPage() {
         <FilterBar>
           <FilterSelect label="Department" value={department} onChange={setDepartment} options={(departments.data ?? []).map((d) => ({ value: d.id, label: d.name }))} allLabel="All departments" />
           <FilterSelect label="Batch" value={batch} onChange={setBatch} options={(batches.data ?? []).map((b) => ({ value: b.id, label: b.name }))} allLabel="All batches" />
-          <FilterSelect label="Year" value={year} onChange={setYear} options={YEARS} allLabel="All years" />
-          <FilterSelect label="Section" value={section} onChange={setSection} options={SECTIONS} allLabel="All sections" />
           <FilterSelect label="Company" value={company} onChange={setCompany} options={(companies.data ?? []).map((c) => ({ value: c.id, label: c.name }))} allLabel="All companies" />
           <FilterDate label="From" value={from} onChange={setFrom} />
           <FilterDate label="To" value={to} onChange={setTo} />
@@ -226,19 +216,6 @@ export function AdminReportsPage() {
             )}
           />
         ))}
-      </ReportPanel>
-
-      <ReportPanel
-        title="Placement by class"
-        subtitle="Every department, year and section, counted from the full class list (the same numbers as the section-wise Excel)"
-        isLoading={classes.isLoading}
-        hasData={Boolean(classes.data)}
-        error={classes.error}
-        onRetry={classes.reload}
-      >
-        {classes.data && (classes.data.length === 0 ? (
-          <div className="card"><EmptyState illustration={<EmptyBriefcaseIllustration />} title="No students in this scope" description={hasFilters ? 'No students match these filters.' : 'Classes appear here once students are imported.'} /></div>
-        ) : <ClassPlacementChart rows={classes.data} />)}
       </ReportPanel>
 
       <ReportPanel

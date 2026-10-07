@@ -90,7 +90,6 @@ const count = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 function DepartmentFormModal({ existing, onClose, onSaved }: { existing?: DepartmentRecord; onClose: () => void; onSaved: () => void }) {
   const [name, setName] = useState(existing?.name ?? '')
   const [code, setCode] = useState(existing?.code ?? '')
-  const [hodEmail, setHodEmail] = useState(existing?.hod_email ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -102,12 +101,11 @@ function DepartmentFormModal({ existing, onClose, onSaved }: { existing?: Depart
     if (!name.trim()) local.name = 'Enter the department name.'
     if (!code.trim()) local.code = 'Enter a short code.'
     else if (!/^[A-Z0-9&-]+$/.test(code.trim())) local.code = 'Use capital letters, numbers, & or - only.'
-    if (hodEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(hodEmail.trim())) local.hod_email = 'Enter a valid email address, or leave it blank.'
     setErrors(local)
     if (Object.keys(local).length) return
     setBusy(true)
     try {
-      const payload = { name: name.trim(), code: code.trim(), hod_email: hodEmail.trim() || null }
+      const payload = { name: name.trim(), code: code.trim() }
       if (existing) await superAdminService.departments.update(existing.id, payload)
       else await superAdminService.departments.create(payload)
       toast('success', existing ? 'Department updated.' : 'Department added.')
@@ -132,11 +130,6 @@ function DepartmentFormModal({ existing, onClose, onSaved }: { existing?: Depart
         <label className="label" htmlFor="d-code">Code</label>
         <Input id="d-code" maxLength={16} value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} error={errors.code} placeholder="e.g. CSE" />
         <p className="mt-1 text-xs text-ink-faint">Shown on the registration form and in reports.</p>
-      </div>
-      <div>
-        <label className="label" htmlFor="d-hod">HOD email (optional)</label>
-        <Input id="d-hod" type="email" maxLength={255} value={hodEmail} onChange={(e) => setHodEmail(e.target.value)} error={errors.hod_email} placeholder="hod.cse@college.edu" />
-        <p className="mt-1 text-xs text-ink-faint">Gets this department's weekly placement summary when it's switched on in Settings.</p>
       </div>
     </FormModal>
   )

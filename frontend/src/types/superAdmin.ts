@@ -55,8 +55,6 @@ export interface DepartmentRecord {
   id: number
   name: string
   code: string
-  /** Gets this department's weekly placement summary (when switched on in Settings). */
-  hod_email: string | null
   students_count: number
   faculty_count: number
   created_at: string | null
@@ -118,7 +116,6 @@ export interface InstitutionSettings {
   allow_student_registration: boolean
   allow_company_registration: boolean
   company_postings_require_review: boolean
-  weekly_hod_summary: boolean
   attendance_threshold: number
 }
 

@@ -68,14 +68,11 @@ class DepartmentController extends Controller
         $request->merge(array_filter([
             'name' => is_string($request->name) ? trim($request->name) : null,
             'code' => is_string($request->code) ? strtoupper(trim($request->code)) : null,
-            'hod_email' => is_string($request->hod_email) ? (trim($request->hod_email) ?: null) : null,
         ], fn ($v) => $v !== null));
 
         return $request->validate([
             'name' => [$department ? 'sometimes' : 'required', 'string', 'max:120', Rule::unique('departments', 'name')->ignore($department)],
             'code' => [$department ? 'sometimes' : 'required', 'string', 'max:16', 'regex:/^[A-Z0-9&\-]+$/', Rule::unique('departments', 'code')->ignore($department)],
-            // The HOD who gets this department's weekly placement summary.
-            'hod_email' => ['sometimes', 'nullable', 'email', 'max:255'],
         ], [
             'name.unique' => 'A department with this name already exists.',
             'code.unique' => 'Another department already uses this code.',
@@ -89,7 +86,6 @@ class DepartmentController extends Controller
             'id' => $d->id,
             'name' => $d->name,
             'code' => $d->code,
-            'hod_email' => $d->hod_email,
             'students_count' => (int) ($d->students_count ?? 0),
             'faculty_count' => (int) ($d->faculty_count ?? 0),
             'created_at' => $d->created_at?->toIso8601String(),

@@ -273,22 +273,10 @@ export interface ReportFilters {
   department_id?: number
   batch_id?: number
   year?: number
-  section?: string
   company_id?: number
   faculty_id?: number
   date_from?: string
   date_to?: string
-}
-
-export interface ClassPlacementRow {
-  department: string | null
-  year: number | null
-  section: string | null
-  total_students: number
-  students_applied: number
-  students_placed: number
-  students_unplaced: number
-  placement_rate: number
 }
 
 export interface PlacementSummary {

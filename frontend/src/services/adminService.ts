@@ -4,7 +4,6 @@ import type { ApplicationStatus } from '@/types/application'
 import type { InternshipAssignmentStatus } from '@/types/internshipAssignment'
 import type { AssignmentDetail, AssignmentListItem } from '@/types/coordination'
 import type {
-  ClassPlacementRow,
   AdminApplicationDetail,
   AdminApplicationRow,
   AdminOpportunity,
@@ -247,8 +246,6 @@ export const adminService = {
       ),
     placements: (params: ReportFilters & { dimension?: 'company' | 'department' | 'batch'; sort?: string; direction?: 'asc' | 'desc' } = {}) =>
       unwrap(api.get<ApiEnvelope<{ summary: PlacementSummary; breakdown: { dimension: string; rows: BreakdownRow[] } }>>('/admin/reports/placements', { params })),
-    classes: (params: ReportFilters = {}) =>
-      unwrap(api.get<ApiEnvelope<{ rows: ClassPlacementRow[] }>>('/admin/reports/classes', { params })).then((d) => d.rows),
     trends: (params: ReportFilters & { granularity?: 'day' | 'week' | 'month' } = {}) =>
       unwrap(api.get<ApiEnvelope<{ granularity: string; points: { period: string; applications: number }[] }>>('/admin/reports/trends', { params })),
     attendance: (params: ReportFilters & { threshold?: number } = {}) =>

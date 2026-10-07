@@ -522,25 +522,6 @@ class ExcelExportAccuracyTest extends TestCase
         }
     }
 
-    public function test_reports_page_class_breakdown_matches_the_section_wise_export(): void
-    {
-        $export = collect($this->exportRows('SECTION_WISE_PLACEMENT_REPORT', ['year' => 3]));
-        $export->pop();
-
-        Sanctum::actingAs($this->admin, ['*']);
-        $api = $this->getJson('/api/admin/reports/classes?year=3')->assertOk()->json('data.rows');
-
-        $this->assertCount($export->count(), $api);
-        foreach ($api as $i => $row) {
-            $this->assertEquals($export[$i]['Total Students'], $row['total_students']);
-            $this->assertEquals($export[$i]['Students Placed'], $row['students_placed']);
-            $this->assertEquals($export[$i]['Students Applied'], $row['students_applied']);
-        }
-
-        $this->getJson('/api/admin/reports/dashboard?section=B')->assertOk()
-            ->assertJsonPath('data.placements.total_students', Student::where('section', 'B')->count());
-    }
-
     public function test_section_and_year_filters_are_validated(): void
     {
         Sanctum::actingAs($this->admin, ['*']);
