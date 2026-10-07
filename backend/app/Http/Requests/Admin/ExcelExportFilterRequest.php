@@ -31,7 +31,18 @@ class ExcelExportFilterRequest extends FormRequest
             'batch_id' => ['sometimes', 'nullable', 'integer', 'exists:batches,id'],
             'year' => ['sometimes', 'nullable', 'integer', 'between:1,6'],
             'section' => ['sometimes', 'nullable', 'string', 'max:10'],
+            'cgpa_min' => ['sometimes', 'nullable', 'numeric', 'between:0,10'],
+            'cgpa_max' => ['sometimes', 'nullable', 'numeric', 'between:0,10', ...($this->filled('cgpa_min') ? ['gte:cgpa_min'] : [])],
+            'max_backlogs' => ['sometimes', 'nullable', 'integer', 'between:0,99'],
+            // none = 0, some = 1-2, many = 3+, not_reported = blank in the college file
+            'backlogs' => ['sometimes', 'nullable', Rule::in(['none', 'some', 'many', 'not_reported'])],
+            'entry_type' => ['sometimes', 'nullable', Rule::in(['regular', 'lateral'])],
+            'year_of_joining' => ['sometimes', 'nullable', 'integer', 'between:2000,2100'],
             'company_id' => ['sometimes', 'nullable', 'integer', 'exists:companies,id'],
+            // Eligible Students export: the job, internship or drive to check against.
+            'job_id' => ['sometimes', 'nullable', 'integer', 'exists:job_postings,id'],
+            'internship_id' => ['sometimes', 'nullable', 'integer', 'exists:internships,id'],
+            'drive_id' => ['sometimes', 'nullable', 'integer', 'exists:placement_drives,id'],
             'faculty_id' => ['sometimes', 'nullable', 'integer', 'exists:faculty,id'],
             'status' => ['sometimes', 'nullable', 'string', 'max:40'],
             // Student-level outcome for exports that list students (see

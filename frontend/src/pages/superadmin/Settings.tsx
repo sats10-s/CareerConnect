@@ -16,6 +16,7 @@ interface FormValues {
   allow_student_registration: boolean
   allow_company_registration: boolean
   company_postings_require_review: boolean
+  weekly_hod_summary: boolean
   attendance_threshold: string
 }
 
@@ -26,6 +27,7 @@ const toForm = (s: InstitutionSettings): FormValues => ({
   allow_student_registration: s.allow_student_registration,
   allow_company_registration: s.allow_company_registration,
   company_postings_require_review: s.company_postings_require_review,
+  weekly_hod_summary: s.weekly_hod_summary,
   attendance_threshold: String(s.attendance_threshold),
 })
 
@@ -111,6 +113,7 @@ export function SuperAdminSettingsPage() {
       if (key === 'allow_student_registration') payload.allow_student_registration = form.allow_student_registration
       if (key === 'allow_company_registration') payload.allow_company_registration = form.allow_company_registration
       if (key === 'company_postings_require_review') payload.company_postings_require_review = form.company_postings_require_review
+      if (key === 'weekly_hod_summary') payload.weekly_hod_summary = form.weekly_hod_summary
       if (key === 'attendance_threshold') payload.attendance_threshold = threshold
     }
     setBusy(true)
@@ -178,6 +181,16 @@ export function SuperAdminSettingsPage() {
             onChange={(v) => set('company_postings_require_review', v)}
             label="Company postings need Placement Admin review"
             description={form.company_postings_require_review ? 'Jobs a recruiter creates stay unpublished until a Placement Admin publishes them.' : 'Approved companies can publish their own jobs directly.'}
+          />
+        </SettingsSection>
+
+        <SettingsSection title="Reports" description="A placement summary for each department, emailed to its HOD every Monday at 8 am with the section-wise and unplaced-student Excel files attached. Set each HOD's email under Departments.">
+          <Switch
+            id="s-hod-summary"
+            checked={form.weekly_hod_summary}
+            onChange={(v) => set('weekly_hod_summary', v)}
+            label="Email HODs a weekly placement summary"
+            description={form.weekly_hod_summary ? 'Departments with an HOD email get the summary every Monday.' : 'No summaries are sent.'}
           />
         </SettingsSection>
 

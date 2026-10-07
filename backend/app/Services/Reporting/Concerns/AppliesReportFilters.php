@@ -23,6 +23,9 @@ use Illuminate\Database\Eloquent\Builder;
  * ExcelExportFilterRequest's own tolerant convention.
  *
  * Recognised filter keys:
+ *  - cgpa_min, cgpa_max, max_backlogs, backlogs (none|some|many|
+ *    not_reported), entry_type, year_of_joining: the student's college
+ *    record, same meanings as the admin Students page.
  *  - department_id, batch_id, year, section: student-scoping (a
  *    Student's own columns, or reached via whereHas('student', ...) /
  *    a join on students.* for a query that is not itself
@@ -45,62 +48,92 @@ use Illuminate\Database\Eloquent\Builder;
 trait AppliesReportFilters
 {
     /**
-     * For a query whose base model already has department_id/batch_id/
-     * year columns of its own (Student::query()).
+     * For a query whose base model is Student itself.
      *
      * @param  array<string, mixed>  $filters
      */
     private function applyStudentOwnScope(Builder $query, array $filters): void
     {
-        if (! empty($filters['department_id'])) {
-            $query->where('department_id', $filters['department_id']);
-        }
-
-        if (! empty($filters['batch_id'])) {
-            $query->where('batch_id', $filters['batch_id']);
-        }
-
-        if (! empty($filters['year'])) {
-            $query->where('year', $filters['year']);
-        }
-
-        if (! empty($filters['section'])) {
-            $query->where('section', self::normalizedSection($filters['section']));
-        }
+        $this->applyStudentRecordFilters($query, $filters);
 
         if (! empty($filters['student_id'])) {
-            $query->where('id', $filters['student_id']);
+            $query->where($query->getModel()->qualifyColumn('id'), $filters['student_id']);
         }
     }
 
     /**
      * For a query one relation-hop away from Student (Application::query(),
-     * etc.) - applies the same department_id/batch_id/year/student_id
-     * filters via whereHas() against the named relation.
+     * etc.) - the same student filters, as one whereHas() against the
+     * named relation.
      *
      * @param  array<string, mixed>  $filters
      */
     private function applyStudentRelationScope(Builder $query, array $filters, string $relation = 'student'): void
     {
-        if (! empty($filters['department_id'])) {
-            $query->whereHas($relation, fn (Builder $q) => $q->where('department_id', $filters['department_id']));
-        }
-
-        if (! empty($filters['batch_id'])) {
-            $query->whereHas($relation, fn (Builder $q) => $q->where('batch_id', $filters['batch_id']));
-        }
-
-        if (! empty($filters['year'])) {
-            $query->whereHas($relation, fn (Builder $q) => $q->where('year', $filters['year']));
-        }
-
-        if (! empty($filters['section'])) {
-            $query->whereHas($relation, fn (Builder $q) => $q->where('section', self::normalizedSection($filters['section'])));
+        if ($this->hasStudentRecordFilters($filters)) {
+            $query->whereHas($relation, fn (Builder $q) => $this->applyStudentRecordFilters($q, $filters));
         }
 
         if (! empty($filters['student_id'])) {
             $query->where('student_id', $filters['student_id']);
         }
+    }
+
+    /**
+     * The filters that read a student's own college record. CGPA and
+     * backlog filters never match a blank value: a student whose CGPA
+     * is not yet available is not "below 7", and blank backlogs are
+     * not "0 backlogs" (use backlogs=not_reported to find them).
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    private function applyStudentRecordFilters(Builder $query, array $filters): void
+    {
+        $column = fn (string $name) => $query->getModel()->qualifyColumn($name);
+
+        foreach (['department_id', 'batch_id', 'year', 'entry_type', 'year_of_joining'] as $name) {
+            if (! empty($filters[$name])) {
+                $query->where($column($name), $filters[$name]);
+            }
+        }
+
+        if (! empty($filters['section'])) {
+            $query->where($column('section'), self::normalizedSection($filters['section']));
+        }
+
+        if (isset($filters['cgpa_min']) && $filters['cgpa_min'] !== '') {
+            $query->where($column('cgpa'), '>=', $filters['cgpa_min']);
+        }
+
+        if (isset($filters['cgpa_max']) && $filters['cgpa_max'] !== '') {
+            $query->where($column('cgpa'), '<=', $filters['cgpa_max']);
+        }
+
+        if (isset($filters['max_backlogs']) && $filters['max_backlogs'] !== '') {
+            $query->where($column('backlogs'), '<=', $filters['max_backlogs']);
+        }
+
+        match ($filters['backlogs'] ?? null) {
+            'none' => $query->where($column('backlogs'), 0),
+            'some' => $query->whereBetween($column('backlogs'), [1, 2]),
+            'many' => $query->where($column('backlogs'), '>=', 3),
+            'not_reported' => $query->whereNull($column('backlogs')),
+            default => null,
+        };
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     */
+    private function hasStudentRecordFilters(array $filters): bool
+    {
+        foreach (['department_id', 'batch_id', 'year', 'entry_type', 'year_of_joining', 'section', 'cgpa_min', 'cgpa_max', 'max_backlogs', 'backlogs'] as $name) {
+            if (isset($filters[$name]) && $filters[$name] !== '') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

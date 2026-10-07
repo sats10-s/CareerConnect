@@ -50,6 +50,27 @@ class OpportunityEligibilityService
             ];
         }
 
+        $reasons = $this->criteriaReasons($student, $opportunity);
+
+        return [
+            'eligibility_enforced' => true,
+            'eligible' => $reasons === [],
+            'reasons' => $reasons,
+        ];
+    }
+
+    /**
+     * Every configured criterion the student fails, whether or not the
+     * admin has switched enforcement on - used by evaluate() above and
+     * by the Eligible Students Excel export, which reports against the
+     * criteria as configured. An empty array means the student meets
+     * all of them (or none are configured).
+     *
+     * @return array<int, array{code: string, message: string}>
+     */
+    public function criteriaReasons(Student $student, JobPosting|Internship $opportunity): array
+    {
+        $criteria = $opportunity->eligibilityCriteria;
         $reasons = [];
 
         $departmentIds = $opportunity->eligibleDepartments->pluck('department_id');
@@ -128,11 +149,7 @@ class OpportunityEligibilityService
             }
         }
 
-        return [
-            'eligibility_enforced' => true,
-            'eligible' => $reasons === [],
-            'reasons' => $reasons,
-        ];
+        return $reasons;
     }
 
     /**

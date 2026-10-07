@@ -19,6 +19,8 @@ use App\Models\Student;
 use App\Models\WeeklyProgressReport;
 use App\Services\Reporting\ApplicationReportService;
 use App\Services\Reporting\Concerns\AppliesReportFilters;
+use App\Services\Reporting\EligibilityReportService;
+use App\Services\Reporting\PackageReportService;
 use App\Services\Reporting\PlacementReportService;
 use App\Services\Support\SheetTitleSanitizer;
 use Illuminate\Database\Eloquent\Builder;
@@ -102,6 +104,8 @@ class ExcelExportService
     public function __construct(
         private readonly PlacementReportService $placementReportService,
         private readonly ApplicationReportService $applicationReportService,
+        private readonly EligibilityReportService $eligibilityReportService,
+        private readonly PackageReportService $packageReportService,
     ) {}
 
     /**
@@ -146,7 +150,9 @@ class ExcelExportService
     }
 
     /**
-     * Supports: department_id, batch_id, year, section, student_status.
+     * Supports: department_id, batch_id, year, section, student_status,
+     * cgpa_min, cgpa_max, max_backlogs, backlogs, entry_type,
+     * year_of_joining (see AppliesReportFilters).
      *
      * A blank CGPA (the 2024-28 batch has none yet) or blank backlogs
      * cell is written as text, never 0, so it cannot be read as a real
@@ -156,7 +162,7 @@ class ExcelExportService
      */
     private function writeStudents(Worksheet $sheet, array $filters): void
     {
-        $headers = ['JNTU No', 'Name', 'College Email', 'Personal Email', ...self::STUDENT_HEADERS, 'Phone', 'CGPA', 'Backlogs', 'Faculty Mentor', 'LinkedIn', 'GitHub', 'Portfolio'];
+        $headers = ['JNTU No', 'Name', 'College Email', 'Personal Email', ...self::STUDENT_HEADERS, 'Gender', 'Program', 'Entry Type', 'Year of Joining', 'Phone', 'CGPA', 'Backlogs', '10th Score', '10th Scale', 'Inter/Diploma Score', 'Inter/Diploma', 'Address', 'Faculty Mentor', 'LinkedIn', 'GitHub', 'Portfolio'];
         $this->writeHeader($sheet, $headers);
 
         $query = Student::query()->with(['user', 'department', 'batch', 'facultyMentor.user']);
@@ -169,9 +175,18 @@ class ExcelExportService
             $s->user?->email,
             $s->personal_email,
             ...$this->studentColumns($s),
+            $s->gender ? ucfirst($s->gender->value) : null,
+            $s->program ? match ($s->program->value) { 'btech' => 'B.Tech', 'mtech' => 'M.Tech', default => $s->program->value } : null,
+            $s->entry_type ? ucfirst($s->entry_type->value) : null,
+            $s->year_of_joining,
             $s->phone,
             $s->cgpa === null ? 'Not yet available' : (float) $s->cgpa,
             $s->backlogs ?? 'Not reported',
+            $s->ssc_score === null ? null : (float) $s->ssc_score,
+            $s->ssc_scale ? ($s->ssc_scale->value === 'percent' ? '%' : 'CGPA (10)') : null,
+            $s->inter_score === null ? null : (float) $s->inter_score,
+            $s->inter_type ? ucfirst($s->inter_type->value) : null,
+            $s->address,
             $s->facultyMentor?->user?->name,
             $s->linkedin_url,
             $s->github_url,
@@ -531,6 +546,9 @@ class ExcelExportService
             ExcelExportType::DEPARTMENT_WISE_PLACEMENT_REPORT => $this->buildDepartmentWisePlacementReport($filters),
             ExcelExportType::BATCH_WISE_PLACEMENT_REPORT => $this->buildBatchWisePlacementReport($filters),
             ExcelExportType::SECTION_WISE_PLACEMENT_REPORT => $this->buildSectionWisePlacementReport($filters),
+            ExcelExportType::ELIGIBLE_STUDENTS => $this->buildEligibleStudents($filters),
+            ExcelExportType::PACKAGE_REPORT => $this->buildPackageReport($filters),
+            ExcelExportType::BATCH_COMPARISON => $this->buildBatchComparison($filters),
             ExcelExportType::STUDENT_APPLICATION_REPORT => $this->buildStudentApplicationReport($filters),
             ExcelExportType::UNPLACED_STUDENT_REPORT => $this->buildUnplacedStudentReport($filters),
             ExcelExportType::STUDENT_APPLICATION_ACTIVITY => $this->buildStudentApplicationActivity($filters),
@@ -670,6 +688,186 @@ class ExcelExportService
         $this->writeHeader($sheet, ['Batch', 'Total Applications', 'Distinct Students Applied', 'Students Selected', 'Selection Rate %']);
         $this->writeDataRows($sheet, 2, $rows);
         $this->autosize($sheet, 5);
+
+        return $spreadsheet;
+    }
+
+    /**
+     * Departments down the side, batches across the top: students,
+     * placed and placement % per batch, so 2023-27 and 2024-28 can be
+     * compared at a glance. A Total row closes each batch's columns.
+     * Counts come from PlacementReportService::batchComparison().
+     *
+     * @param array<string, mixed> $filters
+     */
+    private function buildBatchComparison(array $filters): Spreadsheet
+    {
+        $rows = collect($this->placementReportService->batchComparison($filters));
+        $batches = $rows->pluck('batch')->map(fn ($b) => $b ?? '—')->unique()->sort()->values();
+        $departments = $rows->pluck('department')->map(fn ($d) => $d ?? '—')->unique()->sort()->values();
+        $cell = $rows->keyBy(fn ($r) => ($r['department'] ?? '—').'|'.($r['batch'] ?? '—'));
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle(SheetTitleSanitizer::sanitize('Batch Comparison'));
+
+        $headers = ['Department'];
+        foreach ($batches as $batch) {
+            array_push($headers, "{$batch} Students", "{$batch} Placed", "{$batch} Placement %");
+        }
+        $this->writeHeader($sheet, $headers);
+
+        $rowIndex = 2;
+        foreach ($departments as $department) {
+            $line = [$department];
+            foreach ($batches as $batch) {
+                $r = $cell->get("{$department}|{$batch}");
+                array_push($line, $r['total_students'] ?? 0, $r['students_placed'] ?? 0, $r ? $r['placement_rate'] : '—');
+            }
+            $sheet->fromArray($line, null, 'A'.$rowIndex++, true);
+        }
+
+        $line = ['Total'];
+        foreach ($batches as $batch) {
+            $inBatch = $rows->filter(fn ($r) => ($r['batch'] ?? '—') === $batch);
+            $total = $inBatch->sum('total_students');
+            $placed = $inBatch->sum('students_placed');
+            array_push($line, $total, $placed, $total > 0 ? round($placed / $total * 100, 2) : 0.0);
+        }
+        $sheet->fromArray($line, null, 'A'.$rowIndex, true);
+        $sheet->getStyle('A'.$rowIndex.':'.\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($headers)).$rowIndex)->getFont()->setBold(true);
+        $this->autosize($sheet, count($headers));
+
+        return $spreadsheet;
+    }
+
+    /**
+     * Package statistics in LPA - see App\Services\Reporting\PackageReportService
+     * for what counts as an offer and why student-level figures use each
+     * student's best offer. Supports the student filters, company_id and
+     * date_from/date_to (on the selection / PPO offer date).
+     *
+     * @param array<string, mixed> $filters
+     */
+    private function buildPackageReport(array $filters): Spreadsheet
+    {
+        $report = $this->packageReportService->report($filters);
+        $o = $report['overview'];
+
+        $spreadsheet = new Spreadsheet();
+        $titles = [SheetTitleSanitizer::sanitize('Overview')];
+        $overview = $spreadsheet->getActiveSheet();
+        $overview->setTitle($titles[0]);
+        $this->writeHeader($overview, ['Metric', 'Value']);
+        $this->writeDataRows($overview, 2, [
+            ['Students with an offer', $o['students_with_offers']],
+            ['Students with a package entered', $o['students_with_package']],
+            ['Total offers', $o['offers']],
+            ['Offers without a package entered', $o['offers_without_package']],
+            ['Highest package (LPA)', $o['highest'] ?? '—'],
+            ['Average package (LPA)', $o['average'] ?? '—'],
+            ['Median package (LPA)', $o['median'] ?? '—'],
+            ['Lowest package (LPA)', $o['lowest'] ?? '—'],
+        ]);
+        $this->autosize($overview, 2);
+
+        $stat = fn (?float $v) => $v ?? '—';
+
+        $titles[] = SheetTitleSanitizer::sanitize('By Department', $titles);
+        $byDepartment = $spreadsheet->createSheet();
+        $byDepartment->setTitle(end($titles));
+        $this->writeHeader($byDepartment, ['Department', 'Students with Package', 'Highest (LPA)', 'Average (LPA)', 'Median (LPA)', 'Lowest (LPA)']);
+        $this->writeDataRows($byDepartment, 2, array_map(fn (array $r) => [$r['department'], $r['students'], $stat($r['highest']), $stat($r['average']), $stat($r['median']), $stat($r['lowest'])], $report['by_department']));
+        $this->autosize($byDepartment, 6);
+
+        $titles[] = SheetTitleSanitizer::sanitize('By Company', $titles);
+        $byCompany = $spreadsheet->createSheet();
+        $byCompany->setTitle(end($titles));
+        $this->writeHeader($byCompany, ['Company', 'Offers', 'Offers without Package', 'Highest (LPA)', 'Average (LPA)', 'Median (LPA)', 'Lowest (LPA)']);
+        $this->writeDataRows($byCompany, 2, array_map(fn (array $r) => [$r['company'], $r['offers'], $r['offers_without_package'], $stat($r['highest']), $stat($r['average']), $stat($r['median']), $stat($r['lowest'])], $report['by_company']));
+        $this->autosize($byCompany, 7);
+
+        $titles[] = SheetTitleSanitizer::sanitize('Best Offer per Student', $titles);
+        $best = $spreadsheet->createSheet();
+        $best->setTitle(end($titles));
+        $this->writeHeader($best, ['JNTU No', 'Name', ...self::STUDENT_HEADERS, 'Company', 'Role', 'Source', 'Package (LPA)', 'Total Offers']);
+        $this->writeDataRows($best, 2, array_map(fn (array $r) => [
+            $r['student']?->roll_number,
+            $r['student']?->user?->name,
+            ...$this->studentColumns($r['student']),
+            $r['company'],
+            $r['role'],
+            $r['source'],
+            $r['lpa'] === null ? 'Not entered' : round($r['lpa'], 2),
+            $r['offers'],
+        ], $report['best_offers']));
+        $this->autosize($best, 11);
+
+        return $spreadsheet;
+    }
+
+    /**
+     * Eligible students for the job, internship or placement drive the
+     * filters name (job_id / internship_id / drive_id): a Summary sheet
+     * with one row per opportunity, then one sheet per opportunity
+     * listing every eligible student (applied or not) and every student
+     * who applied without meeting the criteria. Student filters narrow
+     * the pool. See App\Services\Reporting\EligibilityReportService.
+     *
+     * @param array<string, mixed> $filters
+     */
+    private function buildEligibleStudents(array $filters): Spreadsheet
+    {
+        $opportunities = $this->eligibilityReportService->opportunities($filters);
+
+        if ($opportunities === []) {
+            throw new ExcelImportException('Choose a job, internship or placement drive for the Eligible Students export.');
+        }
+
+        $spreadsheet = new Spreadsheet();
+        $summary = $spreadsheet->getActiveSheet();
+        $titles = [SheetTitleSanitizer::sanitize('Summary')];
+        $summary->setTitle($titles[0]);
+        $this->writeHeader($summary, ['Company', 'Role/Title', 'Type', 'Criteria', 'Students Checked', 'Eligible', 'Eligible, Applied', 'Eligible, Not Applied', 'Applied, Not Eligible']);
+
+        foreach ($opportunities as $index => $opportunity) {
+            $result = $this->eligibilityReportService->forOpportunity($opportunity, $filters);
+            $type = $opportunity instanceof Internship ? 'Internship' : 'Job';
+
+            $summary->fromArray([
+                $opportunity->company?->name,
+                $opportunity->title,
+                $type,
+                $this->eligibilityReportService->criteriaText($opportunity),
+                $result['summary']['in_scope'],
+                $result['summary']['eligible'],
+                $result['summary']['eligible_applied'],
+                $result['summary']['eligible_not_applied'],
+                $result['summary']['applied_not_eligible'],
+            ], null, 'A'.($index + 2), true);
+
+            $title = SheetTitleSanitizer::sanitize(trim(($opportunity->company?->name ?? '').' '.$opportunity->title), $titles);
+            $titles[] = $title;
+            $sheet = $spreadsheet->createSheet();
+            $sheet->setTitle($title);
+            $this->writeHeader($sheet, ['JNTU No', 'Name', ...self::STUDENT_HEADERS, 'CGPA', 'Backlogs', 'Eligible', 'Why Not Eligible', 'Applied', 'Application Status', 'College Email', 'Phone']);
+            $this->writeDataRows($sheet, 2, array_map(fn (array $r) => [
+                $r['student']->roll_number,
+                $r['student']->user?->name,
+                ...$this->studentColumns($r['student']),
+                $r['student']->cgpa === null ? 'Not yet available' : (float) $r['student']->cgpa,
+                $r['student']->backlogs ?? 'Not reported',
+                $r['eligible'] ? 'Yes' : 'No',
+                implode(', ', $r['reasons']),
+                $r['application_status'] ? 'Yes' : 'No',
+                $r['application_status'] ?? '—',
+                $r['student']->user?->email,
+                $r['student']->phone,
+            ], $result['rows']));
+            $this->autosize($sheet, 14);
+        }
+
+        $this->autosize($summary, 9);
 
         return $spreadsheet;
     }

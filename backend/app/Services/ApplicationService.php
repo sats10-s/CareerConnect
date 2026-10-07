@@ -153,7 +153,7 @@ class ApplicationService
      * "when/why" fields in sync with the transition that produced them
      * without a caller having to set them separately.
      */
-    public function updateStatus(Application $application, ApplicationStatus $target, User $actingUser, ?string $remarks = null): Application
+    public function updateStatus(Application $application, ApplicationStatus $target, User $actingUser, ?string $remarks = null, ?float $offerPackage = null): Application
     {
         $from = $application->status;
 
@@ -165,11 +165,12 @@ class ApplicationService
             ));
         }
 
-        return DB::transaction(function () use ($application, $from, $target, $actingUser, $remarks) {
+        return DB::transaction(function () use ($application, $from, $target, $actingUser, $remarks, $offerPackage) {
             $updates = ['status' => $target];
 
             if ($target === ApplicationStatus::SELECTED) {
                 $updates['selected_at'] = now();
+                $updates['offer_package'] = $offerPackage;
             }
 
             if ($target === ApplicationStatus::REJECTED) {

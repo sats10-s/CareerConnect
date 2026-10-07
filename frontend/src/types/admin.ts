@@ -104,6 +104,8 @@ export interface AdminApplicationDetail extends AdminApplicationRow {
     | null
   withdrawn_at: string | null
   selected_at: string | null
+  /** Annual package in ₹ for a selected job offer; null = not entered. */
+  offer_package?: number | null
   rejection_reason: string | null
   notes: string | null
   status_history: StatusChange<ApplicationStatus>[]
@@ -217,6 +219,9 @@ export type ExcelExportType =
   | 'DEPARTMENT_WISE_PLACEMENT_REPORT'
   | 'BATCH_WISE_PLACEMENT_REPORT'
   | 'SECTION_WISE_PLACEMENT_REPORT'
+  | 'ELIGIBLE_STUDENTS'
+  | 'PACKAGE_REPORT'
+  | 'BATCH_COMPARISON'
   | 'STUDENT_APPLICATION_REPORT'
   | 'UNPLACED_STUDENT_REPORT'
   | 'STUDENT_APPLICATION_ACTIVITY'
@@ -268,10 +273,22 @@ export interface ReportFilters {
   department_id?: number
   batch_id?: number
   year?: number
+  section?: string
   company_id?: number
   faculty_id?: number
   date_from?: string
   date_to?: string
+}
+
+export interface ClassPlacementRow {
+  department: string | null
+  year: number | null
+  section: string | null
+  total_students: number
+  students_applied: number
+  students_placed: number
+  students_unplaced: number
+  placement_rate: number
 }
 
 export interface PlacementSummary {

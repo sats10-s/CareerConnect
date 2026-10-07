@@ -86,7 +86,8 @@ class ExcelExportTemplateTest extends TestCase
 
     public static function analyticalExportTypes(): array
     {
-        return array_map(fn (ExcelExportType $t) => [$t->value], array_filter(ExcelExportType::cases(), fn ($t) => $t->isAnalytical()));
+        // Eligible Students needs a job/internship/drive - covered in ExcelExportAccuracyTest.
+        return array_map(fn (ExcelExportType $t) => [$t->value], array_filter(ExcelExportType::cases(), fn ($t) => $t->isAnalytical() && $t !== ExcelExportType::ELIGIBLE_STUDENTS));
     }
 
     #[DataProvider('analyticalExportTypes')]

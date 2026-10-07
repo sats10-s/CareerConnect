@@ -54,6 +54,7 @@ class AdminApplicationResource extends JsonResource
             'applied_at' => $this->applied_at?->toIso8601String(),
             'withdrawn_at' => $this->withdrawn_at?->toIso8601String(),
             'selected_at' => $this->selected_at?->toIso8601String(),
+            'offer_package' => $this->offer_package === null ? null : (float) $this->offer_package,
             'rejection_reason' => $this->rejection_reason,
             'notes' => $this->notes,
 

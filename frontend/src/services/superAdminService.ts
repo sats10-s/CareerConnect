@@ -34,8 +34,8 @@ export const superAdminService = {
   roles: () => unwrap(api.get<ApiEnvelope<{ items: RoleSummary[] }>>('/super-admin/roles')).then((d) => d.items),
   departments: {
     list: () => unwrap(api.get<ApiEnvelope<{ items: DepartmentRecord[] }>>('/super-admin/departments')).then((d) => d.items),
-    create: (payload: { name: string; code: string }) => unwrap(api.post<ApiEnvelope<DepartmentRecord>>('/super-admin/departments', payload)),
-    update: (id: number, payload: { name?: string; code?: string }) => unwrap(api.patch<ApiEnvelope<DepartmentRecord>>(`/super-admin/departments/${id}`, payload)),
+    create: (payload: { name: string; code: string; hod_email?: string | null }) => unwrap(api.post<ApiEnvelope<DepartmentRecord>>('/super-admin/departments', payload)),
+    update: (id: number, payload: { name?: string; code?: string; hod_email?: string | null }) => unwrap(api.patch<ApiEnvelope<DepartmentRecord>>(`/super-admin/departments/${id}`, payload)),
     remove: (id: number) => api.delete(`/super-admin/departments/${id}`),
   },
   batches: {

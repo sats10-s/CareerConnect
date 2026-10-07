@@ -32,6 +32,7 @@ class Application extends Model
         'applied_at',
         'withdrawn_at',
         'selected_at',
+        'offer_package',
         'rejection_reason',
         'notes',
     ];
@@ -41,6 +42,7 @@ class Application extends Model
         return [
             'status' => ApplicationStatus::class,
             'applied_at' => 'datetime',
+            'offer_package' => 'decimal:2',
             'withdrawn_at' => 'datetime',
             'selected_at' => 'datetime',
         ];

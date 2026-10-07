@@ -19,6 +19,7 @@ class SettingsService
         'allow_student_registration' => ['type' => 'bool', 'default' => false, 'rules' => ['required', 'boolean'], 'label' => 'Student self-registration'],
         'allow_company_registration' => ['type' => 'bool', 'default' => true, 'rules' => ['required', 'boolean'], 'label' => 'Company self-registration'],
         'company_postings_require_review' => ['type' => 'bool', 'default' => true, 'rules' => ['required', 'boolean'], 'label' => 'Company postings need Placement Admin review'],
+        'weekly_hod_summary' => ['type' => 'bool', 'default' => false, 'rules' => ['required', 'boolean'], 'label' => 'Email HODs a weekly placement summary'],
         'attendance_threshold' => ['type' => 'int', 'default' => 75, 'rules' => ['required', 'integer', 'between:1,100'], 'label' => 'Attendance alert threshold (%)'],
     ];
 

@@ -47,6 +47,8 @@ class UpdateApplicationStatusRequest extends FormRequest
                 }
             }],
             'remarks' => ['nullable', 'string', 'max:1000'],
+            // Annual package in rupees; only kept when selecting.
+            'offer_package' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
         ];
     }
 }

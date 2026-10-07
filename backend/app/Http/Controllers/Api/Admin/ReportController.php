@@ -119,6 +119,16 @@ class ReportController extends Controller
         ]);
     }
 
+    /**
+     * Placement per department + year + section, counted from the
+     * students table (PlacementReportService::classBreakdown()) - the
+     * same numbers as the Section-wise Placement Report export.
+     */
+    public function classes(ReportFilterRequest $request): JsonResponse
+    {
+        return $this->success(['rows' => $this->placementReportService->classBreakdown($request->filters())]);
+    }
+
     public function applications(ReportFilterRequest $request): JsonResponse
     {
         return $this->success([

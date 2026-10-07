@@ -351,6 +351,196 @@ class ExcelExportAccuracyTest extends TestCase
         $this->assertSame(Application::count(), $sum);
     }
 
+    public function test_cgpa_and_backlog_filters_never_match_blank_values(): void
+    {
+        $cases = [
+            [['cgpa_min' => 7.5], fn ($q) => $q->where('cgpa', '>=', 7.5)],
+            [['cgpa_min' => 7, 'cgpa_max' => 8.5], fn ($q) => $q->whereBetween('cgpa', [7, 8.5])],
+            [['max_backlogs' => 0], fn ($q) => $q->where('backlogs', '<=', 0)],
+            [['backlogs' => 'some'], fn ($q) => $q->whereBetween('backlogs', [1, 2])],
+            [['backlogs' => 'not_reported'], fn ($q) => $q->whereNull('backlogs')],
+            [['cgpa_min' => 7, 'max_backlogs' => 0, 'year' => 3], fn ($q) => $q->where('cgpa', '>=', 7)->where('backlogs', '<=', 0)->where('year', 3)],
+        ];
+
+        foreach ($cases as [$filters, $where]) {
+            $expected = $where(Student::query())->pluck('roll_number')->sort()->values()->all();
+            $actual = collect($this->exportRows('STUDENTS', $filters))->pluck('JNTU No')->sort()->values()->all();
+            $this->assertSame($expected, $actual, json_encode($filters));
+
+            $applications = Application::whereIn('student_id', $where(Student::query())->pluck('id'))->count();
+            $this->assertCount($applications, $this->exportRows('APPLICATIONS', $filters), json_encode($filters));
+        }
+
+        // Nobody without a CGPA slips into a CGPA range.
+        $rows = $this->exportRows('STUDENTS', ['cgpa_min' => 0]);
+        $this->assertNotContains('Not yet available', collect($rows)->pluck('CGPA')->all());
+    }
+
+    public function test_students_export_carries_the_full_college_record(): void
+    {
+        $student = Student::first();
+        $student->update(['gender' => 'female', 'year_of_joining' => 2023, 'entry_type' => 'lateral', 'ssc_score' => 92.5, 'ssc_scale' => 'percent', 'inter_score' => 88, 'inter_type' => 'diploma', 'address' => 'Kakinada']);
+
+        $row = collect($this->exportRows('STUDENTS'))->firstWhere('JNTU No', $student->roll_number);
+        $this->assertSame('Female', $row['Gender']);
+        $this->assertEquals(2023, $row['Year of Joining']);
+        $this->assertSame('Lateral', $row['Entry Type']);
+        $this->assertEquals(92.5, $row['10th Score']);
+        $this->assertSame('%', $row['10th Scale']);
+        $this->assertEquals(88, $row['Inter/Diploma Score']);
+        $this->assertSame('Diploma', $row['Inter/Diploma']);
+        $this->assertSame('Kakinada', $row['Address']);
+
+        $this->assertCount(Student::where('entry_type', 'lateral')->count(), $this->exportRows('STUDENTS', ['entry_type' => 'lateral']));
+    }
+
+    public function test_eligible_students_matches_the_criteria_and_applications(): void
+    {
+        $job = \App\Models\JobPosting::where('title', 'Software Engineer')->first();
+        $job->syncEligibility(['eligibility_enforced' => false, 'min_cgpa' => 7, 'max_backlogs' => 0, 'department_ids' => [$this->excelDepartment->id]]);
+
+        $eligible = Student::where('department_id', $this->excelDepartment->id)->where('cgpa', '>=', 7)->where('backlogs', '<=', 0)->pluck('id');
+        $applied = Application::where('applicable_type', \App\Models\JobPosting::class)->where('applicable_id', $job->id)->pluck('status', 'student_id');
+
+        $sheetTitle = \App\Services\Support\SheetTitleSanitizer::sanitize('NovaTech Solutions Software Engineer', ['Summary']);
+        $rows = collect($this->exportRows('ELIGIBLE_STUDENTS', ['job_id' => $job->id], $sheetTitle));
+        $summary = $this->exportRows('ELIGIBLE_STUDENTS', ['job_id' => $job->id], 'Summary')[0];
+
+        $this->assertEquals(Student::count(), $summary['Students Checked']);
+        $this->assertEquals($eligible->count(), $summary['Eligible']);
+        $this->assertEquals($eligible->filter(fn ($id) => $applied->has($id))->count(), $summary['Eligible, Applied']);
+        $this->assertEquals($eligible->reject(fn ($id) => $applied->has($id))->count(), $summary['Eligible, Not Applied']);
+        $this->assertEquals($applied->keys()->diff($eligible)->count(), $summary['Applied, Not Eligible']);
+        $this->assertSame($summary['Eligible'], $summary['Eligible, Applied'] + $summary['Eligible, Not Applied']);
+        $this->assertStringContainsString('CGPA >= 7.00', $summary['Criteria']);
+
+        $this->assertCount($eligible->count() + $summary['Applied, Not Eligible'], $rows);
+        foreach ($rows as $row) {
+            $student = Student::where('roll_number', $row['JNTU No'])->first();
+            $this->assertSame($eligible->contains($student->id) ? 'Yes' : 'No', $row['Eligible'], $row['JNTU No']);
+            $this->assertSame($applied->has($student->id) ? 'Yes' : 'No', $row['Applied']);
+            if ($row['Eligible'] === 'No') {
+                $this->assertNotSame('', $row['Why Not Eligible']);
+            }
+        }
+
+        // Student filters narrow the pool; a drive covers each of its opportunities.
+        $summaryYear2 = $this->exportRows('ELIGIBLE_STUDENTS', ['job_id' => $job->id, 'year' => 2], 'Summary')[0];
+        $this->assertEquals(Student::where('year', 2)->count(), $summaryYear2['Students Checked']);
+
+        $drive = \App\Models\PlacementDrive::create(['company_id' => $this->excelCompany->id, 'title' => 'Campus Drive', 'drive_type' => 'CAMPUS_PLACEMENT', 'status' => 'PUBLISHED', 'created_by' => $this->admin->id]);
+        $drive->opportunities()->create(['opportunity_type' => \App\Models\JobPosting::class, 'opportunity_id' => $job->id]);
+        $drive->opportunities()->create(['opportunity_type' => Internship::class, 'opportunity_id' => Internship::first()->id]);
+        $driveSummary = $this->exportRows('ELIGIBLE_STUDENTS', ['drive_id' => $drive->id], 'Summary');
+        $this->assertCount(2, $driveSummary);
+        $this->assertEquals($summary['Eligible'], collect($driveSummary)->firstWhere('Role/Title', 'Software Engineer')['Eligible']);
+        // No criteria on the internship: every student is eligible.
+        $this->assertEquals(Student::count(), collect($driveSummary)->firstWhere('Type', 'Internship')['Eligible']);
+
+        Sanctum::actingAs($this->admin, ['*']);
+        $this->getJson('/api/admin/excel/exports/ELIGIBLE_STUDENTS')->assertUnprocessable();
+    }
+
+    public function test_package_report_matches_entered_offers(): void
+    {
+        $selectedJobs = Application::where('status', 'SELECTED')->where('applicable_type', \App\Models\JobPosting::class)->orderBy('id')->get();
+        $this->assertCount(3, $selectedJobs);
+        $packages = [600000, 1200000, null];
+
+        Sanctum::actingAs($this->admin, ['*']);
+        foreach ($selectedJobs as $i => $application) {
+            $this->patchJson("/api/admin/applications/{$application->id}/offer", ['offer_package' => $packages[$i]])->assertOk();
+        }
+        // Not selected: refused.
+        $pending = Application::where('status', '!=', 'SELECTED')->first();
+        $this->patchJson("/api/admin/applications/{$pending->id}/offer", ['offer_package' => 500000])->assertUnprocessable();
+
+        // A PPO for a fourth student, and a declined one that must not count.
+        $fixture = $this->activatedInternshipAssignmentFixture($this->admin);
+        \App\Models\PpoRecord::create(['internship_assignment_id' => $fixture['assignment_id'], 'company_id' => $this->excelCompany->id, 'package' => 900000, 'status' => 'ACCEPTED', 'designation' => 'SDE', 'offered_at' => now()->toDateString()]);
+        $declined = $this->activatedInternshipAssignmentFixture($this->admin);
+        \App\Models\PpoRecord::create(['internship_assignment_id' => $declined['assignment_id'], 'company_id' => $this->excelCompany->id, 'package' => 5000000, 'status' => 'DECLINED', 'designation' => 'SDE', 'offered_at' => now()->toDateString()]);
+
+        $overview = collect($this->exportSheet('PACKAGE_REPORT', [], 'Overview')->toArray())->pluck(1, 0);
+        // Best offers: 6, 12, 9 LPA (the third campus offer has no package).
+        $this->assertEquals(4, $overview['Students with an offer']);
+        $this->assertEquals(3, $overview['Students with a package entered']);
+        $this->assertEquals(4, $overview['Total offers']);
+        $this->assertEquals(1, $overview['Offers without a package entered']);
+        $this->assertEquals(12, $overview['Highest package (LPA)']);
+        $this->assertEquals(9, $overview['Average package (LPA)']);
+        $this->assertEquals(9, $overview['Median package (LPA)']);
+        $this->assertEquals(6, $overview['Lowest package (LPA)']);
+
+        $best = collect($this->exportRows('PACKAGE_REPORT', [], 'Best Offer per Student'));
+        $this->assertCount(4, $best);
+        $this->assertSame('Not entered', $best->firstWhere('JNTU No', $selectedJobs[2]->student->roll_number)['Package (LPA)']);
+        $this->assertSame('PPO', $best->firstWhere('Package (LPA)', 9)['Source']);
+
+        $byDepartment = collect($this->exportRows('PACKAGE_REPORT', [], 'By Department'))->keyBy('Department');
+        $cse = Student::where('department_id', $this->excelDepartment->id)->pluck('id');
+        $expectedCse = collect([[$selectedJobs[0], 6], [$selectedJobs[1], 12], [$selectedJobs[2], null]])
+            ->filter(fn ($p) => $cse->contains($p[0]->student_id) && $p[1] !== null)->pluck(1)->push(9);
+        $this->assertEquals($expectedCse->count(), $byDepartment[$this->excelDepartment->name]['Students with Package']);
+        $this->assertEquals($expectedCse->max(), $byDepartment[$this->excelDepartment->name]['Highest (LPA)']);
+
+        // Department filter narrows it.
+        $aimlOverview = collect($this->exportSheet('PACKAGE_REPORT', ['department_id' => $this->aiml->id], 'Overview')->toArray())->pluck(1, 0);
+        $this->assertEquals(Application::where('status', 'SELECTED')->where('applicable_type', \App\Models\JobPosting::class)->whereIn('student_id', Student::where('department_id', $this->aiml->id)->pluck('id'))->count(), $aimlOverview['Total offers']);
+    }
+
+    public function test_package_can_be_entered_when_selecting(): void
+    {
+        $user = $this->makeStudentUser(['roll_number' => '23A91A9999', 'section' => 'A']);
+        $job = $this->makeJobPosting(['title' => 'Cloud Engineer']);
+        $id = $this->applyAndAdvance($this->admin, $user, $job, ['UNDER_REVIEW', 'SHORTLISTED', 'ASSESSMENT']);
+
+        Sanctum::actingAs($this->admin, ['*']);
+        $this->patchJson("/api/admin/applications/{$id}/status", ['status' => 'SELECTED', 'offer_package' => 750000])
+            ->assertOk()->assertJsonPath('data.offer_package', 750000);
+        $this->assertEquals(750000, Application::find($id)->offer_package);
+    }
+
+    public function test_batch_comparison_matches_department_and_batch_counts(): void
+    {
+        $rows = collect($this->exportRows('BATCH_COMPARISON'));
+        $total = $rows->pop();
+        $placed = Application::where('status', 'SELECTED')->pluck('student_id')->unique();
+
+        foreach ([$this->batch2023, $this->batch2024] as $batch) {
+            foreach ([$this->excelDepartment, $this->aiml] as $dept) {
+                $ids = Student::where(['batch_id' => $batch->id, 'department_id' => $dept->id])->pluck('id');
+                $row = $rows->firstWhere('Department', $dept->name);
+                $this->assertEquals($ids->count(), $row["{$batch->name} Students"], "{$dept->code} {$batch->name}");
+                $this->assertEquals($ids->intersect($placed)->count(), $row["{$batch->name} Placed"]);
+            }
+
+            $inBatch = Student::where('batch_id', $batch->id)->pluck('id');
+            $this->assertEquals($inBatch->count(), $total["{$batch->name} Students"]);
+            $this->assertEquals($inBatch->intersect($placed)->count(), $total["{$batch->name} Placed"]);
+            $this->assertEquals(round($inBatch->intersect($placed)->count() / $inBatch->count() * 100, 2), $total["{$batch->name} Placement %"]);
+        }
+    }
+
+    public function test_reports_page_class_breakdown_matches_the_section_wise_export(): void
+    {
+        $export = collect($this->exportRows('SECTION_WISE_PLACEMENT_REPORT', ['year' => 3]));
+        $export->pop();
+
+        Sanctum::actingAs($this->admin, ['*']);
+        $api = $this->getJson('/api/admin/reports/classes?year=3')->assertOk()->json('data.rows');
+
+        $this->assertCount($export->count(), $api);
+        foreach ($api as $i => $row) {
+            $this->assertEquals($export[$i]['Total Students'], $row['total_students']);
+            $this->assertEquals($export[$i]['Students Placed'], $row['students_placed']);
+            $this->assertEquals($export[$i]['Students Applied'], $row['students_applied']);
+        }
+
+        $this->getJson('/api/admin/reports/dashboard?section=B')->assertOk()
+            ->assertJsonPath('data.placements.total_students', Student::where('section', 'B')->count());
+    }
+
     public function test_section_and_year_filters_are_validated(): void
     {
         Sanctum::actingAs($this->admin, ['*']);

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Download } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { toast } from '@/components/ui/Toast'
 import { FilterDate, FilterSelect } from '@/components/common/FilterBar'
@@ -30,6 +31,16 @@ const STUDENT_STATUSES = [
 const APPLICATION_STATUSES = ['APPLIED', 'UNDER_REVIEW', 'SHORTLISTED', 'ASSESSMENT', 'INTERVIEW', 'SELECTED', 'REJECTED', 'WITHDRAWN']
   .map((x) => ({ value: x, label: x.charAt(0) + x.slice(1).toLowerCase().replace('_', ' ') }))
 const STUDENT_STATUS_TYPES = ['STUDENTS', 'STUDENT_APPLICATION_REPORT']
+const BACKLOG_OPTIONS = [
+  { value: '0', label: 'No backlogs' },
+  { value: 'max1', label: 'Up to 1 backlog' },
+  { value: 'max2', label: 'Up to 2 backlogs' },
+  { value: 'some', label: '1-2 backlogs' },
+  { value: 'many', label: '3+ backlogs' },
+  { value: 'not_reported', label: 'Backlogs not reported' },
+]
+// Exports with nothing student-level to filter on.
+const NO_STUDENT_FILTERS = ['PLACEMENT_DRIVES', 'COMPANIES']
 
 /**
  * Downloads a live .xlsx from GET /admin/excel/exports/{type}. Nothing is
@@ -43,6 +54,9 @@ export function ExcelExportTab() {
   const [section, setSection] = useState('')
   const [studentStatus, setStudentStatus] = useState('')
   const [applicationStatus, setApplicationStatus] = useState('')
+  const [cgpaMin, setCgpaMin] = useState('')
+  const [backlogs, setBacklogs] = useState('')
+  const [target, setTarget] = useState('')
   const [applicableType, setApplicableType] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
@@ -50,10 +64,32 @@ export function ExcelExportTab() {
   const [error, setError] = useState<string | null>(null)
   const departments = useApiResource(() => metaService.departments(), 'departments')
   const batches = useApiResource(() => metaService.batches(), 'batches')
+  const isEligible = type === 'ELIGIBLE_STUDENTS'
+  const targets = useApiResource(async () => {
+    if (!isEligible) return []
+    const [jobs, internships, drives] = await Promise.all([
+      adminService.jobs.list({ per_page: 100 }),
+      adminService.internships.list({ per_page: 100 }),
+      adminService.drives.list({ per_page: 100 }),
+    ])
+    return [
+      ...drives.items.map((d) => ({ value: `drive_id:${d.id}`, label: `Drive: ${d.title}${d.company ? ` (${d.company.name})` : ''}` })),
+      ...jobs.items.map((j) => ({ value: `job_id:${j.id}`, label: `Job: ${j.company?.name ?? ''} ${j.title}`.trim() })),
+      ...internships.items.map((i) => ({ value: `internship_id:${i.id}`, label: `Internship: ${i.company?.name ?? ''} ${i.title}`.trim() })),
+    ]
+  }, `export-targets:${isEligible}`)
 
   async function download() {
     if (dateFrom && dateTo && dateTo < dateFrom) {
       setError('The end date must be on or after the start date.')
+      return
+    }
+    if (isEligible && !target) {
+      setError('Choose the drive, job or internship to check eligibility against.')
+      return
+    }
+    if (cgpaMin && (Number.isNaN(Number(cgpaMin)) || Number(cgpaMin) < 0 || Number(cgpaMin) > 10)) {
+      setError('Minimum CGPA must be between 0 and 10.')
       return
     }
     setError(null)
@@ -65,7 +101,16 @@ export function ExcelExportTab() {
     if (section) filters.section = section
     if (studentStatus && STUDENT_STATUS_TYPES.includes(type)) filters.student_status = studentStatus
     if (applicationStatus && type === 'APPLICATIONS') filters.status = applicationStatus
-    if (applicableType) filters.applicable_type = applicableType as 'job' | 'internship'
+    if (cgpaMin) filters.cgpa_min = Number(cgpaMin)
+    if (backlogs === '0' || backlogs.startsWith('max')) filters.max_backlogs = Number(backlogs.replace('max', ''))
+    else if (backlogs) filters.backlogs = backlogs as 'some' | 'many' | 'not_reported'
+    if (isEligible && target) {
+      const [key, id] = target.split(':')
+      filters[key as 'job_id' | 'internship_id' | 'drive_id'] = Number(id)
+    }
+    if (NO_STUDENT_FILTERS.includes(type)) {
+      for (const key of ['department_id', 'batch_id', 'year', 'section', 'cgpa_min', 'max_backlogs', 'backlogs'] as const) delete filters[key]
+    }    if (applicableType) filters.applicable_type = applicableType as 'job' | 'internship'
     if (dateFrom) filters.date_from = dateFrom
     if (dateTo) filters.date_to = dateTo
     try {
@@ -95,11 +140,23 @@ export function ExcelExportTab() {
 
         <div>
           <p className="label">Narrow it down (optional)</p>
+          {isEligible && (
+            <div className="mb-3">
+              <Select aria-label="Drive, job or internship" value={target} onChange={(e) => setTarget(e.target.value)}>
+                <option value="">{targets.isLoading ? 'Loading drives, jobs and internships…' : 'Choose a drive, job or internship'}</option>
+                {(targets.data ?? []).map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </Select>
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-3">
             <FilterSelect label="Department" value={departmentId} onChange={setDepartmentId} options={(departments.data ?? []).map((d) => ({ value: d.id, label: d.name }))} allLabel="All departments" />
             <FilterSelect label="Batch" value={batchId} onChange={setBatchId} options={(batches.data ?? []).map((b) => ({ value: b.id, label: b.name }))} allLabel="All batches" />
             <FilterSelect label="Year" value={year} onChange={setYear} options={YEARS} allLabel="All years" />
             <FilterSelect label="Section" value={section} onChange={setSection} options={SECTIONS} allLabel="All sections" />
+            <div className="w-[calc(50%-0.375rem)] sm:w-44">
+              <Input aria-label="Minimum CGPA" type="number" inputMode="decimal" min={0} max={10} step="0.1" placeholder="Min CGPA" value={cgpaMin} onChange={(e) => setCgpaMin(e.target.value)} />
+            </div>
+            <FilterSelect label="Backlogs" value={backlogs} onChange={setBacklogs} options={BACKLOG_OPTIONS} allLabel="Any backlogs" />
             {STUDENT_STATUS_TYPES.includes(type) && (
               <FilterSelect label="Student status" value={studentStatus} onChange={setStudentStatus} options={STUDENT_STATUSES} allLabel="All students" />
             )}
@@ -116,7 +173,7 @@ export function ExcelExportTab() {
             <FilterDate label="From" value={dateFrom} onChange={setDateFrom} />
             <FilterDate label="To" value={dateTo} onChange={setDateTo} />
           </div>
-          <p className="mt-1.5 text-xs text-ink-faint">Filters only apply to export types that support them.</p>
+          <p className="mt-1.5 text-xs text-ink-faint">Filters only apply to export types that support them. Students with no CGPA yet are left out by a minimum CGPA, and blank backlogs only match "Backlogs not reported".</p>
         </div>
 
         {error && <p role="alert" className="text-sm text-error">{error}</p>}

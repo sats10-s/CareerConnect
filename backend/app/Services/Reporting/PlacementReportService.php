@@ -187,20 +187,10 @@ class PlacementReportService
             $query->join('batches', 'batches.id', '=', 'students.batch_id');
         }
 
-        if (! empty($filters['department_id'])) {
-            $query->where('students.department_id', $filters['department_id']);
-        }
-
-        if (! empty($filters['batch_id'])) {
-            $query->where('students.batch_id', $filters['batch_id']);
-        }
-
-        if (! empty($filters['year'])) {
-            $query->where('students.year', $filters['year']);
-        }
-
-        if (! empty($filters['section'])) {
-            $query->where('students.section', self::normalizedSection($filters['section']));
+        if ($this->hasStudentRecordFilters($filters)) {
+            $inScope = Student::query();
+            $this->applyStudentRecordFilters($inScope, $filters);
+            $query->whereIn('students.id', $inScope->select('students.id'));
         }
 
         if (! empty($filters['applicable_type'])) {
@@ -266,6 +256,41 @@ class PlacementReportService
      */
     public function classBreakdown(array $filters): array
     {
+        return array_map(fn (array $r) => [
+            'department' => $r['department'],
+            'year' => $r['year'] === null ? null : (int) $r['year'],
+            'section' => $r['section'],
+            ...array_diff_key($r, ['department' => 1, 'year' => 1, 'section' => 1]),
+        ], $this->studentGroupCounts($filters, [
+            'department' => 'departments.name',
+            'year' => 'students.year',
+            'section' => 'students.section',
+        ]));
+    }
+
+    /**
+     * Placement by department for each batch, for comparing batches side
+     * by side - the same counts as classBreakdown(), grouped by
+     * department and batch instead of class.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return list<array{department: ?string, batch: ?string, total_students: int, students_applied: int, students_placed: int, students_unplaced: int, placement_rate: float}>
+     */
+    public function batchComparison(array $filters): array
+    {
+        return $this->studentGroupCounts($filters, [
+            'department' => 'departments.name',
+            'batch' => 'batches.name',
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     * @param  array<string, string>  $groups  alias => column
+     * @return list<array<string, mixed>>
+     */
+    private function studentGroupCounts(array $filters, array $groups): array
+    {
         $applied = Application::query();
         $this->applyDateRange($applied, 'applied_at', $filters);
         $this->applyCompanyScope($applied, $filters);
@@ -277,31 +302,37 @@ class PlacementReportService
         $inScope = Student::query();
         $this->applyStudentOwnScope($inScope, $filters);
 
-        $rows = DB::table('students')
+        $select = collect($groups)->map(fn (string $column, string $alias) => "{$column} as {$alias}")->implode(', ');
+
+        $query = DB::table('students')
             ->whereIn('students.id', $inScope->select('id'))
             ->leftJoin('departments', 'departments.id', '=', 'students.department_id')
+            ->leftJoin('batches', 'batches.id', '=', 'students.batch_id')
             ->selectRaw(sprintf(
-                'departments.name as department, students.year as year, students.section as section, COUNT(*) as total_students, '
+                '%s, COUNT(*) as total_students, '
                 .'SUM(CASE WHEN students.id IN (%s) THEN 1 ELSE 0 END) as students_applied, '
                 .'SUM(CASE WHEN students.id IN (%s) THEN 1 ELSE 0 END) as students_placed',
+                $select,
                 $applied->toSql(),
                 $placed->toSql(),
             ))
             ->addBinding([...$applied->getBindings(), ...$placed->getBindings()], 'select')
-            ->groupBy('departments.name', 'students.year', 'students.section')
-            ->orderBy('departments.name')
-            ->orderBy('students.year')
-            ->orderBy('students.section')
-            ->get();
+            ->groupBy(...array_values($groups));
 
-        return $rows->map(function ($r) {
+        foreach ($groups as $column) {
+            $query->orderBy($column);
+        }
+
+        return $query->get()->map(function ($r) use ($groups) {
             $total = (int) $r->total_students;
             $placedCount = (int) $r->students_placed;
+            $row = [];
 
-            return [
-                'department' => $r->department,
-                'year' => $r->year === null ? null : (int) $r->year,
-                'section' => $r->section,
+            foreach (array_keys($groups) as $alias) {
+                $row[$alias] = $r->{$alias};
+            }
+
+            return $row + [
                 'total_students' => $total,
                 'students_applied' => (int) $r->students_applied,
                 'students_placed' => $placedCount,

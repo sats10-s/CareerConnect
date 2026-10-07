@@ -129,6 +129,7 @@ class ApplicationController extends Controller
                 $target,
                 $request->user(),
                 $request->validated('remarks'),
+                $request->filled('offer_package') ? (float) $request->validated('offer_package') : null,
             );
         } catch (ApplicationException $e) {
             return $this->failure($e->getMessage(), $e->reasons(), $e->status());
@@ -140,6 +141,30 @@ class ApplicationController extends Controller
         ]);
 
         return $this->success(data: new AdminApplicationResource($application), message: 'Application status updated successfully.');
+    }
+
+    /**
+     * PATCH /api/admin/applications/{id}/offer - enter or correct the
+     * annual package of a SELECTED application (null clears it), e.g.
+     * one a company selected or one selected before packages were
+     * recorded.
+     */
+    public function updateOffer(Request $request, Application $application): JsonResponse
+    {
+        Gate::authorize('updateStatus', $application);
+
+        $validated = $request->validate([
+            'offer_package' => ['present', 'nullable', 'numeric', 'min:0', 'max:999999999'],
+        ]);
+
+        if ($application->status !== ApplicationStatus::SELECTED) {
+            return $this->failure('A package can only be recorded on a selected application.', [], 422);
+        }
+
+        $application->update(['offer_package' => $validated['offer_package']]);
+        $application->load(self::EAGER_LOAD_DETAIL);
+
+        return $this->success(data: new AdminApplicationResource($application), message: 'Offer package saved.');
     }
 
     private function applicableClassFor(?string $type): ?string
