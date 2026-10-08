@@ -2,16 +2,12 @@
 
 Written 2026-10-08 against the `student-import` branch. The example uses one Ubuntu 24.04 server running Nginx, PHP-FPM, MySQL 8 and Supervisor, with the frontend and the API on the same domain (`placements.example.edu` below; replace with yours). One domain keeps Sanctum's cookie sign-in simple and avoids CORS problems.
 
-## 1. Before you deploy (must fix)
+## 1. Before you deploy
 
-These are open on the current branch and will break or weaken a production install.
+The code is on GitHub at `git@github.com:sats10-s/CareerConnect.git` (branch `student-import`), with `composer.json`, `composer.lock` and the status-history migration fix committed. Two rules still apply:
 
-1. **Commit `backend/composer.json`.** The working copy requires PhpSpreadsheet `^5.10` but the committed file still says `^4.0`. The server will install whatever the committed file says.
-2. **Commit the status-history migration fix** (`2024_01_07_000002_create_internship_assignment_status_history_table.php`) so a fresh MySQL install creates that table correctly.
-3. **Track `composer.lock`.** It is listed in `backend/.gitignore`, so the server resolves fresh versions instead of the ones you tested. Remove that line and commit the lock file.
-4. **Add a git remote** (GitHub, GitLab or similar) and push, so the server can `git clone`. Nothing is on a remote today.
-5. **Never run `php artisan db:seed` in production.** The full seeder creates demo accounts that all share one published password. Run only the reference-data seeders listed in step 4.4.
-6. **Clear out stale import files.** `backend/storage/app/private/student-imports/` on the development machine holds a student file uploaded on 2026-10-06 from an import that was never confirmed or cancelled. It is now git-ignored; cancel that import in Student Data, or delete the file if it is not needed.
+1. **Never run `php artisan db:seed` in production.** The full seeder creates demo accounts that all share one published password. Run only the reference-data seeders listed in step 4.4.
+2. **Clear out stale import files.** `backend/storage/app/private/student-imports/` on the development machine holds a student file uploaded on 2026-10-06 from an import that was never confirmed or cancelled. It is git-ignored; cancel that import in Student Data, or delete the file if it is not needed.
 
 ## 2. Server requirements
 
@@ -41,7 +37,7 @@ FLUSH PRIVILEGES;
 
 ```bash
 sudo mkdir -p /var/www && cd /var/www
-sudo git clone <your remote> careerconnect
+sudo git clone -b student-import https://github.com/sats10-s/CareerConnect.git careerconnect
 sudo chown -R www-data:www-data careerconnect
 cd careerconnect/backend
 composer install --no-dev --optimize-autoloader
