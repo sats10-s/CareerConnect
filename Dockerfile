@@ -14,7 +14,7 @@ COPY backend/composer.json backend/composer.lock ./
 # that platform check while resolving dependencies in this build stage.
 RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts --ignore-platform-req=ext-gd
 
-FROM php:8.3-fpm-bookworm
+FROM php:8.4-fpm-bookworm
 RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx supervisor default-mysql-client libicu-dev libzip-dev libpng-dev \
     libonig-dev libxml2-dev libcurl4-openssl-dev unzip \
