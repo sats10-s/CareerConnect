@@ -10,7 +10,9 @@ RUN npm run build
 FROM composer:2 AS php-dependencies
 WORKDIR /src/backend
 COPY backend/composer.json backend/composer.lock ./
-RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts
+# The runtime image installs GD; the Composer image does not, so ignore only
+# that platform check while resolving dependencies in this build stage.
+RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts --ignore-platform-req=ext-gd
 
 FROM php:8.3-fpm-bookworm
 RUN apt-get update && apt-get install -y --no-install-recommends \
