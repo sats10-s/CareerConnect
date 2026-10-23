@@ -29,7 +29,7 @@ COPY deploy/nginx.conf /etc/nginx/sites-available/default
 COPY deploy/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY deploy/start.sh /usr/local/bin/start-careerconnect
 RUN chmod +x /usr/local/bin/start-careerconnect \
-  && mkdir -p backend/storage/framework/{cache,sessions,views} backend/storage/logs \
+  && mkdir -p backend/resources/views backend/storage/framework/{cache,sessions,views} backend/storage/logs \
   && chown -R www-data:www-data backend/storage backend/bootstrap/cache
 
 ENV PORT=10000
