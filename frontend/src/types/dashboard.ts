@@ -43,6 +43,9 @@ export interface AdminDashboardData {
     active_internships: number
     applications: number
     selected_students: number
+    placed_students: number
+    not_placed_students: number
+    unconfirmed_placement_status: number
   }
   recent_activity: Array<{ type: string; description: string; at: string }>
 }

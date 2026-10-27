@@ -62,9 +62,11 @@ class ApplicationService
 
         $eligibility = $this->eligibilityService->evaluate($student, $opportunity);
 
-        if ($eligibility['eligibility_enforced'] && ! $eligibility['eligible']) {
+        if (! $eligibility['eligible']) {
             throw new ApplicationException(
-                'You do not meet the eligibility criteria for this opportunity.',
+                in_array('PLACEMENT_RESTRICTED', array_column($eligibility['reasons'], 'code'), true)
+                    ? 'You are not currently eligible to apply for this opportunity.'
+                    : 'You do not meet the eligibility criteria for this opportunity.',
                 $eligibility['reasons'],
             );
         }

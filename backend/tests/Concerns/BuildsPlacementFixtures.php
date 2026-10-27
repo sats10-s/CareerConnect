@@ -93,6 +93,7 @@ trait BuildsPlacementFixtures
             'year' => 3,
             'cgpa' => 8.0,
             'backlogs' => 0,
+            'placement_status' => 'NOT_PLACED',
         ], array_diff_key($overrides, array_flip(['email', 'name']))));
 
         return $user->fresh();

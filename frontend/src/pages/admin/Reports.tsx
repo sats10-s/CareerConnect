@@ -173,7 +173,9 @@ export function AdminReportsPage() {
               { label: 'Students', value: p.total_students },
               { label: 'Applied', value: p.unique_applicants },
               { label: 'Selected', value: p.students_selected },
+              { label: 'Explicitly placed', value: p.students_placed },
               { label: 'Not placed', value: p.students_unplaced },
+              { label: 'Unconfirmed', value: p.students_unconfirmed },
             ]} />
             <MetricBand metrics={[
               { label: 'Applications', value: p.total_applications },

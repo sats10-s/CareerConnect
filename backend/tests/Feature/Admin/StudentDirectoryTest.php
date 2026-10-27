@@ -90,6 +90,7 @@ class StudentDirectoryTest extends TestCase
     {
         $aarav = $this->makeStudent('Aarav Mehta', 'CC24001', $this->cse);
         $this->makeStudent('Priya Nair', 'CC24002', $this->mech);
+        $aarav->update(['placement_status' => 'PLACED']);
         $this->apply($aarav, 'SELECTED');
 
         Sanctum::actingAs($this->makeUser(RoleName::PLACEMENT_ADMIN), ['*']);
@@ -98,8 +99,8 @@ class StudentDirectoryTest extends TestCase
         $response->assertJsonPath('data.meta.total', 2)
             ->assertJsonPath('data.items.0.name', 'Aarav Mehta')
             ->assertJsonPath('data.items.0.applications_count', 1)
-            ->assertJsonPath('data.items.0.placement_status', 'SELECTED')
-            ->assertJsonPath('data.items.1.placement_status', null);
+            ->assertJsonPath('data.items.0.placement_status', 'PLACED')
+            ->assertJsonPath('data.items.1.placement_status', 'NOT_PLACED');
         $this->assertArrayNotHasKey('resume_path', $response->json('data.items.0'));
     }
 
@@ -108,6 +109,7 @@ class StudentDirectoryTest extends TestCase
         $aarav = $this->makeStudent('Aarav Mehta', 'CC24001', $this->cse);
         $this->makeStudent('Priya Nair', 'CC24002', $this->mech);
         $this->makeStudent('Kabir Singh', 'CC24003', $this->cse, ['year' => 3]);
+        $aarav->update(['placement_status' => 'PLACED']);
         $this->apply($aarav, 'SELECTED');
 
         Sanctum::actingAs($this->makeUser(RoleName::PLACEMENT_ADMIN), ['*']);

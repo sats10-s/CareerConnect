@@ -92,7 +92,6 @@ class ExcelExportAccuracyTest extends TestCase
                 'cgpa' => $cgpa,
                 'backlogs' => $backlogs,
             ]);
-
             foreach ($applications as [$opportunity, $through]) {
                 $withdraw = $through === ['WITHDRAWN'];
                 $applicationId = $this->applyAndAdvance($this->admin, $user, $opportunity, $withdraw ? [] : $through);
@@ -101,6 +100,12 @@ class ExcelExportAccuracyTest extends TestCase
                     Sanctum::actingAs($user, ['*']);
                     $this->postJson("/api/student/applications/{$applicationId}/withdraw")->assertOk();
                 }
+            }
+
+            // One placement is explicitly verified; other SELECTED
+            // applications in this fixture remain application outcomes.
+            if ($i === 0) {
+                $user->student->update(['placement_status' => 'PLACED']);
             }
         }
     }
@@ -188,12 +193,10 @@ class ExcelExportAccuracyTest extends TestCase
         $this->assertCount($expected, $internshipRows);
     }
 
-    public function test_unplaced_report_matches_students_without_a_selected_application(): void
+    public function test_unplaced_report_matches_explicitly_not_placed_students(): void
     {
-        $placed = Application::where('status', 'SELECTED')->distinct()->pluck('student_id');
-
         $rows = $this->exportRows('UNPLACED_STUDENT_REPORT');
-        $this->assertCount(Student::whereNotIn('id', $placed)->count(), $rows);
+        $this->assertCount(Student::where('placement_status', 'NOT_PLACED')->count(), $rows);
 
         foreach ($rows as $row) {
             $student = Student::where('roll_number', $row['JNTU No'])->first();
@@ -202,7 +205,7 @@ class ExcelExportAccuracyTest extends TestCase
         }
 
         $filtered = $this->exportRows('UNPLACED_STUDENT_REPORT', ['year' => 2, 'section' => 'B']);
-        $this->assertCount(Student::where(['year' => 2, 'section' => 'B'])->whereNotIn('id', $placed)->count(), $filtered);
+        $this->assertCount(Student::where(['year' => 2, 'section' => 'B'])->where('placement_status', 'NOT_PLACED')->count(), $filtered);
     }
 
     public function test_section_wise_report_matches_class_headcounts_and_totals(): void
@@ -211,7 +214,7 @@ class ExcelExportAccuracyTest extends TestCase
         $total = $rows->pop();
         $this->assertSame('Total', $total['Department']);
 
-        $placed = Application::where('status', 'SELECTED')->distinct()->pluck('student_id');
+        $placed = Student::where('placement_status', 'PLACED')->pluck('id');
         $applied = Application::distinct()->pluck('student_id');
 
         $classes = Student::with('department')->get()->groupBy(fn ($s) => $s->department->name.'|'.$s->year.'|'.$s->section);
@@ -223,7 +226,7 @@ class ExcelExportAccuracyTest extends TestCase
             $this->assertEquals($students->count(), $row['Total Students']);
             $this->assertEquals($students->whereIn('id', $applied)->count(), $row['Students Applied']);
             $this->assertEquals($students->whereIn('id', $placed)->count(), $row['Students Placed']);
-            $this->assertEquals($students->whereNotIn('id', $placed)->count(), $row['Students Unplaced']);
+            $this->assertEquals($students->where('placement_status', 'NOT_PLACED')->count(), $row['Students Unplaced']);
         }
 
         $this->assertEquals(Student::count(), $total['Total Students']);
@@ -307,7 +310,7 @@ class ExcelExportAccuracyTest extends TestCase
             'applied' => Application::pluck('student_id'),
             'shortlisted' => Application::whereIn('id', $everShortlisted)->pluck('student_id'),
             'interviewed' => Application::has('interviews')->pluck('student_id'),
-            'placed' => Application::where('status', 'SELECTED')->pluck('student_id'),
+            'placed' => Student::where('placement_status', 'PLACED')->pluck('id'),
         ];
         $all = Student::pluck('roll_number')->sort()->values()->all();
 
@@ -399,7 +402,7 @@ class ExcelExportAccuracyTest extends TestCase
         $job = \App\Models\JobPosting::where('title', 'Software Engineer')->first();
         $job->syncEligibility(['eligibility_enforced' => false, 'min_cgpa' => 7, 'max_backlogs' => 0, 'department_ids' => [$this->excelDepartment->id]]);
 
-        $eligible = Student::where('department_id', $this->excelDepartment->id)->where('cgpa', '>=', 7)->where('backlogs', '<=', 0)->pluck('id');
+        $eligible = Student::where('department_id', $this->excelDepartment->id)->where('placement_status', 'NOT_PLACED')->where('cgpa', '>=', 7)->where('backlogs', '<=', 0)->pluck('id');
         $applied = Application::where('applicable_type', \App\Models\JobPosting::class)->where('applicable_id', $job->id)->pluck('status', 'student_id');
 
         $sheetTitle = \App\Services\Support\SheetTitleSanitizer::sanitize('NovaTech Solutions Software Engineer', ['Summary']);
@@ -434,8 +437,9 @@ class ExcelExportAccuracyTest extends TestCase
         $driveSummary = $this->exportRows('ELIGIBLE_STUDENTS', ['drive_id' => $drive->id], 'Summary');
         $this->assertCount(2, $driveSummary);
         $this->assertEquals($summary['Eligible'], collect($driveSummary)->firstWhere('Role/Title', 'Software Engineer')['Eligible']);
-        // No criteria on the internship: every student is eligible.
-        $this->assertEquals(Student::count(), collect($driveSummary)->firstWhere('Type', 'Internship')['Eligible']);
+        // No academic criteria on the internship; explicit placement
+        // restrictions still apply.
+        $this->assertEquals(Student::where('placement_status', 'NOT_PLACED')->count(), collect($driveSummary)->firstWhere('Type', 'Internship')['Eligible']);
 
         Sanctum::actingAs($this->admin, ['*']);
         $this->getJson('/api/admin/excel/exports/ELIGIBLE_STUDENTS')->assertUnprocessable();
@@ -505,7 +509,7 @@ class ExcelExportAccuracyTest extends TestCase
     {
         $rows = collect($this->exportRows('BATCH_COMPARISON'));
         $total = $rows->pop();
-        $placed = Application::where('status', 'SELECTED')->pluck('student_id')->unique();
+        $placed = Student::where('placement_status', 'PLACED')->pluck('id');
 
         foreach ([$this->batch2023, $this->batch2024] as $batch) {
             foreach ([$this->excelDepartment, $this->aiml] as $dept) {

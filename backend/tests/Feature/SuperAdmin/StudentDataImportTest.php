@@ -71,13 +71,37 @@ class StudentDataImportTest extends TestCase
         return $this->confirm($batch['id']);
     }
 
+    /** Compare JSON objects by keys while retaining list order. */
+    private function assertSameJsonValue(mixed $expected, mixed $actual): void
+    {
+        $this->assertSame($this->canonicalizeJsonValue($expected), $this->canonicalizeJsonValue($actual));
+    }
+
+    private function canonicalizeJsonValue(mixed $value): mixed
+    {
+        if (! is_array($value)) {
+            return $value;
+        }
+
+        if (array_is_list($value)) {
+            return array_map(fn ($item) => $this->canonicalizeJsonValue($item), $value);
+        }
+
+        ksort($value);
+        foreach ($value as $key => $item) {
+            $value[$key] = $this->canonicalizeJsonValue($item);
+        }
+
+        return $value;
+    }
+
     public function test_preview_of_the_college_file_has_exact_counts_and_nothing_is_saved_yet(): void
     {
         $batch = $this->upload($this->collegeStudentFile());
 
         $this->assertSame('READY_FOR_CONFIRMATION', $batch['status']);
         $this->assertSame(18, $batch['total_rows']);
-        $this->assertSame(['new' => 11, 'updated' => 0, 'unchanged' => 0, 'error' => 7, 'warning' => 4], $batch['counts']);
+        $this->assertSameJsonValue(['new' => 11, 'updated' => 0, 'unchanged' => 0, 'error' => 7, 'warning' => 4], $batch['counts']);
 
         $sheets = collect($batch['sheets'])->keyBy('name');
         $this->assertSame(12, $sheets['2023 Batch']['rows']);
@@ -86,7 +110,7 @@ class StudentDataImportTest extends TestCase
         $this->assertSame(6, $sheets['Lateral & MTech']['rows']);
         $this->assertSame(3, $sheets['Lateral & MTech']['new']);
         $this->assertSame(3, $sheets['Lateral & MTech']['error']);
-        $this->assertSame([['value' => 'ROBOTICS', 'rows' => 1]], $batch['unknown_departments']);
+        $this->assertSameJsonValue([['value' => 'ROBOTICS', 'rows' => 1]], $batch['unknown_departments']);
 
         $this->assertDatabaseCount('students', 0);
 
@@ -111,8 +135,8 @@ class StudentDataImportTest extends TestCase
         $batch = $this->importFixture();
 
         $this->assertSame('CONFIRMED', $batch['status']);
-        $this->assertSame(['created' => 11, 'updated' => 0, 'failed' => 0, 'one_time_passwords' => 2], $batch['result']);
-        $this->assertSame(['done' => 11, 'total' => 11], $batch['progress']);
+        $this->assertSameJsonValue(['created' => 11, 'updated' => 0, 'failed' => 0, 'one_time_passwords' => 2], $batch['result']);
+        $this->assertSameJsonValue(['done' => 11, 'total' => 11], $batch['progress']);
         $this->assertDatabaseCount('students', 11);
 
         $aarav = Student::with(['user', 'department', 'batch'])->where('roll_number', '23341A0501')->firstOrFail();
@@ -219,7 +243,7 @@ class StudentDataImportTest extends TestCase
 
         // 0 changes. The three data problems in the file (CGPA 78.5, section E,
         // 11-digit mobile) are still reported as warnings on unchanged rows.
-        $this->assertSame(['new' => 0, 'updated' => 0, 'unchanged' => 11, 'error' => 7, 'warning' => 3], $batch['counts']);
+        $this->assertSameJsonValue(['new' => 0, 'updated' => 0, 'unchanged' => 11, 'error' => 7, 'warning' => 3], $batch['counts']);
         $this->assertSame('VALIDATED', $batch['status']); // nothing to confirm
         $this->postJson("/api/super-admin/student-data/imports/{$batch['id']}/confirm")->assertStatus(422);
         $this->assertEquals($hashes, User::pluck('password', 'id'));
@@ -241,7 +265,7 @@ class StudentDataImportTest extends TestCase
 
         $this->assertSame(1, $batch['counts']['updated']);
         $updated = $this->getJson("/api/super-admin/student-data/imports/{$batch['id']}/rows?tab=updated")->json('data.items');
-        $this->assertSame([['field' => 'section', 'label' => 'Section', 'old_value' => 'A', 'new_value' => 'B']], $updated[0]['changes']);
+        $this->assertSameJsonValue([['field' => 'section', 'label' => 'Section', 'old_value' => 'A', 'new_value' => 'B']], $updated[0]['changes']);
 
         $this->confirm($batch['id']);
 
@@ -404,7 +428,7 @@ class StudentDataImportTest extends TestCase
         }
 
         $this->assertSame('CONFIRMED', $result['status']);
-        $this->assertSame(['created' => 10, 'updated' => 0, 'failed' => 1, 'one_time_passwords' => 2], $result['result']);
+        $this->assertSameJsonValue(['created' => 10, 'updated' => 0, 'failed' => 1, 'one_time_passwords' => 2], $result['result']);
         $failed = \App\Models\ExcelImportRow::where('import_batch_id', $batch['id'])->whereNotNull('apply_error')->sole();
         $this->assertStringContainsString('added by another import', $failed->apply_error);
         // No half-created account was left behind for the failed row.
@@ -436,7 +460,7 @@ class StudentDataImportTest extends TestCase
     {
         $this->importFixture();
 
-        $entries = AuditLog::query()->where('action', 'like', 'student.import_%')->get();
+        $entries = AuditLog::query()->where('action', 'like', 'student.import_%')->orderBy('created_at')->orderBy('id')->get();
         $this->assertSame(['student.import_uploaded', 'student.import_confirmed'], $entries->pluck('action')->all());
         foreach ($entries as $entry) {
             $this->assertDoesNotMatchRegularExpression('/\d{5}[A-Z]\d{4}|Test/', json_encode($entry->metadata).$entry->description);
@@ -472,7 +496,7 @@ class StudentDataImportTest extends TestCase
         ]);
 
         $batch = $this->upload($file, 'academic_update');
-        $this->assertSame(['new' => 0, 'updated' => 3, 'unchanged' => 1, 'error' => 2, 'warning' => 1], $batch['counts']);
+        $this->assertSameJsonValue(['new' => 0, 'updated' => 3, 'unchanged' => 1, 'error' => 2, 'warning' => 1], $batch['counts']);
 
         $flagged = $this->getJson("/api/super-admin/student-data/imports/{$batch['id']}/rows?tab=flagged")->json('data.items');
         $this->assertSame('23341A0101', $flagged[0]['roll_number']);

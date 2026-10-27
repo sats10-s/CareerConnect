@@ -54,7 +54,9 @@ trait HasEligibilityCriteria
 
     public function requiredSkills(): MorphMany
     {
-        return $this->morphMany(OpportunityRequiredSkill::class, 'opportunity');
+        return $this->morphMany(OpportunityRequiredSkill::class, 'opportunity')
+            ->orderBy('sort_order')
+            ->orderBy('id');
     }
 
     /**
@@ -120,7 +122,10 @@ trait HasEligibilityCriteria
             if (array_key_exists('skills', $eligibility)) {
                 $this->requiredSkills()->delete();
                 $this->requiredSkills()->createMany(
-                    static::normalizeSkillNames($eligibility['skills'])->map(fn ($name) => ['skill_name' => $name])->all()
+                    static::normalizeSkillNames($eligibility['skills'])
+                        ->values()
+                        ->map(fn ($name, $position) => ['skill_name' => $name, 'sort_order' => $position])
+                        ->all()
                 );
             }
         });

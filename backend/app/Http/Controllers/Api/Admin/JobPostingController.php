@@ -38,6 +38,7 @@ class JobPostingController extends Controller
         'eligible_batch_ids',
         'eligible_years',
         'required_skills',
+        'allow_placed_students',
     ];
 
     private const EAGER_LOAD = [
@@ -110,6 +111,7 @@ class JobPostingController extends Controller
 
             $jobPosting = JobPosting::create($data);
             $jobPosting->syncEligibility($this->eligibilityPayloadFromRequest($request));
+            $this->syncPlacedStudentPolicy($request, $jobPosting);
 
             return $jobPosting;
         });
@@ -144,6 +146,7 @@ class JobPostingController extends Controller
 
             $jobPosting->update($data);
             $jobPosting->syncEligibility($this->eligibilityPayloadFromRequest($request));
+            $this->syncPlacedStudentPolicy($request, $jobPosting);
         });
 
         $jobPosting->refresh()->load(self::EAGER_LOAD);

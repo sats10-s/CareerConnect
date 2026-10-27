@@ -162,6 +162,7 @@ class JobPostingTest extends TestCase
             'opportunity_type' => JobPosting::class,
             'opportunity_id' => $jobPosting->id,
             'skill_name' => 'Laravel',
+            'sort_order' => 1,
         ]);
 
         $response->assertJsonPath('data.eligibility.enforced', true);

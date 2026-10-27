@@ -31,6 +31,7 @@ enum ExcelImportType: string
 {
     case STUDENT_MASTER = 'STUDENT_MASTER';
     case PLACEMENT_STATUS = 'PLACEMENT_STATUS';
+    case STUDENT_PLACEMENT_STATUS = 'STUDENT_PLACEMENT_STATUS';
     case INTERNSHIP_STATUS = 'INTERNSHIP_STATUS';
     case INTERVIEW_SCHEDULE = 'INTERVIEW_SCHEDULE';
     case SHORTLIST = 'SHORTLIST';
@@ -72,6 +73,7 @@ enum ExcelImportType: string
         return match ($this) {
             self::STUDENT_MASTER => 'Student Master Data',
             self::PLACEMENT_STATUS => 'Placement/Application Status',
+            self::STUDENT_PLACEMENT_STATUS => 'Student Placement Status',
             self::INTERNSHIP_STATUS => 'Internship Status',
             self::INTERVIEW_SCHEDULE => 'Interview Schedule',
             self::SHORTLIST => 'Shortlist',

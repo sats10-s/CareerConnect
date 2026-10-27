@@ -21,6 +21,7 @@ export interface CompanyRef {
 
 export interface OpportunityEligibility {
   enforced: boolean
+  allow_placed_students: boolean
   minimum_cgpa: number | null
   maximum_backlogs: number | null
   /** Only present on show/create/update responses, not on list rows. */
@@ -72,6 +73,7 @@ export interface OpportunityPayload {
   duration_months?: number | null
   stipend?: string | null
   eligibility_enforced?: boolean
+  allow_placed_students?: boolean
   minimum_cgpa?: number | null
   maximum_backlogs?: number | null
   eligible_department_ids?: number[]
@@ -193,6 +195,7 @@ export interface DrivePayload {
 
 export type ExcelImportType =
   | 'STUDENT_MASTER'
+  | 'STUDENT_PLACEMENT_STATUS'
   | 'PLACEMENT_STATUS'
   | 'INTERNSHIP_STATUS'
   | 'INTERVIEW_SCHEDULE'
@@ -289,6 +292,8 @@ export interface PlacementSummary {
   students_shortlisted: number
   students_interviewed: number
   students_selected: number
+  students_placed: number
+  students_unconfirmed: number
   applications_rejected: number
   applications_withdrawn: number
   students_unplaced: number
@@ -365,8 +370,13 @@ export interface AdminStudentRow {
   backlogs: number | null
   applications_count: number
   selected_count: number
-  /** "SELECTED" when the student has at least one selected application, otherwise null. */
-  placement_status: 'SELECTED' | null
+  placement_status: 'PLACED' | 'NOT_PLACED' | 'UNKNOWN' | 'UNPLACED'
+  placement_company: string | null
+  placement_job_role: string | null
+  placement_package: number | null
+  placement_date: string | null
+  placement_status_updated_by: number | null
+  placement_status_updated_at: string | null
 }
 
 export interface AdminStudentDetail {

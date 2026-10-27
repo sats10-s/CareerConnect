@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { isAxiosError } from 'axios'
-import { AlertTriangle, ArrowLeft, CheckCircle2, XCircle } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, CheckCircle2 } from 'lucide-react'
 import { CompanyLogo } from '@/components/opportunities/CompanyLogo'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -223,19 +223,24 @@ export function OpportunityDetailPage({ type }: OpportunityDetailPageProps) {
                   View in Applications
                 </Link>
               </div>
-            ) : (
+            ) : detail.my_eligibility.eligible ? (
               <Button onClick={() => setConfirmingApply(true)} className="w-full">
                 Apply
               </Button>
+            ) : (
+              <div className="space-y-1.5 rounded-lg bg-error-bg p-3 text-sm text-error">
+                <p className="font-medium">You cannot apply to this opportunity right now.</p>
+                <ul className="list-inside list-disc">
+                  {detail.my_eligibility.reasons.map((reason) => <li key={reason.code}>{reason.message}</li>)}
+                </ul>
+              </div>
             )}
           </section>
 
           <section className="card p-5">
             <h2 className="text-sm font-semibold text-ink">Eligibility</h2>
-            {!detail.eligibility.enforced ? (
-              <p className="mt-2 text-sm text-muted">No eligibility criteria configured — open to every student.</p>
-            ) : (
-              <div className="mt-2 space-y-3 text-sm">
+            <div className="mt-2 space-y-3 text-sm">
+              {!detail.eligibility.enforced ? <p className="text-muted">No academic criteria configured.</p> : (
                 <ul className="list-inside list-disc space-y-0.5 text-muted">
                   {detail.eligibility.minimum_cgpa !== null && <li>Minimum CGPA {detail.eligibility.minimum_cgpa.toFixed(2)}</li>}
                   {detail.eligibility.maximum_backlogs !== null && <li>Maximum {detail.eligibility.maximum_backlogs} backlogs</li>}
@@ -245,25 +250,11 @@ export function OpportunityDetailPage({ type }: OpportunityDetailPageProps) {
                   {detail.eligibility.batches.length > 0 && <li>Batches: {detail.eligibility.batches.map((b) => b.name).join(', ')}</li>}
                   {detail.eligibility.years.length > 0 && <li>Years: {detail.eligibility.years.join(', ')}</li>}
                 </ul>
-
-                {detail.my_eligibility.eligible ? (
-                  <p className="flex items-center gap-1.5 font-medium text-success">
-                    <CheckCircle2 className="h-4 w-4" /> You're eligible
-                  </p>
-                ) : (
-                  <div className="space-y-1.5">
-                    <p className="flex items-center gap-1.5 font-medium text-error">
-                      <XCircle className="h-4 w-4" /> You don't currently meet every criterion
-                    </p>
-                    <ul className="list-inside list-disc text-muted">
-                      {detail.my_eligibility.reasons.map((reason) => (
-                        <li key={reason.code}>{reason.message}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            )}
+              )}
+              {detail.my_eligibility.eligible ? <p className="flex items-center gap-1.5 font-medium text-success"><CheckCircle2 className="h-4 w-4" /> You're eligible to apply</p> : (
+                <ul className="list-inside list-disc text-error">{detail.my_eligibility.reasons.map((reason) => <li key={reason.code}>{reason.message}</li>)}</ul>
+              )}
+            </div>
           </section>
         </aside>
       </div>

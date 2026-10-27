@@ -84,13 +84,37 @@ class PlacementAdminImportTest extends TestCase
         User::create(['name' => 'A Student', 'email' => 'student@college.edu', 'password' => 'x', 'role_id' => Role::where('name', 'STUDENT')->value('id')]);
     }
 
+    /** Compare JSON objects by keys while retaining list order. */
+    private function assertSameJsonValue(mixed $expected, mixed $actual): void
+    {
+        $this->assertSame($this->canonicalizeJsonValue($expected), $this->canonicalizeJsonValue($actual));
+    }
+
+    private function canonicalizeJsonValue(mixed $value): mixed
+    {
+        if (! is_array($value)) {
+            return $value;
+        }
+
+        if (array_is_list($value)) {
+            return array_map(fn ($item) => $this->canonicalizeJsonValue($item), $value);
+        }
+
+        ksort($value);
+        foreach ($value as $key => $item) {
+            $value[$key] = $this->canonicalizeJsonValue($item);
+        }
+
+        return $value;
+    }
+
     public function test_preview_validates_every_row_and_never_stores_a_plaintext_password(): void
     {
         $batch = $this->upload($this->adminFile());
 
         $this->assertSame('placement_admins', $batch['type']);
-        $this->assertSame(['new' => 3, 'updated' => 0, 'unchanged' => 0, 'error' => 6, 'warning' => 0], $batch['counts']);
-        $this->assertSame([['value' => 'ROBOTICS', 'rows' => 1]], $batch['unknown_departments']);
+        $this->assertSameJsonValue(['new' => 3, 'updated' => 0, 'unchanged' => 0, 'error' => 6, 'warning' => 0], $batch['counts']);
+        $this->assertSameJsonValue([['value' => 'ROBOTICS', 'rows' => 1]], $batch['unknown_departments']);
 
         $messages = collect($this->getJson("/api/super-admin/student-data/imports/{$batch['id']}/rows?tab=errors")->json('data.items'))->pluck('messages')->flatten();
         foreach ([
@@ -115,7 +139,7 @@ class PlacementAdminImportTest extends TestCase
     public function test_confirm_creates_placement_admins_who_sign_in_by_email_and_must_change_their_password(): void
     {
         $batch = $this->confirm($this->upload($this->adminFile())['id']);
-        $this->assertSame(['created' => 3, 'updated' => 0, 'failed' => 0, 'one_time_passwords' => 0], $batch['result']);
+        $this->assertSameJsonValue(['created' => 3, 'updated' => 0, 'failed' => 0, 'one_time_passwords' => 0], $batch['result']);
 
         $ravi = User::with(['role', 'department'])->where('email', 'ravi.kumar@college.edu')->firstOrFail();
         $this->assertSame('Ravi Kumar', $ravi->name);
@@ -145,7 +169,7 @@ class PlacementAdminImportTest extends TestCase
         $ravi->forceFill(['password' => Hash::make('ChosenByRavi1'), 'must_change_password' => false, 'password_changed_at' => now()])->save();
 
         $same = $this->upload($this->adminFile());
-        $this->assertSame(['new' => 0, 'updated' => 0, 'unchanged' => 3, 'error' => 6, 'warning' => 0], $same['counts']);
+        $this->assertSameJsonValue(['new' => 0, 'updated' => 0, 'unchanged' => 3, 'error' => 6, 'warning' => 0], $same['counts']);
         $this->postJson("/api/super-admin/student-data/imports/{$same['id']}/cancel")->assertOk();
 
         $batch = $this->upload($this->adminFile([['Ravi Kumar Varma', 'ECE', 'ravi.kumar@college.edu', 'NewFilePass1']]));

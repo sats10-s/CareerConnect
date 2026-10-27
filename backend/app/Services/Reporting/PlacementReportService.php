@@ -65,10 +65,9 @@ use Illuminate\Support\Facades\DB;
  *    never leaves them, so the current-status column and "ever
  *    reached" always agree here; the simpler current-status query is
  *    used.
- *  - students_unplaced: every in-scope student with zero SELECTED
- *    application, ever - mirrors
- *    ExcelExportService::buildUnplacedStudentReport()'s
- *    whereDoesntHave('applications', status = SELECTED) exactly.
+ *  - students_placed / students_unplaced: explicit placement-office
+ *    status on the student record. SELECTED remains an application
+ *    outcome and does not itself confirm a placement.
  *  - companies_count / job_opportunities_count: distinct companies /
  *    distinct opportunities (job postings + internships, counted
  *    together) that received at least one in-scope application - not
@@ -110,9 +109,9 @@ class PlacementReportService
         $applicationsRejected = (clone $applicationQuery)->where('status', ApplicationStatus::REJECTED->value)->count();
         $applicationsWithdrawn = (clone $applicationQuery)->where('status', ApplicationStatus::WITHDRAWN->value)->count();
 
-        $unplacedQuery = Student::query()->whereDoesntHave('applications', fn (Builder $q) => $q->where('status', ApplicationStatus::SELECTED->value));
-        $this->applyStudentOwnScope($unplacedQuery, $filters);
-        $studentsUnplaced = $unplacedQuery->count();
+        $studentsPlaced = (clone $studentQuery)->where('placement_status', 'PLACED')->count();
+        $studentsUnplaced = (clone $studentQuery)->where('placement_status', 'NOT_PLACED')->count();
+        $studentsUnconfirmed = (clone $studentQuery)->where('placement_status', 'UNKNOWN')->count();
 
         $opportunityPairs = (clone $applicationQuery)->select('applicable_type', 'applicable_id')->distinct()->get();
         $jobOpportunityIds = $opportunityPairs->where('applicable_type', JobPosting::class)->pluck('applicable_id')->unique()->values();
@@ -134,6 +133,8 @@ class PlacementReportService
             'students_shortlisted' => $studentsShortlisted,
             'students_interviewed' => $studentsInterviewed,
             'students_selected' => $studentsSelected,
+            'students_placed' => $studentsPlaced,
+            'students_unconfirmed' => $studentsUnconfirmed,
             'applications_rejected' => $applicationsRejected,
             'applications_withdrawn' => $applicationsWithdrawn,
             'students_unplaced' => $studentsUnplaced,
@@ -242,14 +243,13 @@ class PlacementReportService
     /**
      * One row per department + year + section: how many students the
      * class has, how many applied, how many were placed (>=1 SELECTED
-     * application) and how many are still unplaced. Unlike breakdownBy(),
+     * application) and its manually confirmed placement status. Unlike breakdownBy(),
      * which only sees students who applied, this counts from the
      * students table, so a class where nobody applied still shows up
      * with its full headcount. Student filters (department/batch/year/
-     * section) narrow the classes; application filters (dates, company,
-     * job vs internship) narrow which applications count as "applied"
-     * and "placed". With no application filters, students_unplaced
-     * matches the Unplaced Student Report row for row.
+     * section) narrow the classes; application filters narrow which
+     * applications count as "applied". Placement totals use explicit
+     * student status and are independent of SELECTED application outcomes.
      *
      * @param  array<string, mixed>  $filters
      * @return list<array{department: ?string, year: ?int, section: ?string, total_students: int, students_applied: int, students_placed: int, students_unplaced: int, placement_rate: float}>
@@ -296,7 +296,9 @@ class PlacementReportService
         $this->applyCompanyScope($applied, $filters);
         $this->applyApplicableType($applied, $filters);
 
-        $placed = (clone $applied)->where('status', ApplicationStatus::SELECTED->value)->select('student_id')->toBase();
+        $placed = Student::query()->where('placement_status', 'PLACED');
+        $this->applyStudentOwnScope($placed, $filters);
+        $placed = $placed->select('id')->toBase();
         $applied = $applied->select('student_id')->toBase();
 
         $inScope = Student::query();
@@ -311,7 +313,8 @@ class PlacementReportService
             ->selectRaw(sprintf(
                 '%s, COUNT(*) as total_students, '
                 .'SUM(CASE WHEN students.id IN (%s) THEN 1 ELSE 0 END) as students_applied, '
-                .'SUM(CASE WHEN students.id IN (%s) THEN 1 ELSE 0 END) as students_placed',
+                .'SUM(CASE WHEN students.id IN (%s) THEN 1 ELSE 0 END) as students_placed, '
+                ."SUM(CASE WHEN students.placement_status = 'NOT_PLACED' THEN 1 ELSE 0 END) as students_unplaced",
                 $select,
                 $applied->toSql(),
                 $placed->toSql(),
@@ -336,7 +339,7 @@ class PlacementReportService
                 'total_students' => $total,
                 'students_applied' => (int) $r->students_applied,
                 'students_placed' => $placedCount,
-                'students_unplaced' => $total - $placedCount,
+                'students_unplaced' => (int) $r->students_unplaced,
                 'placement_rate' => $total > 0 ? round(($placedCount / $total) * 100, 2) : 0.0,
             ];
         })->all();

@@ -78,6 +78,7 @@ class ApplicationTest extends TestCase
             'year' => 3,
             'cgpa' => 8.0,
             'backlogs' => 0,
+            'placement_status' => 'NOT_PLACED',
         ], array_diff_key($overrides, array_flip(['email']))));
 
         return $user;
@@ -161,6 +162,68 @@ class ApplicationTest extends TestCase
             'applicable_id' => $internship->id,
             'status' => 'APPLIED',
         ]);
+    }
+
+    public function test_placed_student_cannot_apply_by_default_to_a_job_or_internship(): void
+    {
+        $job = $this->makeJobPosting();
+        $internship = $this->makeInternship();
+        $student = $this->makeStudent(['placement_status' => 'PLACED']);
+        Sanctum::actingAs($student, ['*']);
+
+        $this->postJson("/api/student/opportunities/jobs/{$job->id}/apply")
+            ->assertUnprocessable()->assertJsonFragment(['code' => 'PLACEMENT_RESTRICTED']);
+        $this->postJson("/api/student/opportunities/internships/{$internship->id}/apply")
+            ->assertUnprocessable()->assertJsonFragment(['code' => 'PLACEMENT_RESTRICTED']);
+        $this->assertDatabaseCount('applications', 0);
+    }
+
+    public function test_individual_exception_applies_only_to_its_student_and_opportunity(): void
+    {
+        $job = $this->makeJobPosting();
+        $otherJob = $this->makeJobPosting(overrides: ['title' => 'Another role']);
+        $placed = $this->makeStudent(['placement_status' => 'PLACED']);
+        $otherPlaced = $this->makeStudent(['placement_status' => 'PLACED']);
+        DB::table('student_opportunity_placement_exceptions')->insert([
+            'student_id' => $placed->student->id, 'opportunity_type' => JobPosting::class, 'opportunity_id' => $job->id,
+            'grant_reason' => 'Approved by the placement office.', 'granted_by' => null, 'granted_at' => now(), 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        Sanctum::actingAs($placed, ['*']);
+        $this->postJson("/api/student/opportunities/jobs/{$job->id}/apply")->assertCreated();
+        $this->postJson("/api/student/opportunities/jobs/{$otherJob->id}/apply")
+            ->assertUnprocessable()->assertJsonFragment(['code' => 'PLACEMENT_RESTRICTED']);
+        Sanctum::actingAs($otherPlaced, ['*']);
+        $this->postJson("/api/student/opportunities/jobs/{$job->id}/apply")
+            ->assertUnprocessable()->assertJsonFragment(['code' => 'PLACEMENT_RESTRICTED']);
+    }
+
+    public function test_admin_exception_grant_and_revocation_keep_auditable_history(): void
+    {
+        $student = $this->makeStudent(['placement_status' => 'PLACED']);
+        $job = $this->makeJobPosting();
+        $admin = $this->makeUser(RoleName::PLACEMENT_ADMIN);
+        Sanctum::actingAs($admin, ['*']);
+
+        $id = $this->postJson("/api/admin/placement-eligibility/opportunities/job/{$job->id}/exceptions", [
+            'student_id' => $student->student->id, 'reason' => 'Approved after placement office review.',
+        ])->assertCreated()->json('data.id');
+        $this->postJson("/api/admin/placement-eligibility/exceptions/{$id}/revoke", ['reason' => 'Permission no longer needed.'])->assertOk();
+
+        $this->assertDatabaseHas('student_opportunity_placement_exceptions', [
+            'id' => $id, 'granted_by' => $admin->id, 'revoked_by' => $admin->id,
+            'revocation_reason' => 'Permission no longer needed.',
+        ]);
+    }
+
+    public function test_student_cannot_grant_placement_exception(): void
+    {
+        $student = $this->makeStudent(['placement_status' => 'NOT_PLACED']);
+        $job = $this->makeJobPosting();
+        Sanctum::actingAs($student, ['*']);
+
+        $this->postJson("/api/admin/placement-eligibility/opportunities/job/{$job->id}/exceptions", [
+            'student_id' => $student->student->id, 'reason' => 'Not allowed.',
+        ])->assertForbidden();
     }
 
     public function test_cannot_apply_to_a_draft_opportunity(): void

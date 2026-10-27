@@ -60,6 +60,15 @@ class ExcelParsingService
                 $this->col('github', 'GitHub', ['GitHub URL'], required: false),
                 $this->col('portfolio', 'Portfolio', ['Portfolio URL'], required: false),
             ],
+            $type === ExcelImportType::STUDENT_PLACEMENT_STATUS => [
+                $this->col('roll_number', 'Roll Number', ['Roll No', 'Registration Number'], required: true),
+                $this->col('placement_status', 'Placement Status', ['Status'], required: true),
+                $this->col('company', 'Company', [], required: false),
+                $this->col('job_role', 'Job Role', ['Role', 'Position'], required: false),
+                $this->col('package', 'Package (LPA)', ['Package', 'CTC'], required: false),
+                $this->col('placement_date', 'Placement Date', [], required: false),
+                $this->col('reason', 'Reason', ['Remarks', 'Notes'], required: false),
+            ],
             $type->isApplicationStatusFamily() => [
                 $this->col('student_name', 'Student Name', ['Name'], required: false),
                 $this->col('roll_number', 'Roll Number', ['Roll No', 'Registration Number'], required: true),
@@ -238,7 +247,7 @@ class ExcelParsingService
      */
     private function readCellValue(\PhpOffice\PhpSpreadsheet\Cell\Cell $cell, string $key): ?string
     {
-        $isDateLike = in_array($key, ['start_date', 'end_date', 'interview_date', 'attendance_date'], true);
+        $isDateLike = in_array($key, ['start_date', 'end_date', 'interview_date', 'attendance_date', 'placement_date'], true);
         $rawValue = $cell->getValue();
 
         if ($rawValue === null) {

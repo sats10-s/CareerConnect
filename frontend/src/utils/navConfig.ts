@@ -65,6 +65,7 @@ export const NAV_ITEMS: Record<Role, NavItem[]> = {
   PLACEMENT_ADMIN: [
     { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard, implemented: true },
     { label: 'Students', path: '/admin/students', icon: Users, implemented: true },
+    { label: 'Placement Eligibility', path: '/admin/placement-eligibility', icon: Users, implemented: true },
     { label: 'Faculty', path: '/admin/faculty', icon: GraduationCap, implemented: true },
     { label: 'Companies', path: '/admin/companies', icon: Building2, implemented: true },
     { label: 'Jobs', path: '/admin/jobs', icon: Briefcase, implemented: true },

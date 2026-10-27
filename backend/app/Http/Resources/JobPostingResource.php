@@ -61,6 +61,7 @@ class JobPostingResource extends JsonResource
 
             'eligibility' => [
                 'enforced' => (bool) ($this->eligibilityCriteria?->eligibility_enforced ?? false),
+                'allow_placed_students' => \Illuminate\Support\Facades\DB::table('opportunity_placement_policies')->where('opportunity_type', \App\Models\JobPosting::class)->where('opportunity_id', $this->id)->value('allow_placed_students') == 1,
                 'minimum_cgpa' => $this->whenLoaded('eligibilityCriteria', fn () => $this->eligibilityCriteria?->min_cgpa === null
                     ? null
                     : (float) $this->eligibilityCriteria->min_cgpa),

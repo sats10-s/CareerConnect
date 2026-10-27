@@ -157,6 +157,7 @@ export const EXCEL_OUTCOME: MetaMap<'VALID' | 'WARNING' | 'ERROR'> = {
 export const EXCEL_IMPORT_TYPES: { value: string; label: string; hint: string }[] = [
   { value: 'PLACEMENT_STATUS', label: 'Placement / application status', hint: 'Update application statuses by roll number, company and job role.' },
   { value: 'STUDENT_MASTER', label: 'Student master data', hint: 'Create or update student records by roll number.' },
+  { value: 'STUDENT_PLACEMENT_STATUS', label: 'Student placement status', hint: 'Preview and confirm PLACED or NOT_PLACED status updates with optional company, role, package and date details.' },
   { value: 'INTERNSHIP_STATUS', label: 'Internship status', hint: 'Update internship application and assignment status.' },
   { value: 'INTERVIEW_SCHEDULE', label: 'Interview schedule', hint: 'Schedule interviews in bulk.' },
   { value: 'SHORTLIST', label: 'Shortlist', hint: 'Mark applications as shortlisted in bulk.' },

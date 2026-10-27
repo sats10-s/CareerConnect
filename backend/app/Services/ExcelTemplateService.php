@@ -81,6 +81,11 @@ class ExcelTemplateService
                 'cgpa' => '8.4', 'backlogs' => '0', 'linkedin' => 'https://linkedin.com/in/asharao',
                 'github' => 'https://github.com/asharao', 'portfolio' => 'https://asharao.dev',
             ],
+            $type === ExcelImportType::STUDENT_PLACEMENT_STATUS => [
+                'roll_number' => 'CS2023101', 'placement_status' => 'PLACED', 'company' => 'Acme Corp',
+                'job_role' => 'Software Engineer', 'package' => '12.5', 'placement_date' => '2026-10-12',
+                'reason' => 'Confirmed offer accepted.',
+            ],
             $type->isApplicationStatusFamily() => [
                 'student_name' => 'Asha Rao', 'roll_number' => 'CS2023101', 'branch' => 'Computer Science',
                 'batch' => '2023-2027', 'company' => 'Acme Corp', 'job_role' => 'Software Engineer Intern',

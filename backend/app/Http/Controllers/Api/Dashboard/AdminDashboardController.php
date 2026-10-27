@@ -50,6 +50,9 @@ class AdminDashboardController extends Controller
                 'selected_students' => Application::where('status', ApplicationStatus::SELECTED->value)
                     ->distinct('student_id')
                     ->count('student_id'),
+                'placed_students' => Student::where('placement_status', 'PLACED')->count(),
+                'not_placed_students' => Student::where('placement_status', 'NOT_PLACED')->count(),
+                'unconfirmed_placement_status' => Student::where('placement_status', 'UNKNOWN')->count(),
             ],
             'recent_activity' => $recentActivity,
         ]);

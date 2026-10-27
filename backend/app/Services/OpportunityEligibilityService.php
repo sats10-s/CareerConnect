@@ -36,6 +36,7 @@ class OpportunityEligibilityService
     {
         $criteria = $opportunity->eligibilityCriteria;
         $enforced = (bool) ($criteria?->eligibility_enforced ?? false);
+        $placementReasons = $this->placementReasons($student, $opportunity);
 
         // Per the product rule: when the admin hasn't turned
         // enforcement on, the student is reported eligible with no
@@ -45,18 +46,50 @@ class OpportunityEligibilityService
         if (! $enforced) {
             return [
                 'eligibility_enforced' => false,
-                'eligible' => true,
-                'reasons' => [],
+                'eligible' => $placementReasons === [],
+                'reasons' => $placementReasons,
             ];
         }
 
-        $reasons = $this->criteriaReasons($student, $opportunity);
+        $reasons = [...$placementReasons, ...$this->criteriaReasons($student, $opportunity)];
 
         return [
             'eligibility_enforced' => true,
             'eligible' => $reasons === [],
             'reasons' => $reasons,
         ];
+    }
+
+    /** Placement permission bypasses only this restriction, never configured criteria. */
+    private function placementReasons(Student $student, JobPosting|Internship $opportunity): array
+    {
+        if (! $student->isPlacementRestricted()) {
+            return [];
+        }
+
+        $allowedForOpportunity = \Illuminate\Support\Facades\DB::table('opportunity_placement_policies')
+            ->where('opportunity_type', $opportunity::class)
+            ->where('opportunity_id', $opportunity->id)
+            ->where('allow_placed_students', true)
+            ->exists();
+
+        $hasException = \Illuminate\Support\Facades\DB::table('student_opportunity_placement_exceptions')
+            ->where('student_id', $student->id)
+            ->where('opportunity_type', $opportunity::class)
+            ->where('opportunity_id', $opportunity->id)
+            ->whereNull('revoked_at')
+            ->exists();
+
+        if ($allowedForOpportunity || $hasException) {
+            return [];
+        }
+
+        return [[
+            'code' => 'PLACEMENT_RESTRICTED',
+            'message' => $student->placement_status === 'PLACED'
+                ? 'Placed students cannot apply to this opportunity unless the placement office grants permission.'
+                : 'Your placement status has not been confirmed. Contact the placement office before applying.',
+        ]];
     }
 
     /**
@@ -150,6 +183,12 @@ class OpportunityEligibilityService
         }
 
         return $reasons;
+    }
+
+    /** Reporting includes configured criteria and the active placement restriction. */
+    public function reportingReasons(Student $student, JobPosting|Internship $opportunity): array
+    {
+        return [...$this->placementReasons($student, $opportunity), ...$this->criteriaReasons($student, $opportunity)];
     }
 
     /**

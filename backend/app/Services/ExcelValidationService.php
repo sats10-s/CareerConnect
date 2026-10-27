@@ -144,6 +144,15 @@ class ExcelValidationService
         return $key !== null ? AttendanceStatus::from($key) : null;
     }
 
+    public function normalizeStudentPlacementStatus(?string $raw): ?string
+    {
+        return match ($this->key($raw)) {
+            'PLACED' => 'PLACED',
+            'NOT PLACED', 'NOT_PLACED', 'UNPLACED' => 'NOT_PLACED',
+            default => null,
+        };
+    }
+
     /**
      * Module spec section 7 normalization: trim, case-insensitive,
      * collapse internal whitespace - identical treatment for every

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Concerns;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Shared by Admin\JobPostingController and Admin\InternshipController:
@@ -53,5 +54,17 @@ trait BuildsEligibilityPayload
         }
 
         return $eligibility;
+    }
+
+    private function syncPlacedStudentPolicy(Request $request, \App\Models\JobPosting|\App\Models\Internship $opportunity): void
+    {
+        if (! $request->has('allow_placed_students')) {
+            return;
+        }
+
+        DB::table('opportunity_placement_policies')->updateOrInsert(
+            ['opportunity_type' => $opportunity::class, 'opportunity_id' => $opportunity->id],
+            ['allow_placed_students' => $request->boolean('allow_placed_students'), 'updated_by' => $request->user()->id, 'updated_at' => now(), 'created_at' => now()],
+        );
     }
 }
