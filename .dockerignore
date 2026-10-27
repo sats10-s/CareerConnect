@@ -6,3 +6,26 @@ frontend/node_modules
 frontend/dist
 backend/storage/logs/*.log
 backend/storage/app/private/*
+
+# Exclude local credentials, certificates, and database exports from build context.
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/auth.json
+**/*.sql
+**/*.sql.gz
+**/*.dump
+**/*.bak
+
+# Exclude test sources and generated local artifacts from the production image.
+backend/tests
+backend/.phpunit.cache
+backend/.phpunit.result.cache
+backend/bootstrap/cache/*.php
+backend/storage/framework/cache/*
+backend/storage/framework/sessions/*
+backend/storage/framework/views/*
+backend/storage/framework/testing/*
+backend/storage/logs/*
+**/.DS_Store

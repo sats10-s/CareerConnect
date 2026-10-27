@@ -4,6 +4,8 @@ namespace Tests\Feature\Admin;
 
 use App\Models\Application;
 use App\Models\ApplicationStatusHistory;
+use App\Models\StudentPlacementStatusHistory;
+use App\Services\StudentPlacementStatusService;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -56,7 +58,7 @@ class ExcelImportApplicationStatusTest extends TestCase
 
     public function test_a_legal_status_transition_matches_and_previews_as_valid(): void
     {
-        $studentUser = $this->makeStudentUser(['name' => 'Asha Rao']);
+        $studentUser = $this->makeStudentUser(['name' => 'Asha Rao', 'placement_status' => 'NOT_PLACED']);
         $studentUser->student->update(['roll_number' => 'CC24001']);
         $job = $this->makeJobPosting();
         $this->applyAndAdvance($this->admin, $studentUser, $job, ['UNDER_REVIEW']);
@@ -102,6 +104,128 @@ class ExcelImportApplicationStatusTest extends TestCase
 
         $this->assertSame('READY_FOR_CONFIRMATION', $batch['status']);
         $this->assertSame(1, $batch['counts']['valid_rows']);
+    }
+
+    public function test_student_placement_status_import_previews_then_confirms_through_audited_service(): void
+    {
+        $studentUser = $this->makeStudentUser(['name' => 'Asha Rao', 'placement_status' => 'UNKNOWN']);
+        $studentUser->student->update(['roll_number' => 'CC24091']);
+        $headers = ['Roll Number', 'Placement Status', 'Company', 'Job Role', 'Package (LPA)', 'Placement Date', 'Reason'];
+        $file = $this->makeXlsxUpload($headers, [['CC24091', 'PLACED', 'Acme Corp', 'Engineer', '12.5', now()->subDay()->toDateString(), 'Offer confirmed.']]);
+        Sanctum::actingAs($this->admin, ['*']);
+        $batch = $this->postJson('/api/admin/excel/import', ['type' => 'STUDENT_PLACEMENT_STATUS', 'file' => $file])
+            ->assertCreated()->json('data');
+
+        $this->assertSame('READY_FOR_CONFIRMATION', $batch['status']);
+        $this->assertSame('UNKNOWN', $studentUser->student->fresh()->placement_status, 'Preview must not change student data.');
+        $this->getJson("/api/admin/excel/imports/{$batch['id']}/preview")->assertOk()
+            ->assertJsonPath('data.items.0.outcome', 'VALID')
+            ->assertJsonPath('data.items.0.changes.0.new_value', 'PLACED');
+
+        $this->postJson("/api/admin/excel/imports/{$batch['id']}/confirm")->assertOk();
+        $student = $studentUser->student->fresh();
+        $this->assertSame('PLACED', $student->placement_status);
+        $this->assertSame('Acme Corp', $student->placement_company);
+        $this->assertSame('Engineer', $student->placement_job_role);
+        $this->assertSame('12.50', $student->placement_package);
+        $this->assertDatabaseHas('student_placement_status_history', [
+            'student_id' => $student->id, 'to_status' => 'PLACED', 'changed_by' => $this->admin->id,
+        ]);
+    }
+
+    public function test_student_placement_status_import_reports_invalid_status_per_row(): void
+    {
+        $studentUser = $this->makeStudentUser(['placement_status' => 'UNKNOWN']);
+        $studentUser->student->update(['roll_number' => 'CC24092']);
+        $file = $this->makeXlsxUpload(['Roll Number', 'Placement Status'], [['CC24092', 'MAYBE']]);
+        Sanctum::actingAs($this->admin, ['*']);
+        $batch = $this->postJson('/api/admin/excel/import', ['type' => 'STUDENT_PLACEMENT_STATUS', 'file' => $file])
+            ->assertCreated()->json('data');
+
+        $this->getJson("/api/admin/excel/imports/{$batch['id']}/preview")->assertOk()
+            ->assertJsonPath('data.items.0.outcome', 'ERROR');
+        $this->assertSame('UNKNOWN', $studentUser->student->fresh()->placement_status);
+    }
+
+    public function test_duplicate_student_identifiers_are_all_invalid_and_confirmation_changes_nothing(): void
+    {
+        $studentUser = $this->makeStudentUser(['placement_status' => 'UNKNOWN']);
+        $studentUser->student->update(['roll_number' => 'CC25001']);
+        $headers = ['Roll Number', 'Placement Status'];
+        $file = $this->makeXlsxUpload($headers, [['CC25001', 'PLACED'], [' cc25001 ', 'NOT_PLACED']]);
+        Sanctum::actingAs($this->admin, ['*']);
+        $batch = $this->postJson('/api/admin/excel/import', ['type' => 'STUDENT_PLACEMENT_STATUS', 'file' => $file])
+            ->assertCreated()->json('data');
+
+        $preview = $this->getJson("/api/admin/excel/imports/{$batch['id']}/preview")->assertOk();
+        $preview->assertJsonPath('data.items.0.outcome', 'ERROR')
+            ->assertJsonPath('data.items.1.outcome', 'ERROR');
+        $this->assertStringContainsString('rows 2, 3', $preview->json('data.items.0.messages.0'));
+        $this->assertStringContainsString('rows 2, 3', $preview->json('data.items.1.messages.0'));
+
+        $this->postJson("/api/admin/excel/imports/{$batch['id']}/confirm")->assertUnprocessable();
+        $this->assertSame('UNKNOWN', $studentUser->student->fresh()->placement_status);
+        $this->assertDatabaseCount('student_placement_status_history', 0);
+    }
+
+    public function test_invalid_row_prevents_every_placement_status_update(): void
+    {
+        $first = $this->makeStudentUser(['placement_status' => 'UNKNOWN']);
+        $first->student->update(['roll_number' => 'CC25002']);
+        $second = $this->makeStudentUser(['placement_status' => 'UNKNOWN']);
+        $second->student->update(['roll_number' => 'CC25003']);
+        $file = $this->makeXlsxUpload(['Roll Number', 'Placement Status'], [['CC25002', 'PLACED'], ['CC25003', 'MAYBE']]);
+        Sanctum::actingAs($this->admin, ['*']);
+        $batch = $this->postJson('/api/admin/excel/import', ['type' => 'STUDENT_PLACEMENT_STATUS', 'file' => $file])->assertCreated()->json('data');
+
+        $this->postJson("/api/admin/excel/imports/{$batch['id']}/confirm")->assertUnprocessable();
+        $this->assertSame('UNKNOWN', $first->student->fresh()->placement_status);
+        $this->assertSame('UNKNOWN', $second->student->fresh()->placement_status);
+        $this->assertDatabaseCount('student_placement_status_history', 0);
+    }
+
+    public function test_stale_row_prevents_all_placement_updates(): void
+    {
+        $first = $this->makeStudentUser(['placement_status' => 'UNKNOWN']);
+        $first->student->update(['roll_number' => 'CC25004']);
+        $second = $this->makeStudentUser(['placement_status' => 'UNKNOWN']);
+        $second->student->update(['roll_number' => 'CC25005']);
+        $file = $this->makeXlsxUpload(['Roll Number', 'Placement Status'], [['CC25004', 'PLACED'], ['CC25005', 'PLACED']]);
+        Sanctum::actingAs($this->admin, ['*']);
+        $batch = $this->postJson('/api/admin/excel/import', ['type' => 'STUDENT_PLACEMENT_STATUS', 'file' => $file])->assertCreated()->json('data');
+        $second->student->update(['placement_company' => 'Changed after preview']);
+
+        $this->postJson("/api/admin/excel/imports/{$batch['id']}/confirm")->assertUnprocessable();
+        $this->assertSame('UNKNOWN', $first->student->fresh()->placement_status);
+        $this->assertSame('UNKNOWN', $second->student->fresh()->placement_status);
+        $this->assertDatabaseCount('student_placement_status_history', 0);
+    }
+
+    public function test_unexpected_failure_after_first_placement_write_rolls_back_status_and_history(): void
+    {
+        $first = $this->makeStudentUser(['placement_status' => 'UNKNOWN']);
+        $first->student->update(['roll_number' => 'CC25006']);
+        $second = $this->makeStudentUser(['placement_status' => 'UNKNOWN']);
+        $second->student->update(['roll_number' => 'CC25007']);
+        $file = $this->makeXlsxUpload(['Roll Number', 'Placement Status'], [['CC25006', 'PLACED'], ['CC25007', 'PLACED']]);
+        Sanctum::actingAs($this->admin, ['*']);
+        $batch = $this->postJson('/api/admin/excel/import', ['type' => 'STUDENT_PLACEMENT_STATUS', 'file' => $file])->assertCreated()->json('data');
+
+        $realService = new StudentPlacementStatusService();
+        $calls = 0;
+        $mock = \Mockery::mock(StudentPlacementStatusService::class);
+        $mock->shouldReceive('update')->twice()->andReturnUsing(function (...$arguments) use (&$calls, $realService) {
+            if (++$calls === 2) throw new \RuntimeException('simulated write failure');
+            return $realService->update(...$arguments);
+        });
+        $this->app->instance(StudentPlacementStatusService::class, $mock);
+
+        $this->postJson("/api/admin/excel/imports/{$batch['id']}/confirm")->assertUnprocessable();
+        $this->assertSame(2, $calls, 'The second row must fail only after the first row update has been attempted.');
+        $this->assertSame('UNKNOWN', $first->student->fresh()->placement_status);
+        $this->assertSame('UNKNOWN', $second->student->fresh()->placement_status);
+        $this->assertDatabaseCount('student_placement_status_history', 0);
+        $this->assertDatabaseCount('excel_import_changes', 0);
     }
 
     public function test_confirm_writes_through_application_service_with_full_history(): void

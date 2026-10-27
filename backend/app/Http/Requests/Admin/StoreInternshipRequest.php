@@ -38,6 +38,7 @@ class StoreInternshipRequest extends FormRequest
             'is_active' => ['nullable', 'boolean'],
 
             'eligibility_enforced' => ['nullable', 'boolean'],
+            'allow_placed_students' => ['nullable', 'boolean'],
             'minimum_cgpa' => ['nullable', 'numeric', 'between:0,10'],
             'maximum_backlogs' => ['nullable', 'integer', 'min:0'],
             'eligible_department_ids' => ['nullable', 'array'],

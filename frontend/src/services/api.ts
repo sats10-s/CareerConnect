@@ -4,7 +4,7 @@ import axios from 'axios'
  * Base URL of the Laravel backend, e.g. http://localhost:8000.
  * The `/api` prefix is added per-request below.
  */
-export const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+export const API_BASE_URL = import.meta.env.VITE_API_URL || ''
 
 /**
  * Shared axios instance.

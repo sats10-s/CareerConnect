@@ -57,7 +57,9 @@ function StudentCell({ row }: { row: AdminStudentRow }) {
 }
 
 function PlacementBadge({ row }: { row: AdminStudentRow }) {
-  if (row.placement_status === 'SELECTED') return <StatusBadge tone="success">Placed</StatusBadge>
+  if (row.placement_status === 'PLACED') return <StatusBadge tone="success">Placed</StatusBadge>
+  if (row.placement_status === 'NOT_PLACED' || row.placement_status === 'UNPLACED') return <StatusBadge tone="info">Not placed</StatusBadge>
+  if (row.placement_status === 'UNKNOWN') return <StatusBadge>Unconfirmed</StatusBadge>
   return row.applications_count > 0 ? <StatusBadge tone="info">Applying</StatusBadge> : <StatusBadge>Not applied</StatusBadge>
 }
 

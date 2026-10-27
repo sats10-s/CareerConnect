@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\Admin\ExcelTemplateController as AdminExcelTemplate
 use App\Http\Controllers\Api\Admin\InternshipAssignmentController as AdminInternshipAssignmentController;
 use App\Http\Controllers\Api\Admin\InternshipCompletionController as AdminInternshipCompletionController;
 use App\Http\Controllers\Api\Admin\InternshipController;
+use App\Http\Controllers\Api\Admin\PlacementEligibilityController;
 use App\Http\Controllers\Api\Admin\InternshipDocumentController as AdminInternshipDocumentController;
 use App\Http\Controllers\Api\Admin\InterviewController as AdminInterviewController;
 use App\Http\Controllers\Api\Admin\JobPostingController;
@@ -196,6 +197,13 @@ Route::middleware(['auth:sanctum', 'password.changed'])->group(function () {
     // Object-level authorization (beyond this role gate) is enforced by
     // JobPostingPolicy/InternshipPolicy inside each controller action.
     Route::prefix('admin')->middleware('role:PLACEMENT_ADMIN,SUPER_ADMIN')->group(function () {
+        Route::get('/placement-eligibility', [PlacementEligibilityController::class, 'index']);
+        Route::get('/placement-eligibility/history', [PlacementEligibilityController::class, 'history']);
+        Route::patch('/placement-eligibility/students/{student}', [PlacementEligibilityController::class, 'setStatus']);
+        Route::get('/placement-eligibility/students/{student}/history', [PlacementEligibilityController::class, 'studentHistory']);
+        Route::put('/placement-eligibility/opportunities/{type}/{id}', [PlacementEligibilityController::class, 'policy']);
+        Route::post('/placement-eligibility/opportunities/{type}/{id}/exceptions', [PlacementEligibilityController::class, 'grant']);
+        Route::post('/placement-eligibility/exceptions/{exceptionId}/revoke', [PlacementEligibilityController::class, 'revoke']);
         Route::get('/jobs', [JobPostingController::class, 'index']);
         Route::post('/jobs', [JobPostingController::class, 'store']);
         Route::get('/jobs/{jobPosting}', [JobPostingController::class, 'show']);

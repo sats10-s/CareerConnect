@@ -87,9 +87,9 @@ class StudentController extends Controller
         }
 
         if (($filters['placement'] ?? null) === 'placed') {
-            $query->whereHas('applications', fn ($q) => $q->where('status', $selected));
+            $query->where('students.placement_status', 'PLACED');
         } elseif (($filters['placement'] ?? null) === 'unplaced') {
-            $query->whereDoesntHave('applications', fn ($q) => $q->where('status', $selected));
+            $query->where('students.placement_status', 'NOT_PLACED');
         }
 
         $sortColumn = match ($filters['sort'] ?? 'name') {

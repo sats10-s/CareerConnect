@@ -26,7 +26,15 @@ export function AdminDashboardPage() {
         <StatCard label="Active internships" value={data.stats.active_internships} icon={GraduationCap} tone="blue" />
         <StatCard label="Applications" value={data.stats.applications} icon={FileText} tone="navy" />
         <StatCard label="Selected" value={data.stats.selected_students} icon={CheckCircle2} tone="green" />
+        <StatCard label="Explicitly placed" value={data.stats.placed_students} icon={CheckCircle2} tone="green" />
+        <StatCard label="Not placed" value={data.stats.not_placed_students} icon={Users} tone="blue" />
+        <StatCard label="Placement unconfirmed" value={data.stats.unconfirmed_placement_status} icon={History} tone="amber" />
       </div>
+
+      <section className="card flex flex-wrap items-center justify-between gap-4 p-5">
+        <div><h2 className="font-semibold text-ink">Placement status management</h2><p className="mt-1 text-sm text-muted">Confirm student placement, record offer details, and review change history.</p></div>
+        <Link to="/admin/placement-eligibility" className="btn-primary">Manage placement status</Link>
+      </section>
 
       <section>
         <SectionHeader title="Recent activity" subtitle="Latest applications and companies onboarded" action={<Link to="/admin/reports" className="text-sm font-medium text-primary hover:underline">Open reports</Link>} />

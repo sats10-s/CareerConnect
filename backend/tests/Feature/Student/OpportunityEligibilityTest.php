@@ -13,6 +13,7 @@ use App\Models\StudentSkill;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -83,6 +84,8 @@ class OpportunityEligibilityTest extends TestCase
             'year' => 3,
             'cgpa' => 8.0,
             'backlogs' => 0,
+            // Existing eligibility cases concern academic criteria; placement is explicit.
+            'placement_status' => 'NOT_PLACED',
         ], $overrides));
         unset($overrides['roll_number']);
 
@@ -153,6 +156,32 @@ class OpportunityEligibilityTest extends TestCase
         $response->assertJsonPath('data.my_eligibility.eligibility_enforced', true);
         $response->assertJsonPath('data.my_eligibility.eligible', true);
         $response->assertJsonPath('data.my_eligibility.reasons', []);
+    }
+
+    public function test_placed_student_is_blocked_even_when_academic_eligibility_is_not_enforced(): void
+    {
+        $job = $this->makeJobPosting();
+        Sanctum::actingAs($this->makeStudent(['placement_status' => 'PLACED']), ['*']);
+
+        $this->getJson("/api/student/opportunities/jobs/{$job->id}")
+            ->assertOk()
+            ->assertJsonPath('data.my_eligibility.eligible', false)
+            ->assertJsonPath('data.my_eligibility.reasons.0.code', 'PLACEMENT_RESTRICTED');
+    }
+
+    public function test_opportunity_policy_allows_placed_student_without_bypassing_academic_criteria(): void
+    {
+        $job = $this->makeJobPosting(['eligibility_enforced' => true, 'min_cgpa' => 9]);
+        DB::table('opportunity_placement_policies')->insert([
+            'opportunity_type' => JobPosting::class, 'opportunity_id' => $job->id,
+            'allow_placed_students' => true, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        Sanctum::actingAs($this->makeStudent(['placement_status' => 'PLACED', 'cgpa' => 8]), ['*']);
+
+        $this->getJson("/api/student/opportunities/jobs/{$job->id}")
+            ->assertOk()
+            ->assertJsonPath('data.my_eligibility.eligible', false)
+            ->assertJsonFragment(['code' => 'CGPA']);
     }
 
     public function test_ineligible_department_produces_department_reason(): void

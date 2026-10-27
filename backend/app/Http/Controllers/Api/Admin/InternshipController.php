@@ -31,6 +31,7 @@ class InternshipController extends Controller
         'eligible_batch_ids',
         'eligible_years',
         'required_skills',
+        'allow_placed_students',
     ];
 
     private const EAGER_LOAD = [
@@ -103,6 +104,7 @@ class InternshipController extends Controller
 
             $internship = Internship::create($data);
             $internship->syncEligibility($this->eligibilityPayloadFromRequest($request));
+            $this->syncPlacedStudentPolicy($request, $internship);
 
             return $internship;
         });
@@ -137,6 +139,7 @@ class InternshipController extends Controller
 
             $internship->update($data);
             $internship->syncEligibility($this->eligibilityPayloadFromRequest($request));
+            $this->syncPlacedStudentPolicy($request, $internship);
         });
 
         $internship->refresh()->load(self::EAGER_LOAD);

@@ -75,6 +75,7 @@ const SuperAdminBatchesPage = lazyPage(() => import('@/pages/superadmin/MetaList
 const AdminApplicationsPage = lazyPage(() => import('@/pages/admin/Applications'), 'AdminApplicationsPage')
 const AdminInterviewsPage = lazyPage(() => import('@/pages/admin/Interviews'), 'AdminInterviewsPage')
 const AdminPlacementDrivesPage = lazyPage(() => import('@/pages/admin/PlacementDrives'), 'AdminPlacementDrivesPage')
+const AdminPlacementEligibilityPage = lazyPage(() => import('@/pages/admin/PlacementEligibility'), 'AdminPlacementEligibilityPage')
 const SuperAdminDashboardPage = lazyPage(() => import('@/pages/superadmin/Dashboard'), 'SuperAdminDashboardPage')
 const SuperAdminUsersPage = lazyPage(() => import('@/pages/superadmin/Users'), 'SuperAdminUsersPage')
 const SuperAdminCompanyApprovalsPage = lazyPage(() => import('@/pages/superadmin/CompanyApprovals'), 'SuperAdminCompanyApprovalsPage')
@@ -180,6 +181,7 @@ export default function App() {
               <Route path="applications" element={<AdminApplicationsPage />} />
               <Route path="interviews" element={<AdminInterviewsPage />} />
               <Route path="placement-drives" element={<AdminPlacementDrivesPage />} />
+              <Route path="placement-eligibility" element={<AdminPlacementEligibilityPage />} />
               {placeholderRoutesFor('PLACEMENT_ADMIN')}
             </Route>
           </Route>
@@ -192,6 +194,7 @@ export default function App() {
               <Route path="users" element={<SuperAdminUsersPage />} />
               <Route path="student-data" element={<SuperAdminStudentDataPage />} />
               <Route path="students" element={<AdminStudentsPage />} />
+              <Route path="placement-eligibility" element={<AdminPlacementEligibilityPage />} />
               <Route path="company-approvals" element={<SuperAdminCompanyApprovalsPage />} />
               <Route path="roles" element={<SuperAdminRolesPage />} />
               <Route path="security" element={<SuperAdminSecurityPage />} />

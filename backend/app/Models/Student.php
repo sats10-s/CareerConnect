@@ -18,6 +18,13 @@ class Student extends Model
 
     protected $fillable = [
         'user_id',
+        'placement_status',
+        'placement_company',
+        'placement_job_role',
+        'placement_package',
+        'placement_date',
+        'placement_status_updated_by',
+        'placement_status_updated_at',
         'roll_number',
         'department_id',
         'batch_id',
@@ -62,9 +69,17 @@ class Student extends Model
             'inter_score' => 'decimal:2',
             'inter_type' => InterType::class,
             'academics_updated_at' => 'datetime',
+            'placement_package' => 'decimal:2',
+            'placement_date' => 'date',
+            'placement_status_updated_at' => 'datetime',
             'resume_size' => 'integer',
             'resume_uploaded_at' => 'datetime',
         ];
+    }
+
+    public function isPlacementRestricted(): bool
+    {
+        return ! in_array($this->placement_status, ['NOT_PLACED', 'UNPLACED'], true);
     }
 
     public function user(): BelongsTo
@@ -90,6 +105,11 @@ class Student extends Model
     public function applications(): HasMany
     {
         return $this->hasMany(Application::class);
+    }
+
+    public function placementStatusHistory(): HasMany
+    {
+        return $this->hasMany(StudentPlacementStatusHistory::class)->orderByDesc('changed_at')->orderByDesc('id');
     }
 
     /**

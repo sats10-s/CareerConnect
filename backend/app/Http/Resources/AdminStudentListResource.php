@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources;
 
-use App\Enums\ApplicationStatus;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -33,7 +32,13 @@ class AdminStudentListResource extends JsonResource
             'backlogs' => $this->backlogs,
             'applications_count' => (int) ($this->applications_count ?? 0),
             'selected_count' => (int) ($this->selected_count ?? 0),
-            'placement_status' => ($this->selected_count ?? 0) > 0 ? ApplicationStatus::SELECTED->value : null,
+            'placement_status' => $this->placement_status,
+            'placement_company' => $this->placement_company,
+            'placement_job_role' => $this->placement_job_role,
+            'placement_package' => $this->placement_package === null ? null : (float) $this->placement_package,
+            'placement_date' => $this->placement_date?->toDateString(),
+            'placement_status_updated_by' => $this->placement_status_updated_by,
+            'placement_status_updated_at' => $this->placement_status_updated_at?->toIso8601String(),
         ];
     }
 }

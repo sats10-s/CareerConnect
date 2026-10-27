@@ -88,6 +88,7 @@ class ApplicationTest extends TestCase
             'year' => 3,
             'cgpa' => 8.0,
             'backlogs' => 0,
+            'placement_status' => 'NOT_PLACED',
         ]);
 
         return $user;
@@ -238,6 +239,7 @@ class ApplicationTest extends TestCase
         $application->refresh();
         $this->assertNotNull($application->selected_at);
         $this->assertNull($application->rejection_reason);
+        $this->assertSame('NOT_PLACED', $application->student->fresh()->placement_status, 'SELECTED applications do not automatically confirm a placement.');
     }
 
     public function test_student_cannot_update_application_status(): void

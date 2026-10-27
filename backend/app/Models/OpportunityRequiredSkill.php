@@ -12,6 +12,7 @@ class OpportunityRequiredSkill extends Model
 
     protected $fillable = [
         'skill_name',
+        'sort_order',
     ];
 
     public function opportunity(): MorphTo

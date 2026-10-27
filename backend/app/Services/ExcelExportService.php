@@ -1008,10 +1008,7 @@ class ExcelExportService
     }
 
     /**
-     * Every student with zero SELECTED application - the module spec's
-     * "unplaced student report". Uses a NOT EXISTS-shaped
-     * whereDoesntHave() rather than pulling every student and every
-     * application into PHP to compute the complement there.
+     * Students explicitly marked NOT_PLACED by an authorized admin.
      *
      * @param array<string, mixed> $filters
      */
@@ -1020,7 +1017,7 @@ class ExcelExportService
         $query = Student::query()
             ->with(['user', 'department', 'batch'])
             ->withCount(['applications', 'applications as in_progress_count' => fn (Builder $q) => $q->whereNotIn('status', ['REJECTED', 'WITHDRAWN'])])
-            ->whereDoesntHave('applications', fn (Builder $q) => $q->where('status', 'SELECTED'));
+            ->where('placement_status', 'NOT_PLACED');
         $this->applyStudentOwnScope($query, $filters);
 
         $spreadsheet = new Spreadsheet();
@@ -1096,12 +1093,17 @@ class ExcelExportService
             return;
         }
 
+        if (in_array($status, ['placed', 'unplaced'], true)) {
+            $query->where('placement_status', $status === 'placed' ? 'PLACED' : 'NOT_PLACED');
+            return;
+        }
+
         $negate = str_starts_with($status, 'not_') || $status === 'unplaced';
         $condition = match ($status) {
             'applied', 'not_applied' => null,
             'shortlisted', 'not_shortlisted' => fn (Builder $q) => $q->whereHas('statusHistory', fn (Builder $h) => $h->where('to_status', 'SHORTLISTED')),
             'interviewed', 'not_interviewed' => fn (Builder $q) => $q->has('interviews'),
-            'placed', 'unplaced' => fn (Builder $q) => $q->where('status', 'SELECTED'),
+            'placed', 'unplaced' => null,
         };
 
         $negate

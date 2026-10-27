@@ -6,9 +6,8 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Filters for GET /api/admin/students. `placement` is derived from the
- * student's applications: `placed` = at least one SELECTED application,
- * `unplaced` = none. CGPA range filters never match a student whose CGPA
+ * Filters for GET /api/admin/students. `placement` uses the explicit
+ * placement status confirmed by the placement office. CGPA range filters never match a student whose CGPA
  * is not on record yet.
  */
 class StudentDirectoryRequest extends FormRequest

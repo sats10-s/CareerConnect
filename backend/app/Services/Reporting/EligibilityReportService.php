@@ -83,7 +83,7 @@ class EligibilityReportService
         $students->chunkById(self::CHUNK_SIZE, function ($chunk) use ($opportunity, $applications, &$rows, &$summary) {
             foreach ($chunk as $student) {
                 $summary['in_scope']++;
-                $reasons = $this->eligibility->criteriaReasons($student, $opportunity);
+                $reasons = $this->eligibility->reportingReasons($student, $opportunity);
                 $eligible = $reasons === [];
                 $application = $applications->get($student->id);
 

@@ -78,6 +78,11 @@ export function SuperAdminDashboardPage() {
         <StatCard label="Audit events" value={data.stats.audit_events.toLocaleString()} icon={History} tone="navy" />
       </div>
 
+      <section className="card flex flex-wrap items-center justify-between gap-4 p-5">
+        <div><h2 className="font-semibold text-ink">Placement status management</h2><p className="mt-1 text-sm text-muted">Review verified placement status, offer details, bulk imports, and change history.</p></div>
+        <Link to="/super-admin/placement-eligibility" className="btn-primary">Manage placement status</Link>
+      </section>
+
       {inactive > 0 && (
         <p className="text-sm text-ink-soft">
           {inactive} account{inactive === 1 ? ' is' : 's are'} deactivated.{' '}

@@ -25,6 +25,7 @@ use App\Models\Interview;
 use App\Models\JobPosting;
 use App\Models\PpoRecord;
 use App\Models\Student;
+use App\Models\StudentPlacementStatusHistory;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -64,22 +65,9 @@ use Throwable;
  * - this class never dispatches a duplicate event and never builds a
  * second notification path.
  *
- * PARTIAL SUCCESS vs. CRITICAL FAILURE (module spec section 10's "If
- * critical failure occurs: ROLL BACK the transaction. Do not leave
- * partial updates."): confirm() re-validates every targeted row
- * against CURRENT database state (never blindly trusts the preview-time
- * snapshot, since MySQL may have drifted between preview and
- * confirmation). A row whose transition/match is no longer valid at
- * confirm time is an EXPECTED per-row business outcome - it is
- * recorded as a row-level failure and skipped, while every other
- * targeted row in the same batch still commits. A "critical failure"
- * is reserved for a genuinely unexpected exception (not one of this
- * codebase's own *Exception business classes) - THAT rolls back the
- * entire transaction and marks the whole batch FAILED. This
- * distinction is a judgment call the module spec doesn't fully
- * disambiguate; the alternative (any single row's expected rejection
- * voiding an entire 250-row confirmed batch) would make bulk import
- * of a real, imperfect company Excel file practically unusable.
+ * Most import types retain their established row-level partial-success
+ * behavior. STUDENT_PLACEMENT_STATUS is the exception: every row is
+ * revalidated first and the entire batch commits or rolls back together.
  */
 class ExcelImportService
 {
@@ -96,6 +84,7 @@ class ExcelImportService
         private readonly InternshipAssignmentService $assignmentService,
         private readonly InternshipCompletionService $completionService,
         private readonly AttendanceService $attendanceService,
+        private readonly StudentPlacementStatusService $placementStatusService,
     ) {}
 
     // =========================================================================
@@ -119,6 +108,13 @@ class ExcelImportService
             $absolutePath = Storage::disk(self::DISK)->path($stored['storage_path']);
             $parsed = $this->parsingService->parse($absolutePath, $type);
 
+            // A roll number is the authoritative identifier for this import.
+            // Find repeats before building rows so every occurrence, including
+            // the first, is clearly invalid in the preview.
+            $placementDuplicateRows = $type === ExcelImportType::STUDENT_PLACEMENT_STATUS
+                ? $this->duplicatePlacementStatusRows($parsed['rows'])
+                : [];
+
             $totalRows = 0;
             $matchedRows = 0;
             $validRows = 0;
@@ -127,7 +123,9 @@ class ExcelImportService
 
             foreach ($parsed['rows'] as $entry) {
                 $totalRows++;
-                $built = $this->buildRow($type, $entry['data']);
+                $built = isset($placementDuplicateRows[$entry['row_number']])
+                    ? $this->errorRow([$placementDuplicateRows[$entry['row_number']]])
+                    : $this->buildRow($type, $entry['data']);
 
                 if ($built['outcome'] !== ExcelRowOutcome::ERROR->value && $built['entity_id'] !== null) {
                     $matchedRows++;
@@ -182,11 +180,97 @@ class ExcelImportService
     {
         return match (true) {
             $type === ExcelImportType::STUDENT_MASTER => $this->buildStudentMasterRow($data),
+            $type === ExcelImportType::STUDENT_PLACEMENT_STATUS => $this->buildStudentPlacementStatusRow($data),
             $type->isApplicationStatusFamily() => $this->buildApplicationStatusRow($data),
             $type === ExcelImportType::INTERNSHIP_STATUS => $this->buildInternshipStatusRow($data),
             $type === ExcelImportType::INTERVIEW_SCHEDULE => $this->buildInterviewScheduleRow($data),
             $type === ExcelImportType::ATTENDANCE => $this->buildAttendanceRow($data),
         };
+    }
+
+    /** @param array<string, ?string> $data */
+    private function buildStudentPlacementStatusRow(array $data): array
+    {
+        $match = $this->matchingService->matchStudent($data['roll_number'] ?? null, null);
+        if ($match['outcome'] !== 'MATCHED') return $this->errorRow([$match['message']]);
+        $student = $match['student'];
+        $status = $this->validationService->normalizeStudentPlacementStatus($data['placement_status'] ?? null);
+        if ($status === null) return $this->errorRow(['Placement Status must be PLACED or NOT_PLACED.']);
+
+        $package = $data['package'] ?? null;
+        if ($package !== null && (! is_numeric($package) || (float) $package < 0 || (float) $package > 99999999.99)) {
+            return $this->errorRow(['Package must be a non-negative number no greater than 99999999.99.']);
+        }
+        $placementDate = $data['placement_date'] ?? null;
+        if ($placementDate !== null && (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $placementDate) || ! checkdate((int) substr($placementDate, 5, 2), (int) substr($placementDate, 8, 2), (int) substr($placementDate, 0, 4)) || $placementDate > now()->toDateString())) {
+            return $this->errorRow(['Placement Date must be a valid date that is not in the future.']);
+        }
+
+        $oldDetails = [
+            'placement_company' => $student->placement_company,
+            'placement_job_role' => $student->placement_job_role,
+            'placement_package' => $student->placement_package === null ? null : (string) $student->placement_package,
+            'placement_date' => $student->placement_date?->toDateString(),
+        ];
+        $newDetails = $status === 'NOT_PLACED' ? array_fill_keys(array_keys($oldDetails), null) : [
+            'placement_company' => $data['company'] ?? $student->placement_company,
+            'placement_job_role' => $data['job_role'] ?? $student->placement_job_role,
+            'placement_package' => $package ?? $student->placement_package,
+            'placement_date' => $placementDate ?? $student->placement_date?->toDateString(),
+        ];
+        if ($student->placement_status === $status && $oldDetails === $newDetails) {
+            return $this->errorRow(['This student already has the requested placement status and details.']);
+        }
+
+        return [
+            'outcome' => ExcelRowOutcome::VALID->value,
+            'entity_type' => Student::class,
+            'entity_id' => $student->id,
+            'confirm_context' => [
+                'from_status' => $student->placement_status,
+                'target_status' => $status,
+                'details' => $status === 'NOT_PLACED' ? [] : [
+                    'placement_company' => $data['company'] ?? null,
+                    'placement_job_role' => $data['job_role'] ?? null,
+                    'placement_package' => $package === null ? null : (float) $package,
+                    'placement_date' => $placementDate,
+                ],
+                'reason' => $data['reason'] ?? null,
+                'old_details' => $oldDetails,
+                'new_details' => $newDetails,
+            ],
+            'messages' => [],
+            'changes' => [['field' => 'placement_status', 'label' => 'Placement Status', 'old_value' => (string) $student->placement_status, 'new_value' => $status]],
+        ];
+    }
+
+    /**
+     * @param list<array{row_number: int, data: array<string, ?string>}> $rows
+     * @return array<int, string> row number => duplicate error message
+     */
+    private function duplicatePlacementStatusRows(array $rows): array
+    {
+        $byIdentifier = [];
+        foreach ($rows as $row) {
+            $identifier = $row['data']['roll_number'] ?? null;
+            $normalized = mb_strtoupper(preg_replace('/\\s+/', ' ', trim((string) $identifier)) ?? '');
+            if ($normalized !== '') $byIdentifier[$normalized][] = $row['row_number'];
+        }
+
+        $duplicates = [];
+        foreach ($byIdentifier as $identifier => $rowNumbers) {
+            if (count($rowNumbers) < 2) continue;
+            $rowList = implode(', ', $rowNumbers);
+            foreach ($rowNumbers as $rowNumber) {
+                $duplicates[$rowNumber] = sprintf(
+                    'Duplicate student identifier "%s" appears on rows %s; remove or correct every duplicate row before importing.',
+                    $identifier,
+                    $rowList,
+                );
+            }
+        }
+
+        return $duplicates;
     }
 
     // --- Placement/Application Status (+ Shortlist/Assessment/Final Selection) -------
@@ -906,6 +990,10 @@ class ExcelImportService
             throw new ExcelImportException('This batch is not ready for confirmation.');
         }
 
+        if ($batch->import_type === ExcelImportType::STUDENT_PLACEMENT_STATUS) {
+            return $this->confirmPlacementStatusBatch($batch, $actingUser);
+        }
+
         $query = $batch->rows()->whereIn('outcome', [ExcelRowOutcome::VALID->value, ExcelRowOutcome::WARNING->value]);
 
         if ($rowIds !== null) {
@@ -966,6 +1054,158 @@ class ExcelImportService
         }
 
         return ['applied' => $applied, 'failed' => $failed, 'skipped_errors' => $targetRows->count() - $applied - $failed];
+    }
+
+    /** Placement status files are atomic: every row is checked before any is applied. */
+    private function confirmPlacementStatusBatch(ExcelImportBatch $batch, User $actingUser): array
+    {
+        $rows = $batch->rows()->orderBy('row_number')->get();
+        $rowNumbersByIdentifier = [];
+        foreach ($rows as $row) {
+            $identifier = $row->raw_row['roll_number'] ?? null;
+            $normalized = mb_strtoupper(preg_replace('/\\s+/', ' ', trim((string) $identifier)) ?? '');
+            if ($normalized !== '') $rowNumbersByIdentifier[$normalized][] = $row->row_number;
+        }
+
+        $errors = [];
+        foreach ($rowNumbersByIdentifier as $identifier => $rowNumbers) {
+            if (count($rowNumbers) < 2) continue;
+            foreach ($rowNumbers as $rowNumber) {
+                $errors[] = ['code' => 'DUPLICATE_STUDENT', 'message' => sprintf(
+                    'Row %d: duplicate student identifier "%s" also appears on rows %s.',
+                    $rowNumber,
+                    $identifier,
+                    implode(', ', $rowNumbers),
+                )];
+            }
+        }
+
+        $contexts = [];
+        foreach ($rows as $row) {
+            if ($row->outcome === ExcelRowOutcome::ERROR) {
+                foreach ($row->messages ?? [] as $message) {
+                    $errors[] = ['code' => 'INVALID_ROW', 'message' => "Row {$row->row_number}: {$message}"];
+                }
+                continue;
+            }
+
+            $fresh = $this->buildStudentPlacementStatusRow($row->raw_row ?? []);
+            if ($fresh['outcome'] !== ExcelRowOutcome::VALID->value || $fresh['entity_id'] !== $row->entity_id) {
+                foreach ($fresh['messages'] ?: ['The student data no longer matches the preview. Upload and review the file again.'] as $message) {
+                    $errors[] = ['code' => 'STALE_OR_INVALID_ROW', 'message' => "Row {$row->row_number}: {$message}"];
+                }
+                continue;
+            }
+
+            $preview = $row->confirm_context ?? [];
+            if (($fresh['confirm_context']['from_status'] ?? null) !== ($preview['from_status'] ?? null)
+                || ! $this->placementDetailsMatch(
+                    $fresh['confirm_context']['old_details'] ?? null,
+                    $preview['old_details'] ?? null,
+                )) {
+                $errors[] = ['code' => 'STALE_ROW', 'message' => "Row {$row->row_number}: placement status or details changed after preview. Upload and review the file again."];
+                continue;
+            }
+
+            $contexts[$row->id] = $preview;
+        }
+
+        if ($errors !== []) {
+            $this->failPlacementStatusBatch($batch, $rows, $errors);
+            throw new ExcelImportException('Placement status import was not applied. Correct the listed rows and upload the file again.', $errors);
+        }
+
+        try {
+            DB::transaction(function () use ($batch, $rows, $actingUser, $contexts) {
+                foreach ($rows as $row) {
+                    // Check again under the transaction immediately before each write;
+                    // any failure escapes and rolls back the entire placement batch.
+                    $student = Student::query()->lockForUpdate()->find($row->entity_id);
+                    $context = $contexts[$row->id];
+                    if ($student === null
+                        || $student->placement_status !== $context['from_status']
+                        || ! $this->placementDetailsMatch(
+                            $this->placementDetailsForImport($student),
+                            $context['old_details'] ?? null,
+                        )) {
+                        throw new ExcelImportException("Row {$row->row_number}: student data changed during confirmation. No placement changes were saved.", [[
+                            'code' => 'STALE_ROW', 'message' => "Row {$row->row_number}: student data changed during confirmation. No placement changes were saved.",
+                        ]]);
+                    }
+
+                    $this->placementStatusService->update($student, $context['target_status'], $actingUser, $context['details'], $context['reason']);
+                    $this->recordChange($batch, $row, Student::class, $student->id, 'placement_status', $context['from_status'], $context['target_status'], $actingUser);
+                    $row->update(['applied' => true, 'applied_at' => now(), 'apply_error' => null]);
+                }
+
+                $batch->update([
+                    'status' => ExcelImportBatchStatus::CONFIRMED,
+                    'confirmed_by' => $actingUser->id,
+                    'confirmed_at' => now(),
+                ]);
+            });
+        } catch (Throwable $e) {
+            $message = $e instanceof ExcelImportException
+                ? $e->getMessage()
+                : 'Placement status import failed during confirmation. No placement changes were saved.';
+            $errors = $e instanceof ExcelImportException && $e->reasons() !== []
+                ? $e->reasons()
+                : [['code' => 'CONFIRMATION_FAILED', 'message' => $message]];
+            $this->failPlacementStatusBatch($batch, $rows, $errors);
+            throw new ExcelImportException($message, $errors, $e instanceof ExcelImportException ? $e->status() : 422);
+        }
+
+        return ['applied' => $rows->count(), 'failed' => 0, 'skipped_errors' => 0];
+    }
+
+    /** @return array<string, mixed> */
+    private function placementDetailsForImport(Student $student): array
+    {
+        return [
+            'placement_company' => $student->placement_company,
+            'placement_job_role' => $student->placement_job_role,
+            'placement_package' => $student->placement_package === null ? null : (string) $student->placement_package,
+            'placement_date' => $student->placement_date?->toDateString(),
+        ];
+    }
+
+    /**
+     * MySQL's native JSON type may return object keys in a different order
+     * than the PHP array used to build the preview. Compare the known fields
+     * by name and normalize DECIMAL representations while keeping values
+     * otherwise strict, so genuine stale edits are still rejected.
+     */
+    private function placementDetailsMatch(?array $left, ?array $right): bool
+    {
+        $normalize = static function (?array $details): array {
+            $package = $details['placement_package'] ?? null;
+
+            return [
+                'placement_company' => $details['placement_company'] ?? null,
+                'placement_job_role' => $details['placement_job_role'] ?? null,
+                'placement_package' => $package === null ? null : number_format((float) $package, 2, '.', ''),
+                'placement_date' => $details['placement_date'] ?? null,
+            ];
+        };
+
+        return $normalize($left) === $normalize($right);
+    }
+
+    /** @param iterable<ExcelImportRow> $rows
+     * @param list<array{code: string, message: string}> $errors
+     */
+    private function failPlacementStatusBatch(ExcelImportBatch $batch, iterable $rows, array $errors): void
+    {
+        $messagesByRow = [];
+        foreach ($errors as $error) {
+            if (preg_match('/^Row (\\d+):/', $error['message'], $match)) $messagesByRow[(int) $match[1]][] = $error['message'];
+        }
+        foreach ($rows as $row) {
+            if (isset($messagesByRow[$row->row_number])) {
+                $row->update(['applied' => false, 'apply_error' => implode(' ', $messagesByRow[$row->row_number])]);
+            }
+        }
+        $batch->update(['status' => ExcelImportBatchStatus::FAILED, 'error_message' => 'Placement status import was not applied. Correct the listed rows and upload the file again.']);
     }
 
     private function recordChange(
@@ -1139,12 +1379,40 @@ class ExcelImportService
                 InternshipAssignment::class => $this->revertInternshipAssignment($change, $actingUser),
                 PpoRecord::class => $this->revertPpo($change, $actingUser),
                 Interview::class => $this->revertInterview($change, $actingUser),
-                Student::class, User::class => $this->revertScalarField($change, $actingUser),
+                Student::class => $change->field === 'placement_status'
+                    ? $this->revertStudentPlacementStatus($change, $actingUser)
+                    : $this->revertScalarField($change, $actingUser),
+                User::class => $this->revertScalarField($change, $actingUser),
                 default => ['result' => 'CONFLICT', 'message' => 'Unsupported entity type for rollback.'],
             };
         } catch (Throwable $e) {
             return ['result' => 'CONFLICT', 'message' => $e->getMessage()];
         }
+    }
+
+    private function revertStudentPlacementStatus(ExcelImportChange $change, User $actingUser): array
+    {
+        $student = Student::find($change->entity_id);
+        if ($student === null || $student->placement_status !== $change->new_value) {
+            return ['result' => 'CONFLICT', 'message' => 'The student placement status no longer holds the value this import set.'];
+        }
+        $history = StudentPlacementStatusHistory::query()
+            ->where('student_id', $student->id)
+            ->where('to_status', $change->new_value)
+            ->where('changed_by', $change->changed_by)
+            ->where('changed_at', '<=', $change->created_at)
+            ->latest('changed_at')->latest('id')->first();
+        if ($history === null) return ['result' => 'CONFLICT', 'message' => 'The placement change history needed for rollback could not be found.'];
+
+        $oldDetails = $history->old_details ?? [];
+        $details = [
+            'placement_company' => $oldDetails['placement_company'] ?? null,
+            'placement_job_role' => $oldDetails['placement_job_role'] ?? null,
+            'placement_package' => $oldDetails['placement_package'] ?? null,
+            'placement_date' => $oldDetails['placement_date'] ?? null,
+        ];
+        $this->placementStatusService->update($student, $history->from_status ?? 'UNKNOWN', $actingUser, $details, 'Reverted by Excel import rollback.');
+        return ['result' => 'REVERTED', 'message' => null];
     }
 
     private function revertApplication(ExcelImportChange $change, User $actingUser): array

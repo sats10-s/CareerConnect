@@ -54,6 +54,7 @@ export function OpportunityFormModal({ kind, existing, onClose, onSaved }: Oppor
   const [isActive, setIsActive] = useState(e?.is_active ?? true)
 
   const [enforced, setEnforced] = useState(e?.eligibility.enforced ?? false)
+  const [allowPlaced, setAllowPlaced] = useState(e?.eligibility.allow_placed_students ?? false)
   const [minCgpa, setMinCgpa] = useState(e?.eligibility.minimum_cgpa != null ? String(e.eligibility.minimum_cgpa) : '')
   const [maxBacklogs, setMaxBacklogs] = useState(e?.eligibility.maximum_backlogs != null ? String(e.eligibility.maximum_backlogs) : '')
   const [years, setYears] = useState<number[]>(e?.eligibility.years ?? [])
@@ -102,6 +103,7 @@ export function OpportunityFormModal({ kind, existing, onClose, onSaved }: Oppor
       openings: openings ? Number(openings) : null,
       is_active: isActive,
       eligibility_enforced: enforced,
+      allow_placed_students: allowPlaced,
       minimum_cgpa: minCgpa ? Number(minCgpa) : null,
       maximum_backlogs: maxBacklogs ? Number(maxBacklogs) : null,
       eligible_department_ids: departmentIds,
@@ -221,6 +223,10 @@ export function OpportunityFormModal({ kind, existing, onClose, onSaved }: Oppor
 
         <fieldset className="space-y-4 rounded-xl border border-hairline p-4">
           <legend className="px-1 text-sm font-semibold text-ink">Eligibility</legend>
+          <label className="flex items-center gap-2 text-sm text-ink">
+            <input type="checkbox" checked={allowPlaced} onChange={(ev) => setAllowPlaced(ev.target.checked)} className="h-4 w-4 accent-[var(--color-primary)]" />
+            Allow placed students who meet the other eligibility rules
+          </label>
           <label className="flex items-center gap-2 text-sm text-ink">
             <input type="checkbox" checked={enforced} onChange={(ev) => setEnforced(ev.target.checked)} className="h-4 w-4 accent-[var(--color-primary)]" />
             Enforce these rules (students who don't meet them can't apply)
